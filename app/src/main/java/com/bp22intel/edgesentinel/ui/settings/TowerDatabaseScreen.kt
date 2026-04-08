@@ -55,20 +55,33 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.bp22intel.edgesentinel.ui.components.SectionHeader
 import com.bp22intel.edgesentinel.ui.theme.AccentBlue
 import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
 import com.bp22intel.edgesentinel.ui.theme.StatusClear
+import com.bp22intel.edgesentinel.ui.theme.StatusElevated
 import com.bp22intel.edgesentinel.ui.theme.Surface
+import com.bp22intel.edgesentinel.ui.theme.SurfaceVariant
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
 import com.bp22intel.edgesentinel.ui.theme.TextSecondary
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TowerDatabaseScreen(
     viewModel: TowerDatabaseViewModel = hiltViewModel(),
     onBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    var showExplainer by remember { mutableStateOf(false) }
     val countries by viewModel.countries.collectAsState()
     val totalTowerCount by viewModel.totalTowerCount.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -130,6 +143,21 @@ fun TowerDatabaseScreen(
                             text = "${countries.size} countries installed",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(onClick = { showExplainer = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.Info,
+                            contentDescription = null,
+                            tint = AccentBlue,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "How tower verification works",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AccentBlue
                         )
                     }
                 }
@@ -309,5 +337,136 @@ fun TowerDatabaseScreen(
         }
 
         item { Spacer(modifier = Modifier.height(32.dp)) }
+    }
+
+    // Explainer bottom sheet
+    if (showExplainer) {
+        ModalBottomSheet(
+            onDismissRequest = { showExplainer = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = Surface
+        ) {
+            TowerVerificationExplainer()
+        }
+    }
+}
+
+@Composable
+private fun TowerVerificationExplainer() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = "HOW TOWER VERIFICATION WORKS",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = AccentBlue
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ExplainerSection(
+            title = "What is this database?",
+            body = "Edge Sentinel ships with a database of 1.3 million known cell towers in the United States. When your phone connects to a tower, the app checks it against this database to determine if it's a recognized piece of infrastructure or something unknown."
+        )
+
+        ExplainerSection(
+            title = "Where does the data come from?",
+            body = "The tower data comes from OpenCelliD, the world's largest crowdsourced cell tower database. Thousands of users around the world contribute tower observations by running apps that record which towers their phones connect to, along with GPS coordinates."
+        )
+
+        ExplainerSection(
+            title = "Can this database be compromised?",
+            body = "Yes — and that's important to understand. Because OpenCelliD is crowdsourced, an attacker could theoretically submit fake entries to \"whitelist\" their surveillance equipment. This is why Edge Sentinel uses a trust scoring system rather than a simple yes/no lookup."
+        )
+
+        Text(
+            text = "TRUST SCORING",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = StatusElevated
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Every tower in the database has a trust score based on how many independent observers confirmed it exists:",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        TrustScoreRow("100+ observers", "High trust", StatusClear)
+        TrustScoreRow("50–99 observers", "Good trust", StatusClear)
+        TrustScoreRow("20–49 observers", "Moderate trust", StatusElevated)
+        TrustScoreRow("10–19 observers", "Baseline trust", TextSecondary)
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "A tower that hundreds of people have connected to over several years is almost certainly legitimate. A tower with only a few observations could be real — or could be a planted entry.",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ExplainerSection(
+            title = "How does Edge Sentinel use this?",
+            body = "The database is a soft signal, not a veto. A known tower with high trust reduces false positive alerts — you won't get warned about your neighborhood cell tower every day.\n\nBut if a known tower starts behaving suspiciously — sending cipher downgrades, stripping encryption, or flooding identity requests — Edge Sentinel will still alert you. Behavioral evidence always overrides database trust.\n\nThink of it like a background check: a clean record is reassuring, but it doesn't mean someone can't act suspiciously today."
+        )
+
+        ExplainerSection(
+            title = "What about unknown towers?",
+            body = "A tower not in the database isn't automatically dangerous. It could be new infrastructure, a temporary cell-on-wheels for an event, or coverage in an area the database doesn't cover well.\n\nEdge Sentinel flags unknown towers as worth watching, but only escalates to a serious alert when combined with other suspicious signals (high signal strength while stationary, cipher anomalies, network downgrades)."
+        )
+
+        ExplainerSection(
+            title = "What about towers outside the US?",
+            body = "The bundled database covers the United States (MCC 310/311). For other countries, you can download additional tower data from the Tower Database screen. Travel Mode also uses country-specific threat profiles to adjust detection sensitivity when you're abroad."
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun ExplainerSection(title: String, body: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = TextPrimary
+    )
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(
+        text = body,
+        style = MaterialTheme.typography.bodySmall,
+        color = TextSecondary,
+        lineHeight = MaterialTheme.typography.bodySmall.lineHeight
+    )
+    Spacer(modifier = Modifier.height(16.dp))
+}
+
+@Composable
+private fun TrustScoreRow(observers: String, label: String, color: Color) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = observers,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextPrimary
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = color
+        )
     }
 }
