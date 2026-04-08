@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -162,6 +163,9 @@ fun AlertCard(
                         maxLines = 2
                     )
 
+                    // Rich details from detailsJson
+                    AlertDetailChips(alert.detailsJson)
+
                     ExplainableText(
                         text = "${threatTypeLabel(alert.threatType)} ${alert.summary}",
                         modifier = Modifier.padding(top = 2.dp)
@@ -174,6 +178,72 @@ fun AlertCard(
                     )
                 }
             }
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun AlertDetailChips(detailsJson: String) {
+    val details = try { org.json.JSONObject(detailsJson) } catch (_: Exception) { return }
+
+    val chips = mutableListOf<Pair<String, String>>() // label to value
+
+    // Cell tower info
+    if (details.has("cellId")) {
+        chips.add("CID" to details.optString("cellId", ""))
+    }
+    if (details.has("lac")) {
+        chips.add("LAC" to details.optString("lac", ""))
+    }
+    if (details.has("mcc") && details.has("mnc")) {
+        chips.add("MCC/MNC" to "${details.optInt("mcc")}/${details.optInt("mnc")}")
+    }
+    if (details.has("signalStrength")) {
+        val sig = details.optInt("signalStrength", 0)
+        if (sig != 0) chips.add("Signal" to "${sig} dBm")
+    }
+    if (details.has("networkType")) {
+        chips.add("Network" to details.optString("networkType", ""))
+    }
+    if (details.has("nearbyTowerCount")) {
+        chips.add("Nearby" to "${details.optInt("nearbyTowerCount")} towers")
+    }
+    // WiFi details
+    if (details.has("ssid")) {
+        chips.add("SSID" to details.optString("ssid", ""))
+    }
+    if (details.has("bssid")) {
+        chips.add("BSSID" to details.optString("bssid", ""))
+    }
+    // Downgrade details
+    if (details.has("fromNetwork") && details.has("toNetwork")) {
+        chips.add("Downgrade" to "${details.optString("fromNetwork")} \u2192 ${details.optString("toNetwork")}")
+    }
+    // Cipher
+    if (details.has("cipher")) {
+        chips.add("Cipher" to details.optString("cipher", ""))
+    }
+
+    if (chips.isEmpty()) return
+
+    androidx.compose.foundation.layout.FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        chips.forEach { (label, value) ->
+            androidx.compose.material3.SuggestionChip(
+                onClick = {},
+                label = {
+                    Text(
+                        text = "$label: $value",
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1
+                    )
+                },
+                modifier = Modifier.heightIn(min = 24.dp)
+            )
         }
     }
 }

@@ -190,15 +190,29 @@ class MonitoringService : LifecycleService() {
                 }
 
                 if (severity == ThreatLevel.SUSPICIOUS || severity == ThreatLevel.THREAT) {
+                    // Build enriched detailsJson with cell tower context
+                    val detailsJson = org.json.JSONObject().apply {
+                        // Copy detection indicators
+                        result.details.forEach { (k, v) -> put(k, v) }
+                        // Add current cell tower context
+                        currentCells.firstOrNull()?.let { cell ->
+                            put("cellId", cell.cid)
+                            put("lac", cell.lacTac)
+                            put("mcc", cell.mcc)
+                            put("mnc", cell.mnc)
+                            put("signalStrength", cell.signalStrength)
+                            put("networkType", cell.networkType.name)
+                            put("nearbyTowerCount", currentCells.size)
+                        }
+                    }.toString()
+
                     val alert = Alert(
                         timestamp = startTime,
                         threatType = result.threatType,
                         severity = severity,
                         confidence = result.confidence,
                         summary = result.summary,
-                        detailsJson = result.details.entries.joinToString(",") {
-                            "\"${it.key}\":\"${it.value}\""
-                        }.let { "{$it}" },
+                        detailsJson = detailsJson,
                         cellId = currentCells.firstOrNull()?.id,
                         acknowledged = false
                     )
