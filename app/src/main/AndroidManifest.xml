@@ -21,6 +21,13 @@
     <!-- Network state -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Internet: ONLY used for DNS/TLS/captive-portal integrity checks.
+         These checks connect to well-known public resolvers (1.1.1.1, 8.8.8.8, 9.9.9.9)
+         and HTTPS endpoints (Google, Cloudflare) to validate DNS responses and TLS
+         certificate chains. NO user data, device identifiers, or telemetry is ever
+         transmitted. See detection/network/ for implementation details. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Silent SMS detection -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
 
