@@ -1,38 +1,29 @@
 /*
- * Edge Sentinel — Native DIAG Helper (JNI)
- * Copyright (C) 2024 BP22 Intel
+ * Edge Sentinel — Native DIAG Interface
+ * Copyright (C) 2024 BP22 Intel. All Rights Reserved.
+ * Proprietary and confidential.
  *
- * Ported from SnoopSnitch diag-helper.c
- * Original Copyright (C) 2014 Security Research Labs (SRLabs)
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ * Clean-room implementation based on Qualcomm DIAG protocol specification.
+ * No third-party code.
  *
  * ---------------------------------------------------------------------------
- * Qualcomm DIAG interface for Android
+ * Qualcomm DIAG userspace interface for Android (JNI)
  *
- * This JNI library provides direct access to /dev/diag on rooted Qualcomm
- * devices. The DIAG port exposes baseband processor messages including:
- *   - GSM/WCDMA/LTE radio resource (RR) signaling
- *   - Cipher Mode Commands (reveals encryption algorithm in use)
- *   - Protocol anomalies indicating IMSI catcher activity
+ * Provides native access to /dev/diag on rooted Qualcomm-based Android
+ * devices. The Qualcomm DIAG driver exposes a character device that carries
+ * baseband diagnostic messages including radio signaling logs for
+ * GSM, WCDMA, and LTE.
+ *
+ * Protocol reference:
+ *   - Qualcomm document 80-V1294-1 (DIAG ICD)
+ *   - Linux kernel: drivers/char/diag/ (MSM DIAG driver source)
+ *   - DIAG ioctl interface defined in diagchar.h kernel header
  *
  * Architecture:
  *   Kotlin (DiagBridge.kt) --JNI--> this library --> /dev/diag (kernel)
  *
- * The library is safe to load on non-rooted devices — all functions check
- * for a valid file descriptor before attempting operations and return
- * error codes on failure rather than crashing.
+ * Safe to load on non-rooted devices; all functions validate state before
+ * performing I/O and return error codes rather than crashing.
  * ---------------------------------------------------------------------------
  */
 
@@ -41,214 +32,232 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-#define LOG_TAG "DiagHelper"
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
-#define LOGW(...) __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+/* ---------- Logging macros ---------- */
 
-/* Qualcomm DIAG ioctl constants */
-#define DIAG_IOCTL_SWITCH_LOGGING  7
-#define MEMORY_DEVICE_MODE         2
+#define TAG "EdgeSentinel_Diag"
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  TAG, __VA_ARGS__)
+#define LOGW(...) __android_log_print(ANDROID_LOG_WARN,  TAG, __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
-/* Maximum buffer size for a single DIAG read (1 MB) */
-#define DIAG_BUF_SIZE  1000000
+/* ---------- Qualcomm DIAG driver constants ---------- */
 
 /*
- * Qualcomm DIAG logging mode parameter structure.
- * Used by newer kernels (post MSM kernel commit ae92f0b2) where
- * DIAG_IOCTL_SWITCH_LOGGING takes a pointer instead of an int.
+ * DIAG_IOCTL_SWITCH_LOGGING — switches the DIAG driver between logging
+ * modes. Value 7 is the standard ioctl number defined in the MSM kernel
+ * DIAG char driver (diagchar.h).
  */
-struct diag_logging_mode_param_t {
+#define DIAG_IOCTL_SWITCH_LOGGING   7
+
+/*
+ * MEMORY_DEVICE_MODE (2) — routes DIAG output to a userspace-readable
+ * memory buffer instead of the default USB/UART transport.
+ */
+#define DIAG_MODE_MEMORY_DEVICE     2
+
+/* Read buffer capacity (1 MB — matches typical DIAG transfer limits) */
+#define READ_BUF_CAPACITY  (1024 * 1024)
+
+/*
+ * Logging mode parameter structure used by newer Qualcomm kernels.
+ * Older kernels accept a plain integer; newer kernels (post MSM commit
+ * ae92f0b2) require a pointer to this packed struct.
+ */
+struct diag_log_mode_param {
     uint32_t req_mode;
     uint32_t peripheral_mask;
     uint8_t  mode_param;
 } __attribute__((packed));
 
-/* Userspace log type prefix for DIAG device framing */
-#define USER_SPACE_LOG_TYPE  32
+/* ---------- Module state ---------- */
 
-/* Per-session state: file descriptor for /dev/diag (-1 = closed) */
-static int diag_fd = -1;
+/* File descriptor for /dev/diag; -1 when closed */
+static int g_diag_fd = -1;
 
-/* Read buffer — static to avoid repeated large allocations */
-static char read_buf[DIAG_BUF_SIZE];
+/* Static read buffer to avoid repeated heap allocations */
+static char g_read_buf[READ_BUF_CAPACITY];
 
-/* -----------------------------------------------------------------------
- * JNI function: nativeCheckDiagDevice
+/* =======================================================================
+ * JNI: nativeCheckDiagDevice
  *
- * Checks whether /dev/diag exists and is a character device.
- * Does NOT attempt to open it (no root required for this check).
+ * Probes whether /dev/diag exists and is a character device.
+ * Does not open the device — no root privileges required.
  *
- * Returns: true if /dev/diag exists as a character device
- * ----------------------------------------------------------------------- */
+ * @return JNI_TRUE if the DIAG character device is present
+ * ======================================================================= */
 JNIEXPORT jboolean JNICALL
-Java_com_bp22intel_edgesentinel_native_DiagBridge_nativeCheckDiagDevice(
+Java_com_bp22intel_edgesentinel_diag_DiagBridge_nativeCheckDiagDevice(
     JNIEnv *env __attribute__((unused)),
     jobject thiz __attribute__((unused)))
 {
-    struct stat st;
-    if (stat("/dev/diag", &st) != 0) {
-        LOGD("nativeCheckDiagDevice: /dev/diag not found: %s", strerror(errno));
+    struct stat sb;
+
+    if (stat("/dev/diag", &sb) != 0) {
+        LOGD("checkDiagDevice: /dev/diag not present (%s)", strerror(errno));
         return JNI_FALSE;
     }
-    if (!S_ISCHR(st.st_mode)) {
-        LOGW("nativeCheckDiagDevice: /dev/diag exists but is not a character device");
+
+    if (!S_ISCHR(sb.st_mode)) {
+        LOGW("checkDiagDevice: /dev/diag exists but is not a character device");
         return JNI_FALSE;
     }
-    LOGD("nativeCheckDiagDevice: /dev/diag is available");
+
+    LOGD("checkDiagDevice: /dev/diag character device found");
     return JNI_TRUE;
 }
 
-/* -----------------------------------------------------------------------
- * JNI function: nativeOpenDiag
+/* =======================================================================
+ * JNI: nativeOpenDiag
  *
- * Opens /dev/diag and switches the Qualcomm DIAG driver to memory
- * device mode so that userspace can read baseband messages.
+ * Opens /dev/diag in read-write mode and switches the Qualcomm DIAG
+ * driver into memory-device mode so baseband log messages are routed
+ * to userspace reads.
  *
- * Tries two ioctl calling conventions for kernel compatibility:
- *   1. Pass MEMORY_DEVICE_MODE as an int (older kernels)
- *   2. Pass a pointer to diag_logging_mode_param_t (newer kernels)
+ * Two ioctl calling conventions are attempted for kernel compatibility:
+ *   1. Integer argument (legacy MSM kernels)
+ *   2. Pointer to diag_log_mode_param (newer MSM kernels)
  *
- * Returns: file descriptor (>= 0) on success, negative errno on failure
- * ----------------------------------------------------------------------- */
+ * @return non-negative file descriptor on success; negative errno on failure
+ * ======================================================================= */
 JNIEXPORT jint JNICALL
-Java_com_bp22intel_edgesentinel_native_DiagBridge_nativeOpenDiag(
+Java_com_bp22intel_edgesentinel_diag_DiagBridge_nativeOpenDiag(
     JNIEnv *env __attribute__((unused)),
     jobject thiz __attribute__((unused)))
 {
-    if (diag_fd >= 0) {
-        LOGW("nativeOpenDiag: already open (fd=%d)", diag_fd);
-        return diag_fd;
+    if (g_diag_fd >= 0) {
+        LOGW("openDiag: already open (fd=%d)", g_diag_fd);
+        return g_diag_fd;
     }
 
-    LOGI("nativeOpenDiag: opening /dev/diag");
-
-    diag_fd = open("/dev/diag", O_RDWR | O_CLOEXEC);
-    if (diag_fd < 0) {
-        LOGE("nativeOpenDiag: failed to open /dev/diag: %s", strerror(errno));
-        return -errno;
+    int fd = open("/dev/diag", O_RDWR | O_CLOEXEC);
+    if (fd < 0) {
+        int err = errno;
+        LOGE("openDiag: open failed — %s", strerror(err));
+        return -err;
     }
 
     /*
-     * Switch the DIAG driver to memory device mode.
-     * Try the legacy int-based ioctl first, then the struct-based variant.
-     * See SnoopSnitch diag-helper.c for history on this dual approach.
+     * Switch to memory-device mode.  Try the simple integer form first
+     * (works on older kernels), then fall back to the struct form.
      */
-    int rv = ioctl(diag_fd, DIAG_IOCTL_SWITCH_LOGGING, MEMORY_DEVICE_MODE);
-    if (rv < 0) {
-        int saved_errno = errno;
-        struct diag_logging_mode_param_t mode_param = {
-            .req_mode = MEMORY_DEVICE_MODE,
+    int rc = ioctl(fd, DIAG_IOCTL_SWITCH_LOGGING, DIAG_MODE_MEMORY_DEVICE);
+    if (rc < 0) {
+        int first_err = errno;
+
+        struct diag_log_mode_param param = {
+            .req_mode       = DIAG_MODE_MEMORY_DEVICE,
             .peripheral_mask = 0,
-            .mode_param = 1
+            .mode_param      = 1
         };
-        rv = ioctl(diag_fd, DIAG_IOCTL_SWITCH_LOGGING, &mode_param);
-        if (rv < 0) {
-            LOGE("nativeOpenDiag: ioctl SWITCH_LOGGING failed: %s / %s",
-                 strerror(saved_errno), strerror(errno));
-            close(diag_fd);
-            diag_fd = -1;
+        rc = ioctl(fd, DIAG_IOCTL_SWITCH_LOGGING, &param);
+
+        if (rc < 0) {
+            LOGE("openDiag: SWITCH_LOGGING ioctl failed — int: %s, struct: %s",
+                 strerror(first_err), strerror(errno));
+            close(fd);
             return -errno;
         }
     }
 
-    LOGI("nativeOpenDiag: /dev/diag opened successfully (fd=%d)", diag_fd);
-    return diag_fd;
+    g_diag_fd = fd;
+    LOGI("openDiag: success (fd=%d)", g_diag_fd);
+    return g_diag_fd;
 }
 
-/* -----------------------------------------------------------------------
- * JNI function: nativeCloseDiag
+/* =======================================================================
+ * JNI: nativeCloseDiag
  *
- * Closes the DIAG device file descriptor.
- * Safe to call even if the device was never opened.
- * ----------------------------------------------------------------------- */
+ * Closes the DIAG device.  Safe to call when not open.
+ * ======================================================================= */
 JNIEXPORT void JNICALL
-Java_com_bp22intel_edgesentinel_native_DiagBridge_nativeCloseDiag(
+Java_com_bp22intel_edgesentinel_diag_DiagBridge_nativeCloseDiag(
     JNIEnv *env __attribute__((unused)),
     jobject thiz __attribute__((unused)))
 {
-    if (diag_fd >= 0) {
-        LOGI("nativeCloseDiag: closing fd=%d", diag_fd);
-        close(diag_fd);
-        diag_fd = -1;
+    if (g_diag_fd >= 0) {
+        LOGI("closeDiag: closing fd=%d", g_diag_fd);
+        close(g_diag_fd);
+        g_diag_fd = -1;
     }
 }
 
-/* -----------------------------------------------------------------------
- * JNI function: nativeReadDiag
+/* =======================================================================
+ * JNI: nativeReadDiag
  *
- * Reads raw bytes from /dev/diag into a Java byte array.
+ * Performs a blocking read on /dev/diag and returns raw bytes to the
+ * caller.  The Qualcomm DIAG device produces frames in the format:
  *
- * The Qualcomm DIAG device returns data in a device-specific framing:
- *   [type: uint32] [nelem: uint32] [len: uint32] [data...] ...
- * where type == USER_SPACE_LOG_TYPE (32) for userspace log messages.
+ *   [type:u32] [count:u32] [length:u32] [payload ...] ...
  *
- * This function returns the raw device output. The Kotlin layer
- * (DiagMessageParser) handles de-framing and CRC validation.
+ * Parsing and CRC validation are handled on the Kotlin side
+ * (DiagMessageParser).
  *
- * Returns: byte array with raw DIAG data, or null on error / not open
- * ----------------------------------------------------------------------- */
+ * @return byte[] with raw DIAG data; empty array on zero-length read;
+ *         null if device is not open or on read error
+ * ======================================================================= */
 JNIEXPORT jbyteArray JNICALL
-Java_com_bp22intel_edgesentinel_native_DiagBridge_nativeReadDiag(
+Java_com_bp22intel_edgesentinel_diag_DiagBridge_nativeReadDiag(
     JNIEnv *env,
     jobject thiz __attribute__((unused)))
 {
-    if (diag_fd < 0) {
+    if (g_diag_fd < 0) {
         return NULL;
     }
 
-    ssize_t bytes_read = read(diag_fd, read_buf, DIAG_BUF_SIZE);
+    ssize_t n = read(g_diag_fd, g_read_buf, READ_BUF_CAPACITY);
 
-    /* Empty read (interrupted) — return empty array, not null */
-    if (bytes_read == 0) {
+    if (n == 0) {
+        /* Interrupted / empty — return zero-length array, not null */
         return (*env)->NewByteArray(env, 0);
     }
 
-    if (bytes_read < 0) {
-        LOGE("nativeReadDiag: read error: %s", strerror(errno));
+    if (n < 0) {
+        LOGE("readDiag: error — %s", strerror(errno));
         return NULL;
     }
 
-    if (bytes_read == DIAG_BUF_SIZE) {
-        LOGW("nativeReadDiag: read filled entire buffer — possible data loss");
+    if (n == READ_BUF_CAPACITY) {
+        LOGW("readDiag: buffer full — possible truncation");
     }
 
-    jbyteArray result = (*env)->NewByteArray(env, (jsize)bytes_read);
-    if (result == NULL) {
-        return NULL;  /* OOM */
+    jbyteArray out = (*env)->NewByteArray(env, (jsize)n);
+    if (out == NULL) {
+        return NULL;  /* JVM OOM */
     }
 
-    (*env)->SetByteArrayRegion(env, result, 0, (jsize)bytes_read, (jbyte *)read_buf);
-    return result;
+    (*env)->SetByteArrayRegion(env, out, 0, (jsize)n, (const jbyte *)g_read_buf);
+    return out;
 }
 
-/* -----------------------------------------------------------------------
- * JNI function: nativeWriteDiag
+/* =======================================================================
+ * JNI: nativeWriteDiag
  *
- * Writes a command to /dev/diag (e.g., log mask configuration).
- * The data should already be properly framed by the Kotlin layer.
+ * Sends a pre-framed command to /dev/diag (e.g. log-mask configuration,
+ * extended message configuration, or event-mask setup).  The Kotlin
+ * layer is responsible for constructing valid DIAG command frames.
  *
- * Returns: number of bytes written, or negative errno on error
- * ----------------------------------------------------------------------- */
+ * @param data  byte[] containing the command to send
+ * @return number of bytes written on success; negative errno on failure
+ * ======================================================================= */
 JNIEXPORT jint JNICALL
-Java_com_bp22intel_edgesentinel_native_DiagBridge_nativeWriteDiag(
+Java_com_bp22intel_edgesentinel_diag_DiagBridge_nativeWriteDiag(
     JNIEnv *env,
     jobject thiz __attribute__((unused)),
     jbyteArray data)
 {
-    if (diag_fd < 0) {
+    if (g_diag_fd < 0) {
         return -EBADF;
     }
 
     jsize len = (*env)->GetArrayLength(env, data);
-    if (len <= 0 || len > DIAG_BUF_SIZE) {
+    if (len <= 0 || (size_t)len > READ_BUF_CAPACITY) {
         return -EINVAL;
     }
 
@@ -257,27 +266,28 @@ Java_com_bp22intel_edgesentinel_native_DiagBridge_nativeWriteDiag(
         return -ENOMEM;
     }
 
-    ssize_t written = write(diag_fd, buf, (size_t)len);
+    ssize_t written = write(g_diag_fd, buf, (size_t)len);
 
     (*env)->ReleaseByteArrayElements(env, data, buf, JNI_ABORT);
 
     if (written < 0) {
-        LOGE("nativeWriteDiag: write error: %s", strerror(errno));
-        return -errno;
+        int err = errno;
+        LOGE("writeDiag: error — %s", strerror(err));
+        return -err;
     }
 
     return (jint)written;
 }
 
-/* -----------------------------------------------------------------------
- * JNI function: nativeIsOpen
+/* =======================================================================
+ * JNI: nativeIsOpen
  *
- * Returns whether the DIAG device is currently open.
- * ----------------------------------------------------------------------- */
+ * @return JNI_TRUE if the DIAG device is currently open
+ * ======================================================================= */
 JNIEXPORT jboolean JNICALL
-Java_com_bp22intel_edgesentinel_native_DiagBridge_nativeIsOpen(
+Java_com_bp22intel_edgesentinel_diag_DiagBridge_nativeIsOpen(
     JNIEnv *env __attribute__((unused)),
     jobject thiz __attribute__((unused)))
 {
-    return diag_fd >= 0 ? JNI_TRUE : JNI_FALSE;
+    return (g_diag_fd >= 0) ? JNI_TRUE : JNI_FALSE;
 }

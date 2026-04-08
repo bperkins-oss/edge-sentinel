@@ -1,19 +1,11 @@
 /*
  * Edge Sentinel — Cellular Threat Detection for Android
- * Copyright (C) 2024 BP22 Intel
+ * Copyright (C) 2024-2026 BP22 Intel. All Rights Reserved.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ * This software is proprietary and confidential. Unauthorized copying,
+ * modification, distribution, or use of this software, in whole or in
+ * part, is strictly prohibited without prior written permission from
+ * BP22 Intel.
  */
 
 package com.bp22intel.edgesentinel.detection.detectors
@@ -25,7 +17,7 @@ import com.bp22intel.edgesentinel.domain.model.NetworkType
  * Known 5G NR attack patterns and heuristics for detecting fake gNodeBs,
  * downgrade attacks, bidding-down attacks, and other NR-specific threats.
  *
- * These patterns are original to Edge Sentinel — SnoopSnitch has no 5G support.
+ * Original Edge Sentinel 5G NR anomaly patterns.
  */
 object NrAnomalyPatterns {
 

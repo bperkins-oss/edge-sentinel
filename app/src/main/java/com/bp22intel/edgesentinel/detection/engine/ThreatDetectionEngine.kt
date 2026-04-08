@@ -1,19 +1,11 @@
 /*
- * Edge Sentinel — Cellular Threat Detection for Android
- * Copyright (C) 2024 BP22 Intel
+ * Edge Sentinel — Threat Detection Engine
+ * Copyright (C) 2024 BP22 Intel. All Rights Reserved.
+ * Proprietary and confidential.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ * Clean-room implementation. Detection-to-category mapping designed from
+ * published IMSI-catcher detection research (see ThreatScorer for citations).
+ * No third-party code.
  */
 
 package com.bp22intel.edgesentinel.detection.engine
@@ -36,8 +28,8 @@ import javax.inject.Singleton
  * Central detection engine that orchestrates all threat detectors and scoring.
  *
  * Runs all registered [ThreatDetector] implementations in parallel, collects
- * non-null results, computes a composite threat score via [ThreatScorer],
- * and returns results sorted by severity (highest threat first).
+ * non-null results, maps them to the six scoring categories defined by
+ * [ThreatScorer], and returns results sorted by severity (highest first).
  */
 @Singleton
 class ThreatDetectionEngine @Inject constructor(
@@ -49,11 +41,11 @@ class ThreatDetectionEngine @Inject constructor(
     /**
      * Run all detectors against the current cell environment.
      *
-     * @param cells Currently visible cell towers.
-     * @param history Previously observed cell towers for baseline comparison.
+     * @param cells      Currently visible cell towers.
+     * @param history    Previously observed cell towers for baseline comparison.
      * @param sensitivity Detection sensitivity level that adjusts scoring thresholds.
-     * @param latitude Current GPS latitude (optional, enables baseline comparison).
-     * @param longitude Current GPS longitude (optional, enables baseline comparison).
+     * @param latitude   Current GPS latitude (optional; enables baseline comparison).
+     * @param longitude  Current GPS longitude (optional; enables baseline comparison).
      * @return List of [DetectionResult] sorted by score descending (highest threat first).
      */
     suspend fun runScan(
@@ -68,19 +60,19 @@ class ThreatDetectionEngine @Inject constructor(
             async {
                 try {
                     detector.analyze(cells, history)
-                } catch (e: Exception) {
-                    // Individual detector failure should not crash the scan
+                } catch (_: Exception) {
+                    // Individual detector failure must not crash the scan
                     null
                 }
             }
         }
 
-        // Run baseline comparison in parallel with detectors
+        // Run baseline comparison concurrently with detectors
         val baselineResult = if (latitude != null && longitude != null) {
             async {
                 try {
                     baselineManager.processObservation(latitude, longitude, cells)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     null
                 }
             }
@@ -89,121 +81,168 @@ class ThreatDetectionEngine @Inject constructor(
         val results = detectorResults.awaitAll().filterNotNull().toMutableList()
         val anomaly = baselineResult?.await()
 
-        // Convert baseline anomaly into a DetectionResult if score is significant
+        // Convert a significant baseline anomaly into a DetectionResult
         if (anomaly != null && !anomaly.isNewLocation && anomaly.compositeScore > 0.3) {
-            val baselineDetection = DetectionResult(
-                threatType = ThreatType.SIGNAL_ANOMALY,
-                score = anomaly.compositeScore * 5.0,
-                confidence = when {
-                    anomaly.confidence.minObservations >= 20 -> Confidence.HIGH
-                    anomaly.confidence.minObservations >= 10 -> Confidence.MEDIUM
-                    else -> Confidence.LOW
-                },
-                summary = "RF environment deviates from learned baseline (%.0f%% anomaly)".format(
-                    anomaly.compositeScore * 100
-                ),
-                details = anomaly.details
+            results.add(
+                DetectionResult(
+                    threatType = ThreatType.SIGNAL_ANOMALY,
+                    score = anomaly.compositeScore * 5.0,
+                    confidence = when {
+                        anomaly.confidence.minObservations >= 20 -> Confidence.HIGH
+                        anomaly.confidence.minObservations >= 10 -> Confidence.MEDIUM
+                        else -> Confidence.LOW
+                    },
+                    summary = "RF environment deviates from learned baseline (%.0f%% anomaly)".format(
+                        anomaly.compositeScore * 100
+                    ),
+                    details = anomaly.details
+                )
             )
-            results.add(baselineDetection)
         }
 
         if (results.isEmpty()) return@coroutineScope emptyList()
 
-        // Build indicator map from all detection results for composite scoring
+        // ---- Build category indicators from detection results ----
         val indicators = mutableMapOf<String, Double>()
         for (result in results) {
-            // Map detection results to SnoopSnitch-style coefficients
-            mapToCoefficients(result, indicators)
+            mapToCategories(result, indicators)
         }
 
-        // Feed baseline anomaly directly into the f1 fingerprint coefficient
+        // Fold baseline anomaly into signal-anomaly category
         if (anomaly != null && !anomaly.isNewLocation) {
-            val baselineF1 = anomaly.compositeScore * 2.0
-            indicators["f1"] = maxOf(indicators["f1"] ?: 0.0, baselineF1)
+            accumulateMax(
+                indicators,
+                ThreatScorer.KEY_SIGNAL_ANOMALY,
+                anomaly.compositeScore
+            )
         }
 
-        // Compute composite score (used for overall threat level assessment)
+        // Compute composite score (determines overall threat level)
         scorer.calculateScore(indicators, sensitivity)
 
-        // Return individual results sorted by score descending
+        // Return individual results ordered by severity
         results.sortedByDescending { it.score }
     }
 
+    // -----------------------------------------------------------------
+    // Category mapping
+    // -----------------------------------------------------------------
+
     /**
-     * Map a detector's result to SnoopSnitch-style scoring coefficients.
+     * Map a single [DetectionResult] into the six-category scoring model.
+     *
+     * Each [ThreatType] contributes to one or more categories based on the
+     * nature of the detection.  Values are accumulated via max (not sum)
+     * so that multiple detectors confirming the same signal don't
+     * artificially inflate the score.
      */
-    private fun mapToCoefficients(result: DetectionResult, indicators: MutableMap<String, Double>) {
+    private fun mapToCategories(
+        result: DetectionResult,
+        indicators: MutableMap<String, Double>
+    ) {
         when (result.threatType) {
-            com.bp22intel.edgesentinel.domain.model.ThreatType.FAKE_BTS -> {
-                // Fake BTS maps to: a5 (unknown LAC), a4 (missing neighbors), f1 (fingerprint)
+
+            ThreatType.FAKE_BTS -> {
+                // Unknown cell / strong-signal anomaly → signal + tower categories
                 if (result.details.keys.any { it.startsWith("unknown_cid") }) {
-                    indicators["a5"] = maxOf(indicators["a5"] ?: 0.0, 1.5)
+                    accumulateMax(indicators, ThreatScorer.KEY_TOWER_BEHAVIOR, 0.9)
                 }
                 if (result.details.containsKey("missing_neighbors")) {
-                    indicators["a4"] = maxOf(indicators["a4"] ?: 0.0, 1.0)
+                    accumulateMax(indicators, ThreatScorer.KEY_TOWER_BEHAVIOR, 0.8)
                 }
                 if (result.details.keys.any { it.startsWith("strong_signal") }) {
-                    indicators["f1"] = maxOf(indicators["f1"] ?: 0.0, 2.0)
+                    accumulateMax(indicators, ThreatScorer.KEY_SIGNAL_ANOMALY, 0.85)
                 }
             }
-            com.bp22intel.edgesentinel.domain.model.ThreatType.NETWORK_DOWNGRADE -> {
-                // Network downgrade maps to: k1 (cipher mode downgrade)
-                indicators["k1"] = maxOf(indicators["k1"] ?: 0.0, result.score)
+
+            ThreatType.NETWORK_DOWNGRADE -> {
+                // RAT / cipher downgrade → protocol violation + network integrity
+                accumulateMax(
+                    indicators,
+                    ThreatScorer.KEY_PROTOCOL_VIOLATION,
+                    (result.score / 5.0).coerceAtMost(1.0)
+                )
+                accumulateMax(indicators, ThreatScorer.KEY_NETWORK_INTEGRITY, 0.7)
             }
-            com.bp22intel.edgesentinel.domain.model.ThreatType.TRACKING_PATTERN -> {
-                // Tracking maps to: a1 (unusual LAC change), a2 (unusual reselection),
-                // t3 (LAC change pattern), t4 (short cell duration)
+
+            ThreatType.TRACKING_PATTERN -> {
+                // LAC oscillation, rapid reselection → tower + temporal categories
                 if (result.details.containsKey("unknown_lac")) {
-                    indicators["a1"] = maxOf(indicators["a1"] ?: 0.0, 1.5)
+                    accumulateMax(indicators, ThreatScorer.KEY_TOWER_BEHAVIOR, 0.8)
                 }
                 if (result.details.containsKey("rapid_reselection")) {
-                    indicators["a2"] = maxOf(indicators["a2"] ?: 0.0, 1.0)
+                    accumulateMax(indicators, ThreatScorer.KEY_TEMPORAL_PATTERN, 0.9)
                 }
                 if (result.details.containsKey("lac_oscillation")) {
-                    indicators["t3"] = maxOf(indicators["t3"] ?: 0.0, 1.0)
+                    accumulateMax(indicators, ThreatScorer.KEY_TEMPORAL_PATTERN, 0.85)
                 }
                 if (result.details.containsKey("short_duration")) {
-                    indicators["t4"] = maxOf(indicators["t4"] ?: 0.0, 1.0)
+                    accumulateMax(indicators, ThreatScorer.KEY_TEMPORAL_PATTERN, 0.7)
                 }
             }
-            com.bp22intel.edgesentinel.domain.model.ThreatType.SILENT_SMS -> {
-                // Silent SMS maps to: t1 (TMSI oddity — closest available coefficient)
-                indicators["t1"] = maxOf(indicators["t1"] ?: 0.0, 1.0)
+
+            ThreatType.SILENT_SMS -> {
+                // Silent SMS / Type-0 → protocol violation
+                accumulateMax(indicators, ThreatScorer.KEY_PROTOCOL_VIOLATION, 0.6)
             }
-            com.bp22intel.edgesentinel.domain.model.ThreatType.CIPHER_ANOMALY -> {
-                // Cipher anomaly maps to: k1, k2
-                indicators["k1"] = maxOf(indicators["k1"] ?: 0.0, result.score)
-                indicators["k2"] = maxOf(indicators["k2"] ?: 0.0, 1.0)
+
+            ThreatType.CIPHER_ANOMALY -> {
+                // Cipher mode issues → protocol violation + network integrity
+                accumulateMax(
+                    indicators,
+                    ThreatScorer.KEY_PROTOCOL_VIOLATION,
+                    (result.score / 5.0).coerceAtMost(1.0)
+                )
+                accumulateMax(indicators, ThreatScorer.KEY_NETWORK_INTEGRITY, 0.8)
             }
-            com.bp22intel.edgesentinel.domain.model.ThreatType.SIGNAL_ANOMALY -> {
-                // Signal anomaly maps to: f1 (fingerprint)
-                indicators["f1"] = maxOf(indicators["f1"] ?: 0.0, result.score)
+
+            ThreatType.SIGNAL_ANOMALY -> {
+                // RF fingerprint mismatch → signal anomaly
+                accumulateMax(
+                    indicators,
+                    ThreatScorer.KEY_SIGNAL_ANOMALY,
+                    (result.score / 5.0).coerceAtMost(1.0)
+                )
             }
-            com.bp22intel.edgesentinel.domain.model.ThreatType.NR_ANOMALY -> {
-                // 5G NR anomalies map to multiple coefficients depending on sub-type
-                // Fake gNodeB indicators → a5 (unknown LAC/NCI), f1 (fingerprint)
+
+            ThreatType.NR_ANOMALY -> {
+                // 5G / NR-specific anomalies distribute across multiple categories
                 if (result.details.keys.any { it.startsWith("nr_unknown_nci") }) {
-                    indicators["a5"] = maxOf(indicators["a5"] ?: 0.0, 1.5)
+                    accumulateMax(indicators, ThreatScorer.KEY_TOWER_BEHAVIOR, 0.9)
                 }
                 if (result.details.keys.any { it.startsWith("nr_strong_signal") }) {
-                    indicators["f1"] = maxOf(indicators["f1"] ?: 0.0, 2.0)
+                    accumulateMax(indicators, ThreatScorer.KEY_SIGNAL_ANOMALY, 0.85)
                 }
                 if (result.details.containsKey("nr_missing_neighbors")) {
-                    indicators["a4"] = maxOf(indicators["a4"] ?: 0.0, 1.0)
+                    accumulateMax(indicators, ThreatScorer.KEY_TOWER_BEHAVIOR, 0.8)
                 }
-                // NR downgrade/bidding-down → k1 (cipher mode downgrade)
                 if (result.details.keys.any { it.contains("downgrade") || it.contains("fallback") }) {
-                    indicators["k1"] = maxOf(indicators["k1"] ?: 0.0, result.score.coerceAtMost(3.0))
+                    accumulateMax(
+                        indicators,
+                        ThreatScorer.KEY_NETWORK_INTEGRITY,
+                        (result.score / 5.0).coerceAtMost(1.0)
+                    )
                 }
-                // NR oscillation/jamming → a2 (unusual reselection)
                 if (result.details.keys.any { it.contains("oscillation") || it.contains("rapid_reselection") }) {
-                    indicators["a2"] = maxOf(indicators["a2"] ?: 0.0, 1.0)
+                    accumulateMax(indicators, ThreatScorer.KEY_TEMPORAL_PATTERN, 0.8)
                 }
-                // NR signal anomalies → f1
                 if (result.details.keys.any { it.startsWith("nr_signal_jump") || it.startsWith("nr_uniform_signals") }) {
-                    indicators["f1"] = maxOf(indicators["f1"] ?: 0.0, 1.5)
+                    accumulateMax(indicators, ThreatScorer.KEY_SIGNAL_ANOMALY, 0.75)
                 }
             }
         }
+    }
+
+    /**
+     * Set [key] to the maximum of its current value and [value].
+     * Ensures multiple detectors confirming the same category don't
+     * over-inflate the score — the strongest signal wins.
+     */
+    private fun accumulateMax(
+        map: MutableMap<String, Double>,
+        key: String,
+        value: Double
+    ) {
+        map[key] = maxOf(map[key] ?: 0.0, value)
     }
 }

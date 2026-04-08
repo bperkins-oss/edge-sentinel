@@ -1,18 +1,6 @@
 # ninja log v5
-0	20	1775652739054082378	CMakeFiles/diag-helper.dir/diag-helper.c.o	e44335ec7c74d383
-21	42	1775652739072656002	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/arm64-v8a/libdiag-helper.so	90c30d20d79a0d60
-0	1	0	clean	7ecfdc8219fe1d11
-0	20	1775652844678711206	CMakeFiles/diag-helper.dir/diag-helper.c.o	e44335ec7c74d383
-20	47	1775652844709322705	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/arm64-v8a/libdiag-helper.so	90c30d20d79a0d60
-0	1	0	clean	7ecfdc8219fe1d11
-0	1092	1775653984516595192	CMakeFiles/diag-helper.dir/diag-helper.c.o	e44335ec7c74d383
-1092	1180	1775653984603834334	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/arm64-v8a/libdiag-helper.so	90c30d20d79a0d60
-0	1	0	clean	7ecfdc8219fe1d11
-0	24	1775654027993238628	CMakeFiles/diag-helper.dir/diag-helper.c.o	e44335ec7c74d383
-24	44	1775654028011540546	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/arm64-v8a/libdiag-helper.so	90c30d20d79a0d60
-0	2	0	clean	7ecfdc8219fe1d11
-0	24	1775654181821251776	CMakeFiles/diag-helper.dir/diag-helper.c.o	e44335ec7c74d383
-24	47	1775654181845044270	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/arm64-v8a/libdiag-helper.so	90c30d20d79a0d60
-0	1	0	clean	7ecfdc8219fe1d11
-0	199	1775666335834563638	CMakeFiles/diag-helper.dir/diag-helper.c.o	e44335ec7c74d383
 199	296	1775666335930881790	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/arm64-v8a/libdiag-helper.so	90c30d20d79a0d60
+0	199	1775666335834563638	CMakeFiles/diag-helper.dir/diag-helper.c.o	e44335ec7c74d383
+0	1	0	clean	7ecfdc8219fe1d11
+0	145	1775678873587797283	CMakeFiles/diag-helper.dir/diag-helper.c.o	e44335ec7c74d383
+145	231	1775678873673609856	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/arm64-v8a/libdiag-helper.so	90c30d20d79a0d60

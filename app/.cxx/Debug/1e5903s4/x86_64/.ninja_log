@@ -1,18 +1,6 @@
 # ninja log v5
-0	20	1775652739462702152	CMakeFiles/diag-helper.dir/diag-helper.c.o	d3ddabea96d4648a
-20	45	1775652739484990503	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86_64/libdiag-helper.so	f1d991680d7359be
-0	1	0	clean	7ecfdc8219fe1d11
-1	19	1775652844858553769	CMakeFiles/diag-helper.dir/diag-helper.c.o	d3ddabea96d4648a
-20	39	1775652844881512393	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86_64/libdiag-helper.so	f1d991680d7359be
-0	2	0	clean	7ecfdc8219fe1d11
-0	27	1775653984774347204	CMakeFiles/diag-helper.dir/diag-helper.c.o	d3ddabea96d4648a
-27	51	1775653984798139698	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86_64/libdiag-helper.so	f1d991680d7359be
-0	1	0	clean	7ecfdc8219fe1d11
-0	19	1775654028143314355	CMakeFiles/diag-helper.dir/diag-helper.c.o	d3ddabea96d4648a
-19	41	1775654028168937040	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86_64/libdiag-helper.so	f1d991680d7359be
-0	1	0	clean	7ecfdc8219fe1d11
-0	21	1775654181991764647	CMakeFiles/diag-helper.dir/diag-helper.c.o	d3ddabea96d4648a
-21	47	1775654182015557140	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86_64/libdiag-helper.so	f1d991680d7359be
-0	1	0	clean	7ecfdc8219fe1d11
-0	21	1775666336111305967	CMakeFiles/diag-helper.dir/diag-helper.c.o	d3ddabea96d4648a
 21	52	1775666336139353743	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86_64/libdiag-helper.so	f1d991680d7359be
+0	21	1775666336111305967	CMakeFiles/diag-helper.dir/diag-helper.c.o	d3ddabea96d4648a
+0	1	0	clean	7ecfdc8219fe1d11
+0	20	1775678873923246430	CMakeFiles/diag-helper.dir/diag-helper.c.o	d3ddabea96d4648a
+20	43	1775678873946649858	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86_64/libdiag-helper.so	f1d991680d7359be

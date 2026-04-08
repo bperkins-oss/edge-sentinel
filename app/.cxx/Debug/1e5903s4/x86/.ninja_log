@@ -1,18 +1,6 @@
 # ninja log v5
-0	18	1775652739332686769	CMakeFiles/diag-helper.dir/diag-helper.c.o	1f467c4384438727
-18	37	1775652739354975120	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86/libdiag-helper.so	2dbd09d147d865c4
-0	1	0	clean	7ecfdc8219fe1d11
-0	17	1775652844804983644	CMakeFiles/diag-helper.dir/diag-helper.c.o	1f467c4384438727
-17	37	1775652844824115831	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86/libdiag-helper.so	2dbd09d147d865c4
-0	2	0	clean	7ecfdc8219fe1d11
-1	26	1775653984706935140	CMakeFiles/diag-helper.dir/diag-helper.c.o	1f467c4384438727
-26	50	1775653984730727632	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86/libdiag-helper.so	2dbd09d147d865c4
-0	1	0	clean	7ecfdc8219fe1d11
-0	18	1775654028092068984	CMakeFiles/diag-helper.dir/diag-helper.c.o	1f467c4384438727
-18	37	1775654028110370902	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86/libdiag-helper.so	2dbd09d147d865c4
-0	1	0	clean	7ecfdc8219fe1d11
-0	19	1775654181932283413	CMakeFiles/diag-helper.dir/diag-helper.c.o	1f467c4384438727
-19	41	1775654181956075906	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86/libdiag-helper.so	2dbd09d147d865c4
-0	1	0	clean	7ecfdc8219fe1d11
-0	28	1775666336051203591	CMakeFiles/diag-helper.dir/diag-helper.c.o	1f467c4384438727
 28	53	1775666336075244541	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86/libdiag-helper.so	2dbd09d147d865c4
+0	28	1775666336051203591	CMakeFiles/diag-helper.dir/diag-helper.c.o	1f467c4384438727
+0	1	0	clean	7ecfdc8219fe1d11
+0	27	1775678873841334430	CMakeFiles/diag-helper.dir/diag-helper.c.o	1f467c4384438727
+27	50	1775678873864737857	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86/libdiag-helper.so	2dbd09d147d865c4

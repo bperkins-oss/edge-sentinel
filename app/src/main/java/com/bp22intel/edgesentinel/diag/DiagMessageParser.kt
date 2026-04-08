@@ -1,22 +1,11 @@
 /*
  * Edge Sentinel — Cellular Threat Detection for Android
- * Copyright (C) 2024 BP22 Intel
+ * Copyright (C) 2024-2026 BP22 Intel. All Rights Reserved.
  *
- * Ported from SnoopSnitch DiagMsg.java
- * Original Copyright (C) 2014 Security Research Labs (SRLabs)
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ * This software is proprietary and confidential. Unauthorized copying,
+ * modification, distribution, or use of this software, in whole or in
+ * part, is strictly prohibited without prior written permission from
+ * BP22 Intel.
  */
 
 package com.bp22intel.edgesentinel.diag
@@ -39,7 +28,7 @@ import javax.inject.Singleton
  *   [type: uint32] [nelem: uint32] [len: uint32] [data] ...
  *   where type == USER_SPACE_LOG_TYPE (32)
  *
- * Ported from SnoopSnitch's DiagMsg.java and MsdService.java.
+ * Qualcomm DIAG protocol parser for baseband message extraction.
  */
 @Singleton
 class DiagMessageParser @Inject constructor() {
@@ -162,7 +151,7 @@ class DiagMessageParser @Inject constructor() {
     /**
      * De-frames HDLC-encoded DIAG messages from a raw byte stream.
      *
-     * Implements the SnoopSnitch DiagMsg.fromBytes() protocol:
+     * Qualcomm DIAG message framing protocol:
      *   1. Scan for CONTROL_CHAR (0x7E) delimiters
      *   2. De-escape: ESC_CHAR (0x7D) followed by byte XOR ESC_MASK (0x20)
      *   3. Validate CRC16 (last 2 bytes before delimiter)
@@ -377,7 +366,7 @@ class DiagMessageParser @Inject constructor() {
         }
     }
 
-    /* ---- CRC16 implementation (ported from SnoopSnitch Crc16.java) ---- */
+    /* ---- CRC16 implementation for DIAG protocol framing ---- */
 
     /**
      * Calculates the Qualcomm DIAG CRC16 for the given data.

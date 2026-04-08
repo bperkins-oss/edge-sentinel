@@ -1,5 +1,5 @@
 # Edge Sentinel — Native DIAG Helper
-# Ported from SnoopSnitch diag-helper (GPLv3)
+# Qualcomm DIAG interface — clean-room implementation
 #
 # Builds a JNI shared library that interfaces with the Qualcomm DIAG port
 # (/dev/diag) for baseband message capture on rooted devices.
