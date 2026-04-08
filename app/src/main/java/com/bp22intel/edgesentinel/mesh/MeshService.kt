@@ -66,7 +66,17 @@ class MeshService : Service() {
         private const val HEARTBEAT_INTERVAL_MS = 15_000L
 
         fun start(context: Context) {
-            context.startForegroundService(Intent(context, MeshService::class.java))
+            try {
+                context.startForegroundService(Intent(context, MeshService::class.java))
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not start foreground service: ${e.message}")
+                // Fallback: try regular service start
+                try {
+                    context.startService(Intent(context, MeshService::class.java))
+                } catch (e2: Exception) {
+                    Log.e(TAG, "Could not start service at all: ${e2.message}")
+                }
+            }
         }
 
         fun stop(context: Context) {
@@ -125,10 +135,16 @@ class MeshService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         try {
+            createNotificationChannel() // Ensure channel exists before startForeground
             startForeground(NOTIFICATION_ID, buildNotification())
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start foreground: ${e.message}", e)
+            // Still try to run without foreground (may get killed by OS)
+        }
+        try {
             startMesh()
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start foreground mesh service: ${e.message}", e)
+            Log.e(TAG, "Failed to start mesh: ${e.message}", e)
             stopSelf()
         }
         return START_STICKY
@@ -143,7 +159,13 @@ class MeshService : Service() {
     }
 
     private fun startMesh() {
-        discovery.startDiscovery()
+        try {
+            discovery.startDiscovery()
+        } catch (e: SecurityException) {
+            Log.w(TAG, "BLE permissions not granted, running in passive mode: ${e.message}")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to start BLE discovery: ${e.message}")
+        }
         _meshState.value = _meshState.value.copy(isActive = true)
 
         // Periodic peer pruning and state updates

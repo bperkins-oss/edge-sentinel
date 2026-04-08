@@ -10,8 +10,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.bp22intel.edgesentinel.debug"
-    android:versionCode="19"
-    android:versionName="2.0.19-debug" >
+    android:versionCode="20"
+    android:versionName="2.0.20-debug" >
 
     <uses-sdk
         android:minSdkVersion="26"
