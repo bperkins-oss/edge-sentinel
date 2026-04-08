@@ -64,7 +64,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.EdgeSentinel">
+            android:theme="@style/Theme.EdgeSentinel.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -80,6 +80,17 @@
             android:name=".mesh.MeshService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
+
+        <receiver
+            android:name=".widget.ThreatStatusWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/threat_status_widget_info" />
+        </receiver>
 
         <!-- Disable default WorkManager initialization (we use HiltWorkerFactory) -->
         <provider

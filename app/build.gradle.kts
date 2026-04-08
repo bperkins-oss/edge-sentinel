@@ -101,6 +101,13 @@ dependencies {
     // DataStore - Preferences
     implementation(libs.datastore.preferences)
 
+    // Splash Screen
+    implementation(libs.splashscreen)
+
+    // Glance - App Widgets
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.test.ext.junit)

@@ -88,7 +88,7 @@
         <activity
             android:name="com.bp22intel.edgesentinel.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.EdgeSentinel" >
+            android:theme="@style/Theme.EdgeSentinel.Splash" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -104,6 +104,18 @@
             android:name="com.bp22intel.edgesentinel.mesh.MeshService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
+
+        <receiver
+            android:name="com.bp22intel.edgesentinel.widget.ThreatStatusWidgetReceiver"
+            android:exported="true" >
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/threat_status_widget_info" />
+        </receiver>
 
         <!-- Disable default WorkManager initialization (we use HiltWorkerFactory) -->
         <provider
@@ -121,6 +133,42 @@
                 android:value="androidx.startup" />
         </provider>
 
+        <activity
+            android:name="androidx.glance.appwidget.action.ActionTrampolineActivity"
+            android:enabled="true"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@android:style/Theme.NoDisplay" />
+        <activity
+            android:name="androidx.glance.appwidget.action.InvisibleActionTrampolineActivity"
+            android:enabled="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:noHistory="true"
+            android:taskAffinity="androidx.glance.appwidget.ListAdapterCallbackTrampoline"
+            android:theme="@style/Widget.Glance.AppWidget.CallbackTrampoline" />
+
+        <receiver
+            android:name="androidx.glance.appwidget.action.ActionCallbackBroadcastReceiver"
+            android:enabled="true"
+            android:exported="false" />
+        <receiver
+            android:name="androidx.glance.appwidget.UnmanagedSessionReceiver"
+            android:enabled="true"
+            android:exported="false" />
+        <receiver
+            android:name="androidx.glance.appwidget.MyPackageReplacedReceiver"
+            android:enabled="true"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name="androidx.glance.appwidget.GlanceRemoteViewsService"
+            android:exported="true"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
         <service
             android:name="androidx.work.impl.background.systemalarm.SystemAlarmService"
             android:directBootAware="false"
@@ -212,6 +260,10 @@
                 <action android:name="androidx.work.diagnostics.REQUEST_DIAGNOSTICS" />
             </intent-filter>
         </receiver>
+
+        <service
+            android:name="androidx.core.widget.RemoteViewsCompatService"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
 
         <activity
             android:name="androidx.compose.ui.tooling.PreviewActivity"

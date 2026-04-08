@@ -11,6 +11,7 @@ import com.bp22intel.edgesentinel.ui.alerts.AlertDetailViewModel_HiltModules;
 import com.bp22intel.edgesentinel.ui.alerts.AlertsViewModel_HiltModules;
 import com.bp22intel.edgesentinel.ui.cellinfo.CellInfoViewModel_HiltModules;
 import com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel_HiltModules;
+import com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel_HiltModules;
 import com.bp22intel.edgesentinel.ui.settings.SettingsViewModel_HiltModules;
 import dagger.Binds;
 import dagger.Component;
@@ -177,6 +178,7 @@ public final class EdgeSentinelApp_HiltComponents {
           HiltWrapper_ActivityRetainedComponentManager_LifecycleModule.class,
           HiltWrapper_SavedStateHandleModule.class,
           MeshViewModel_HiltModules.KeyModule.class,
+          OnboardingViewModel_HiltModules.KeyModule.class,
           SettingsViewModel_HiltModules.KeyModule.class
       }
   )
@@ -219,6 +221,7 @@ public final class EdgeSentinelApp_HiltComponents {
           DashboardViewModel_HiltModules.BindsModule.class,
           HiltWrapper_HiltViewModelFactory_ViewModelModule.class,
           MeshViewModel_HiltModules.BindsModule.class,
+          OnboardingViewModel_HiltModules.BindsModule.class,
           SettingsViewModel_HiltModules.BindsModule.class
       }
   )

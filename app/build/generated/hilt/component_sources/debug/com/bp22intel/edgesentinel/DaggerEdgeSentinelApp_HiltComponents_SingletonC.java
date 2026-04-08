@@ -54,6 +54,8 @@ import com.bp22intel.edgesentinel.ui.cellinfo.CellInfoViewModel;
 import com.bp22intel.edgesentinel.ui.cellinfo.CellInfoViewModel_HiltModules;
 import com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel;
 import com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel_HiltModules;
+import com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel;
+import com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel_HiltModules;
 import com.bp22intel.edgesentinel.ui.settings.SettingsViewModel;
 import com.bp22intel.edgesentinel.ui.settings.SettingsViewModel_HiltModules;
 import dagger.hilt.android.ActivityRetainedLifecycle;
@@ -418,7 +420,7 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
 
     @Override
     public Map<Class<?>, Boolean> getViewModelKeys() {
-      return LazyClassKeyMap.<Boolean>of(MapBuilder.<String, Boolean>newMapBuilder(6).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel, AlertDetailViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel, AlertsViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel, CellInfoViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel, DashboardViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_mesh_MeshViewModel, MeshViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_settings_SettingsViewModel, SettingsViewModel_HiltModules.KeyModule.provide()).build());
+      return LazyClassKeyMap.<Boolean>of(MapBuilder.<String, Boolean>newMapBuilder(7).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel, AlertDetailViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel, AlertsViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel, CellInfoViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel, DashboardViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_mesh_MeshViewModel, MeshViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel, OnboardingViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_settings_SettingsViewModel, SettingsViewModel_HiltModules.KeyModule.provide()).build());
     }
 
     @Override
@@ -438,35 +440,40 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel = "com.bp22intel.edgesentinel.ui.cellinfo.CellInfoViewModel";
-
       static String com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertsViewModel";
-
-      static String com_bp22intel_edgesentinel_mesh_MeshViewModel = "com.bp22intel.edgesentinel.mesh.MeshViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel = "com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel";
 
       static String com_bp22intel_edgesentinel_ui_settings_SettingsViewModel = "com.bp22intel.edgesentinel.ui.settings.SettingsViewModel";
 
+      static String com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel = "com.bp22intel.edgesentinel.ui.cellinfo.CellInfoViewModel";
+
+      static String com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel = "com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel";
+
+      static String com_bp22intel_edgesentinel_mesh_MeshViewModel = "com.bp22intel.edgesentinel.mesh.MeshViewModel";
+
       static String com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertDetailViewModel";
 
-      @KeepFieldType
-      CellInfoViewModel com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel2;
+      static String com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel = "com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel";
 
       @KeepFieldType
       AlertsViewModel com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel2;
 
       @KeepFieldType
-      MeshViewModel com_bp22intel_edgesentinel_mesh_MeshViewModel2;
+      SettingsViewModel com_bp22intel_edgesentinel_ui_settings_SettingsViewModel2;
+
+      @KeepFieldType
+      CellInfoViewModel com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel2;
 
       @KeepFieldType
       DashboardViewModel com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel2;
 
       @KeepFieldType
-      SettingsViewModel com_bp22intel_edgesentinel_ui_settings_SettingsViewModel2;
+      MeshViewModel com_bp22intel_edgesentinel_mesh_MeshViewModel2;
 
       @KeepFieldType
       AlertDetailViewModel com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel2;
+
+      @KeepFieldType
+      OnboardingViewModel com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel2;
     }
   }
 
@@ -489,6 +496,8 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
 
     private Provider<MeshViewModel> meshViewModelProvider;
 
+    private Provider<OnboardingViewModel> onboardingViewModelProvider;
+
     private Provider<SettingsViewModel> settingsViewModelProvider;
 
     private ViewModelCImpl(SingletonCImpl singletonCImpl,
@@ -509,12 +518,13 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
       this.cellInfoViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 2);
       this.dashboardViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 3);
       this.meshViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 4);
-      this.settingsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 5);
+      this.onboardingViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 5);
+      this.settingsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 6);
     }
 
     @Override
     public Map<Class<?>, javax.inject.Provider<ViewModel>> getHiltViewModelMap() {
-      return LazyClassKeyMap.<javax.inject.Provider<ViewModel>>of(MapBuilder.<String, javax.inject.Provider<ViewModel>>newMapBuilder(6).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel, ((Provider) alertDetailViewModelProvider)).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel, ((Provider) alertsViewModelProvider)).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel, ((Provider) cellInfoViewModelProvider)).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel, ((Provider) dashboardViewModelProvider)).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_mesh_MeshViewModel, ((Provider) meshViewModelProvider)).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_settings_SettingsViewModel, ((Provider) settingsViewModelProvider)).build());
+      return LazyClassKeyMap.<javax.inject.Provider<ViewModel>>of(MapBuilder.<String, javax.inject.Provider<ViewModel>>newMapBuilder(7).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel, ((Provider) alertDetailViewModelProvider)).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel, ((Provider) alertsViewModelProvider)).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel, ((Provider) cellInfoViewModelProvider)).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel, ((Provider) dashboardViewModelProvider)).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_mesh_MeshViewModel, ((Provider) meshViewModelProvider)).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel, ((Provider) onboardingViewModelProvider)).put(LazyClassKeyProvider.com_bp22intel_edgesentinel_ui_settings_SettingsViewModel, ((Provider) settingsViewModelProvider)).build());
     }
 
     @Override
@@ -524,32 +534,37 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertsViewModel";
-
       static String com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel = "com.bp22intel.edgesentinel.ui.cellinfo.CellInfoViewModel";
-
-      static String com_bp22intel_edgesentinel_mesh_MeshViewModel = "com.bp22intel.edgesentinel.mesh.MeshViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertDetailViewModel";
 
       static String com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel = "com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel";
 
-      static String com_bp22intel_edgesentinel_ui_settings_SettingsViewModel = "com.bp22intel.edgesentinel.ui.settings.SettingsViewModel";
+      static String com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel = "com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel";
 
-      @KeepFieldType
-      AlertsViewModel com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel2;
+      static String com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertsViewModel";
+
+      static String com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertDetailViewModel";
+
+      static String com_bp22intel_edgesentinel_mesh_MeshViewModel = "com.bp22intel.edgesentinel.mesh.MeshViewModel";
+
+      static String com_bp22intel_edgesentinel_ui_settings_SettingsViewModel = "com.bp22intel.edgesentinel.ui.settings.SettingsViewModel";
 
       @KeepFieldType
       CellInfoViewModel com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel2;
 
       @KeepFieldType
-      MeshViewModel com_bp22intel_edgesentinel_mesh_MeshViewModel2;
+      DashboardViewModel com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel2;
+
+      @KeepFieldType
+      OnboardingViewModel com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel2;
+
+      @KeepFieldType
+      AlertsViewModel com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel2;
 
       @KeepFieldType
       AlertDetailViewModel com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel2;
 
       @KeepFieldType
-      DashboardViewModel com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel2;
+      MeshViewModel com_bp22intel_edgesentinel_mesh_MeshViewModel2;
 
       @KeepFieldType
       SettingsViewModel com_bp22intel_edgesentinel_ui_settings_SettingsViewModel2;
@@ -591,7 +606,10 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
           case 4: // com.bp22intel.edgesentinel.mesh.MeshViewModel 
           return (T) new MeshViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 5: // com.bp22intel.edgesentinel.ui.settings.SettingsViewModel 
+          case 5: // com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel 
+          return (T) new OnboardingViewModel(singletonCImpl.provideDataStoreProvider.get());
+
+          case 6: // com.bp22intel.edgesentinel.ui.settings.SettingsViewModel 
           return (T) new SettingsViewModel(singletonCImpl.provideDataStoreProvider.get());
 
           default: throw new AssertionError(id);

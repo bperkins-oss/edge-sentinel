@@ -21,6 +21,7 @@ package com.bp22intel.edgesentinel
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.bp22intel.edgesentinel.notification.NotificationChannels
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -34,4 +35,9 @@ class EdgeSentinelApp : Application(), Configuration.Provider {
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
             .build()
+
+    override fun onCreate() {
+        super.onCreate()
+        NotificationChannels.createAll(this)
+    }
 }

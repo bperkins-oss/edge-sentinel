@@ -18,6 +18,10 @@
 
 package com.bp22intel.edgesentinel.ui.navigation
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -42,23 +46,27 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.bp22intel.edgesentinel.ui.about.AboutScreen
 import com.bp22intel.edgesentinel.ui.dashboard.DashboardScreen
 import com.bp22intel.edgesentinel.ui.alerts.AlertListScreen
 import com.bp22intel.edgesentinel.ui.alerts.AlertDetailScreen
 import com.bp22intel.edgesentinel.ui.cellinfo.CellInfoScreen
 import com.bp22intel.edgesentinel.ui.mesh.MeshScreen
+import com.bp22intel.edgesentinel.ui.onboarding.OnboardingScreen
 import com.bp22intel.edgesentinel.ui.settings.SettingsScreen
 
 /**
  * Navigation routes for the app.
  */
 object Routes {
+    const val ONBOARDING = "onboarding"
     const val DASHBOARD = "dashboard"
     const val ALERTS = "alerts"
     const val ALERT_DETAIL = "alert_detail/{alertId}"
     const val CELL_INFO = "cell_info"
     const val MESH = "mesh"
     const val SETTINGS = "settings"
+    const val ABOUT = "about"
 
     fun alertDetail(alertId: Long): String = "alert_detail/$alertId"
 }
@@ -84,35 +92,55 @@ fun EdgeSentinelNavHost() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
+    // Hide bottom bar on onboarding, about, and alert detail screens
+    val showBottomBar = currentDestination?.route?.let { route ->
+        route != Routes.ONBOARDING && route != Routes.ABOUT && route != Routes.ALERT_DETAIL
+    } ?: true
+
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                BottomNavTab.entries.forEach { tab ->
-                    NavigationBarItem(
-                        icon = { Icon(tab.icon, contentDescription = tab.label) },
-                        label = { Text(tab.label) },
-                        selected = currentDestination?.hierarchy?.any {
-                            it.route == tab.route
-                        } == true,
-                        onClick = {
-                            navController.navigate(tab.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            if (showBottomBar) {
+                NavigationBar {
+                    BottomNavTab.entries.forEach { tab ->
+                        NavigationBarItem(
+                            icon = { Icon(tab.icon, contentDescription = tab.label) },
+                            label = { Text(tab.label) },
+                            selected = currentDestination?.hierarchy?.any {
+                                it.route == tab.route
+                            } == true,
+                            onClick = {
+                                navController.navigate(tab.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Routes.DASHBOARD,
-            modifier = Modifier.padding(innerPadding)
+            startDestination = Routes.ONBOARDING,
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = { fadeIn() + slideInHorizontally { it / 4 } },
+            exitTransition = { fadeOut() + slideOutHorizontally { -it / 4 } },
+            popEnterTransition = { fadeIn() + slideInHorizontally { -it / 4 } },
+            popExitTransition = { fadeOut() + slideOutHorizontally { it / 4 } }
         ) {
+            composable(Routes.ONBOARDING) {
+                OnboardingScreen(
+                    onOnboardingComplete = {
+                        navController.navigate(Routes.DASHBOARD) {
+                            popUpTo(Routes.ONBOARDING) { inclusive = true }
+                        }
+                    }
+                )
+            }
             composable(Routes.DASHBOARD) {
                 DashboardScreen(
                     onAlertClick = { alert ->
@@ -150,7 +178,16 @@ fun EdgeSentinelNavHost() {
                 MeshScreen()
             }
             composable(Routes.SETTINGS) {
-                SettingsScreen()
+                SettingsScreen(
+                    onNavigateToAbout = {
+                        navController.navigate(Routes.ABOUT)
+                    }
+                )
+            }
+            composable(Routes.ABOUT) {
+                AboutScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }

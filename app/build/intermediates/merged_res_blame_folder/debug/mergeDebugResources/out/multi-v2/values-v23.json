@@ -1,10 +1,27 @@
 {
     "logs": [
         {
-            "outputFile": "com.bp22intel.edgesentinel.app-mergeDebugResources-69:/values-v23/values-v23.xml",
+            "outputFile": "com.bp22intel.edgesentinel.app-mergeDebugResources-74:/values-v23/values-v23.xml",
             "map": [
                 {
-                    "source": "/home/billperkins/.gradle/caches/transforms-4/b0b0891621560c9e9aea75ff899b9c97/transformed/work-runtime-2.10.0/res/values-v23/values-v23.xml",
+                    "source": "/home/billperkins/.gradle/caches/transforms-4/1b84944eb9b7b8955cc8b1749195b07f/transformed/glance-appwidget-1.1.1/res/values-v23/values-v23.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "55",
+                        "endOffsets": "106"
+                    },
+                    "to": {
+                        "startLines": "4",
+                        "startColumns": "4",
+                        "startOffsets": "184",
+                        "endColumns": "55",
+                        "endOffsets": "235"
+                    }
+                },
+                {
+                    "source": "/home/billperkins/.gradle/caches/transforms-4/eca6e305c9cc5b2ecca1de3a52235f02/transformed/work-runtime-2.10.0/res/values-v23/values-v23.xml",
                     "from": {
                         "startLines": "2,3",
                         "startColumns": "4,4",

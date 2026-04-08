@@ -18,6 +18,7 @@
 
 package com.bp22intel.edgesentinel.ui.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -54,11 +55,18 @@ fun ThreatIndicator(
     modifier: Modifier = Modifier,
     size: Dp = 200.dp
 ) {
-    val baseColor = when (threatLevel) {
+    val targetColor = when (threatLevel) {
         ThreatLevel.CLEAR -> StatusClear
         ThreatLevel.SUSPICIOUS -> StatusSuspicious
         ThreatLevel.THREAT -> StatusThreat
     }
+
+    // Smooth color transition when threat level changes
+    val baseColor by animateColorAsState(
+        targetValue = targetColor,
+        animationSpec = tween(durationMillis = 800),
+        label = "threat_color"
+    )
 
     val labelText = when (threatLevel) {
         ThreatLevel.CLEAR -> "CLEAR"
@@ -67,6 +75,8 @@ fun ThreatIndicator(
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "threat_pulse")
+
+    // Main pulse alpha
     val pulseAlpha by infiniteTransition.animateFloat(
         initialValue = if (threatLevel == ThreatLevel.THREAT) 0.3f else 1f,
         targetValue = 1f,
@@ -79,6 +89,22 @@ fun ThreatIndicator(
         ),
         label = "pulse_alpha"
     )
+
+    // Radar sweep — expanding ring that fades out (active on SUSPICIOUS and THREAT)
+    val radarProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = if (threatLevel == ThreatLevel.THREAT) 1200 else 2400,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "radar_sweep"
+    )
+
+    val showRadar = threatLevel != ThreatLevel.CLEAR
 
     Box(
         contentAlignment = Alignment.Center,
@@ -101,6 +127,18 @@ fun ThreatIndicator(
                 radius = radius,
                 center = center
             )
+
+            // Radar pulse rings (expanding outward when threat detected)
+            if (showRadar) {
+                val radarRadius = radius * 0.3f + (radius * 0.7f * radarProgress)
+                val radarAlpha = (1f - radarProgress) * 0.6f
+                drawCircle(
+                    color = baseColor.copy(alpha = radarAlpha),
+                    radius = radarRadius,
+                    center = center,
+                    style = Stroke(width = 2.dp.toPx())
+                )
+            }
 
             // Inner filled circle
             drawCircle(

@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="black">#FF000000</color>
+    <color name="brand_green">#FF10B981</color>
+    <color name="splash_background">#FF0D1117</color>
+    <color name="threat_red">#FFEF4444</color>
     <color name="white">#FFFFFFFF</color>
     <string name="app_name">Edge Sentinel</string>
-    <style name="Theme.EdgeSentinel" parent="android:Theme.Material.NoActionBar"/>
+    <string name="widget_description">Shows current cellular threat level and monitoring status</string>
+    <style name="Theme.EdgeSentinel" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
+    <style name="Theme.EdgeSentinel.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.EdgeSentinel</item>
+    </style>
 </resources>
