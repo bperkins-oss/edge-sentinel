@@ -451,9 +451,11 @@ private fun SensorMiniIndicator(score: SensorCategoryScore, onClick: () -> Unit 
                 .background(indicatorColor.copy(alpha = 0.2f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = score.category.icon,
-                fontSize = 16.sp
+            Icon(
+                imageVector = score.category.icon,
+                contentDescription = score.category.label,
+                tint = indicatorColor,
+                modifier = Modifier.size(18.dp)
             )
         }
         Spacer(modifier = Modifier.height(4.dp))

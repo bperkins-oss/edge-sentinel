@@ -18,10 +18,18 @@
 
 package com.bp22intel.edgesentinel.domain.model
 
-enum class SensorCategory(val label: String, val icon: String) {
-    CELLULAR("Cellular", "📡"),
-    WIFI("WiFi", "📶"),
-    BLUETOOTH("Bluetooth", "🔵"),
-    NETWORK("Network", "🌐"),
-    BASELINE("Baseline", "📊")
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CellTower
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Radar
+import androidx.compose.ui.graphics.vector.ImageVector
+
+enum class SensorCategory(val label: String, val icon: ImageVector) {
+    CELLULAR("Cellular", Icons.Filled.CellTower),
+    WIFI("WiFi", Icons.Filled.Wifi),
+    BLUETOOTH("Bluetooth", Icons.Filled.Bluetooth),
+    NETWORK("Network", Icons.Filled.Language),
+    BASELINE("Baseline", Icons.Filled.Radar)
 }

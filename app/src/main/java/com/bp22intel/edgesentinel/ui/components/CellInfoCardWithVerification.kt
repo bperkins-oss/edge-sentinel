@@ -175,7 +175,7 @@ private fun TowerVerificationBadge(result: TowerVerifier.VerificationResult) {
         !result.isKnown && result.confidence >= 0.7f -> Triple(
             Icons.Default.Warning, 
             StatusDangerous, 
-            "⚠ SUSPICIOUS"
+            "SUSPICIOUS"
         )
         else -> Triple(
             Icons.Default.Help, 

@@ -59,9 +59,9 @@ private fun ThreatStatusContent(
     }
 
     val statusLabel = when (threatLevel) {
-        ThreatLevel.CLEAR -> "✅ CLEAR"
-        ThreatLevel.SUSPICIOUS -> "⚠️ SUSPICIOUS"
-        ThreatLevel.THREAT -> "🔴 THREAT"
+        ThreatLevel.CLEAR -> "CLEAR"
+        ThreatLevel.SUSPICIOUS -> "SUSPICIOUS"
+        ThreatLevel.THREAT -> "THREAT"
     }
 
     Column(
