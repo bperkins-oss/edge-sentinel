@@ -43,6 +43,12 @@ class TowerDatabaseViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val _importSuccess = MutableStateFlow<String?>(null)
+    val importSuccess: StateFlow<String?> = _importSuccess.asStateFlow()
+
     val importProgress = towerDatabaseManager.importProgress
 
     init {
@@ -76,13 +82,31 @@ class TowerDatabaseViewModel @Inject constructor(
     fun importFromCsv(inputStream: InputStream, filterMcc: Int? = null) {
         viewModelScope.launch {
             try {
+                _error.value = null
+                _isLoading.value = true
                 towerDatabaseManager.importFromCsv(inputStream, filterMcc)
-                loadCountryList() // Refresh the list
-                loadTotalTowerCount() // Refresh total count
+                loadCountryList()
+                loadTotalTowerCount()
+                _importSuccess.value = "Import complete"
             } catch (e: Exception) {
-                // Handle error
+                _error.value = "Import failed: ${e.message}"
+                android.util.Log.e("TowerDBVM", "CSV import failed", e)
+            } finally {
+                _isLoading.value = false
             }
         }
+    }
+
+    fun setError(msg: String) {
+        _error.value = msg
+    }
+
+    fun clearError() {
+        _error.value = null
+    }
+
+    fun clearSuccess() {
+        _importSuccess.value = null
     }
 
     fun deleteCountry(mcc: Int) {

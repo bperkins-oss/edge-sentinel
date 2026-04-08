@@ -35,6 +35,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileUpload
@@ -81,17 +83,25 @@ fun TowerDatabaseScreen(
     val totalTowerCount by viewModel.totalTowerCount.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val importProgress by viewModel.importProgress.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val importSuccess by viewModel.importSuccess.collectAsState()
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let { selectedUri ->
             try {
+                // Take persistable read permission
+                context.contentResolver.takePersistableUriPermission(
+                    selectedUri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) { /* Not all providers support persistable permissions */ }
+            try {
                 context.contentResolver.openInputStream(selectedUri)?.let { inputStream ->
                     viewModel.importFromCsv(inputStream)
-                }
+                } ?: viewModel.setError("Could not open file")
             } catch (e: Exception) {
-                // Handle error - show toast or snackbar
+                viewModel.setError("Import failed: ${e.message}")
             }
         }
     }
@@ -184,7 +194,7 @@ fun TowerDatabaseScreen(
             ) {
                 Button(
                     onClick = {
-                        filePickerLauncher.launch(arrayOf("text/csv", "text/comma-separated-values"))
+                        filePickerLauncher.launch(arrayOf("*/*"))
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
@@ -207,6 +217,54 @@ fun TowerDatabaseScreen(
                     color = TextSecondary,
                     textAlign = TextAlign.Center
                 )
+
+                // Error message
+                error?.let { msg ->
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFFEF4444).copy(alpha = 0.15f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = msg,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFEF4444),
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = { viewModel.clearError() }) {
+                                Text("OK", color = Color(0xFFEF4444))
+                            }
+                        }
+                    }
+                }
+
+                // Success message
+                importSuccess?.let { msg ->
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFF10B981).copy(alpha = 0.15f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = msg,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF10B981),
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = { viewModel.clearSuccess() }) {
+                                Text("OK", color = Color(0xFF10B981))
+                            }
+                        }
+                    }
+                }
             }
         }
 
