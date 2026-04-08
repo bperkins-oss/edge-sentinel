@@ -60,6 +60,7 @@ private fun threatTypeIcon(type: ThreatType): ImageVector {
         ThreatType.TRACKING_PATTERN -> Icons.Filled.TrackChanges
         ThreatType.CIPHER_ANOMALY -> Icons.Filled.GppBad
         ThreatType.SIGNAL_ANOMALY -> Icons.Filled.GppMaybe
+        ThreatType.NR_ANOMALY -> Icons.Filled.NetworkCheck
     }
 }
 
@@ -71,6 +72,7 @@ private fun threatTypeLabel(type: ThreatType): String {
         ThreatType.TRACKING_PATTERN -> "Tracking"
         ThreatType.CIPHER_ANOMALY -> "Cipher"
         ThreatType.SIGNAL_ANOMALY -> "Signal"
+        ThreatType.NR_ANOMALY -> "5G NR"
     }
 }
 

@@ -4,6 +4,7 @@ import androidx.hilt.work.HiltWrapper_WorkerFactoryModule;
 import com.bp22intel.edgesentinel.di.AppModule;
 import com.bp22intel.edgesentinel.di.DetectionModule;
 import com.bp22intel.edgesentinel.di.RepositoryModule;
+import com.bp22intel.edgesentinel.mesh.MeshViewModel_HiltModules;
 import com.bp22intel.edgesentinel.service.MonitoringService_GeneratedInjector;
 import com.bp22intel.edgesentinel.service.ScanWorker_HiltModule;
 import com.bp22intel.edgesentinel.ui.alerts.AlertDetailViewModel_HiltModules;
@@ -175,6 +176,7 @@ public final class EdgeSentinelApp_HiltComponents {
           ViewModelCBuilderModule.class,
           HiltWrapper_ActivityRetainedComponentManager_LifecycleModule.class,
           HiltWrapper_SavedStateHandleModule.class,
+          MeshViewModel_HiltModules.KeyModule.class,
           SettingsViewModel_HiltModules.KeyModule.class
       }
   )
@@ -216,6 +218,7 @@ public final class EdgeSentinelApp_HiltComponents {
           CellInfoViewModel_HiltModules.BindsModule.class,
           DashboardViewModel_HiltModules.BindsModule.class,
           HiltWrapper_HiltViewModelFactory_ViewModelModule.class,
+          MeshViewModel_HiltModules.BindsModule.class,
           SettingsViewModel_HiltModules.BindsModule.class
       }
   )

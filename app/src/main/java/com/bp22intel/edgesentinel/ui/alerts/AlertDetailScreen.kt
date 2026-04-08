@@ -81,6 +81,7 @@ private fun threatTypeLabel(type: ThreatType): String {
         ThreatType.TRACKING_PATTERN -> "Location Tracking Pattern"
         ThreatType.CIPHER_ANOMALY -> "Cipher/Encryption Anomaly"
         ThreatType.SIGNAL_ANOMALY -> "Signal Anomaly"
+        ThreatType.NR_ANOMALY -> "5G NR Anomaly"
     }
 }
 

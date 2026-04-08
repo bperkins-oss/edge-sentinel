@@ -23,6 +23,8 @@ import hilt_aggregated_deps._com_bp22intel_edgesentinel_MainActivity_GeneratedIn
 import hilt_aggregated_deps._com_bp22intel_edgesentinel_di_AppModule;
 import hilt_aggregated_deps._com_bp22intel_edgesentinel_di_DetectionModule;
 import hilt_aggregated_deps._com_bp22intel_edgesentinel_di_RepositoryModule;
+import hilt_aggregated_deps._com_bp22intel_edgesentinel_mesh_MeshViewModel_HiltModules_BindsModule;
+import hilt_aggregated_deps._com_bp22intel_edgesentinel_mesh_MeshViewModel_HiltModules_KeyModule;
 import hilt_aggregated_deps._com_bp22intel_edgesentinel_service_MonitoringService_GeneratedInjector;
 import hilt_aggregated_deps._com_bp22intel_edgesentinel_service_ScanWorker_HiltModule;
 import hilt_aggregated_deps._com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel_HiltModules_BindsModule;
@@ -81,6 +83,8 @@ import hilt_aggregated_deps._dagger_hilt_android_internal_modules_HiltWrapper_Ac
         _com_bp22intel_edgesentinel_di_AppModule.class,
         _com_bp22intel_edgesentinel_di_DetectionModule.class,
         _com_bp22intel_edgesentinel_di_RepositoryModule.class,
+        _com_bp22intel_edgesentinel_mesh_MeshViewModel_HiltModules_BindsModule.class,
+        _com_bp22intel_edgesentinel_mesh_MeshViewModel_HiltModules_KeyModule.class,
         _com_bp22intel_edgesentinel_service_MonitoringService_GeneratedInjector.class,
         _com_bp22intel_edgesentinel_service_ScanWorker_HiltModule.class,
         _com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel_HiltModules_BindsModule.class,

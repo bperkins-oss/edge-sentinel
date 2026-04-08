@@ -77,6 +77,10 @@ class AlertDetailViewModel @Inject constructor(
             ThreatType.SIGNAL_ANOMALY -> "An unusual signal pattern was detected but may be " +
                 "benign. Continue monitoring and check if the pattern persists. No immediate " +
                 "action is required unless other threat indicators are also present."
+
+            ThreatType.NR_ANOMALY -> "A 5G NR anomaly was detected — this may indicate " +
+                "a rogue gNodeB, NR bidding-down attack, or suspicious NR cell behavior. " +
+                "Monitor for correlated alerts. If persistent, avoid sensitive communications."
         }
     }
 }
