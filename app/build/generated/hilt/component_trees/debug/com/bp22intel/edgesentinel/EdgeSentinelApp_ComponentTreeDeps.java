@@ -20,7 +20,6 @@ import dagger.hilt.processor.internal.definecomponent.codegen._dagger_hilt_compo
 import hilt_aggregated_deps._androidx_hilt_work_HiltWrapper_WorkerFactoryModule;
 import hilt_aggregated_deps._com_bp22intel_edgesentinel_EdgeSentinelApp_GeneratedInjector;
 import hilt_aggregated_deps._com_bp22intel_edgesentinel_MainActivity_GeneratedInjector;
-import hilt_aggregated_deps._com_bp22intel_edgesentinel_di_AnalysisModule;
 import hilt_aggregated_deps._com_bp22intel_edgesentinel_di_AppModule;
 import hilt_aggregated_deps._com_bp22intel_edgesentinel_di_DetectionModule;
 import hilt_aggregated_deps._com_bp22intel_edgesentinel_di_RepositoryModule;
@@ -99,7 +98,6 @@ import hilt_aggregated_deps._dagger_hilt_android_internal_modules_HiltWrapper_Ac
         _androidx_hilt_work_HiltWrapper_WorkerFactoryModule.class,
         _com_bp22intel_edgesentinel_EdgeSentinelApp_GeneratedInjector.class,
         _com_bp22intel_edgesentinel_MainActivity_GeneratedInjector.class,
-        _com_bp22intel_edgesentinel_di_AnalysisModule.class,
         _com_bp22intel_edgesentinel_di_AppModule.class,
         _com_bp22intel_edgesentinel_di_DetectionModule.class,
         _com_bp22intel_edgesentinel_di_RepositoryModule.class,
