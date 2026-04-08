@@ -6,6 +6,7 @@ import com.bp22intel.edgesentinel.detection.engine.ThreatDetectionEngine;
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository;
 import com.bp22intel.edgesentinel.domain.repository.CellRepository;
 import com.bp22intel.edgesentinel.domain.repository.ScanRepository;
+import com.bp22intel.edgesentinel.fusion.SensorFusionEngine;
 import dagger.MembersInjector;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.InjectedFieldSignature;
@@ -39,18 +40,22 @@ public final class MonitoringService_MembersInjector implements MembersInjector<
 
   private final Provider<ScanRepository> scanRepositoryProvider;
 
+  private final Provider<SensorFusionEngine> sensorFusionEngineProvider;
+
   public MonitoringService_MembersInjector(Provider<CellInfoCollector> cellInfoCollectorProvider,
       Provider<TelephonyMonitor> telephonyMonitorProvider,
       Provider<ThreatDetectionEngine> threatDetectionEngineProvider,
       Provider<CellRepository> cellRepositoryProvider,
       Provider<AlertRepository> alertRepositoryProvider,
-      Provider<ScanRepository> scanRepositoryProvider) {
+      Provider<ScanRepository> scanRepositoryProvider,
+      Provider<SensorFusionEngine> sensorFusionEngineProvider) {
     this.cellInfoCollectorProvider = cellInfoCollectorProvider;
     this.telephonyMonitorProvider = telephonyMonitorProvider;
     this.threatDetectionEngineProvider = threatDetectionEngineProvider;
     this.cellRepositoryProvider = cellRepositoryProvider;
     this.alertRepositoryProvider = alertRepositoryProvider;
     this.scanRepositoryProvider = scanRepositoryProvider;
+    this.sensorFusionEngineProvider = sensorFusionEngineProvider;
   }
 
   public static MembersInjector<MonitoringService> create(
@@ -59,8 +64,9 @@ public final class MonitoringService_MembersInjector implements MembersInjector<
       Provider<ThreatDetectionEngine> threatDetectionEngineProvider,
       Provider<CellRepository> cellRepositoryProvider,
       Provider<AlertRepository> alertRepositoryProvider,
-      Provider<ScanRepository> scanRepositoryProvider) {
-    return new MonitoringService_MembersInjector(cellInfoCollectorProvider, telephonyMonitorProvider, threatDetectionEngineProvider, cellRepositoryProvider, alertRepositoryProvider, scanRepositoryProvider);
+      Provider<ScanRepository> scanRepositoryProvider,
+      Provider<SensorFusionEngine> sensorFusionEngineProvider) {
+    return new MonitoringService_MembersInjector(cellInfoCollectorProvider, telephonyMonitorProvider, threatDetectionEngineProvider, cellRepositoryProvider, alertRepositoryProvider, scanRepositoryProvider, sensorFusionEngineProvider);
   }
 
   @Override
@@ -71,6 +77,7 @@ public final class MonitoringService_MembersInjector implements MembersInjector<
     injectCellRepository(instance, cellRepositoryProvider.get());
     injectAlertRepository(instance, alertRepositoryProvider.get());
     injectScanRepository(instance, scanRepositoryProvider.get());
+    injectSensorFusionEngine(instance, sensorFusionEngineProvider.get());
   }
 
   @InjectedFieldSignature("com.bp22intel.edgesentinel.service.MonitoringService.cellInfoCollector")
@@ -107,5 +114,11 @@ public final class MonitoringService_MembersInjector implements MembersInjector<
   public static void injectScanRepository(MonitoringService instance,
       ScanRepository scanRepository) {
     instance.scanRepository = scanRepository;
+  }
+
+  @InjectedFieldSignature("com.bp22intel.edgesentinel.service.MonitoringService.sensorFusionEngine")
+  public static void injectSensorFusionEngine(MonitoringService instance,
+      SensorFusionEngine sensorFusionEngine) {
+    instance.sensorFusionEngine = sensorFusionEngine;
   }
 }

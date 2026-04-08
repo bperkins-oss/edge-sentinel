@@ -58,6 +58,7 @@ class MonitoringService : LifecycleService() {
     @Inject lateinit var cellRepository: CellRepository
     @Inject lateinit var alertRepository: AlertRepository
     @Inject lateinit var scanRepository: ScanRepository
+    @Inject lateinit var sensorFusionEngine: com.bp22intel.edgesentinel.fusion.SensorFusionEngine
 
     private var scanJob: Job? = null
     private lateinit var notificationManager: NotificationManager
@@ -218,6 +219,28 @@ class MonitoringService : LifecycleService() {
                     )
                     alertRepository.insertAlert(alert)
                     showAlertNotification(alert)
+
+                    // Feed into sensor fusion engine
+                    val sensorCategory = when (result.threatType) {
+                        com.bp22intel.edgesentinel.domain.model.ThreatType.FAKE_BTS,
+                        com.bp22intel.edgesentinel.domain.model.ThreatType.NETWORK_DOWNGRADE,
+                        com.bp22intel.edgesentinel.domain.model.ThreatType.SILENT_SMS,
+                        com.bp22intel.edgesentinel.domain.model.ThreatType.CIPHER_ANOMALY,
+                        com.bp22intel.edgesentinel.domain.model.ThreatType.SIGNAL_ANOMALY,
+                        com.bp22intel.edgesentinel.domain.model.ThreatType.NR_ANOMALY ->
+                            com.bp22intel.edgesentinel.domain.model.SensorCategory.CELLULAR
+                        com.bp22intel.edgesentinel.domain.model.ThreatType.TRACKING_PATTERN ->
+                            com.bp22intel.edgesentinel.domain.model.SensorCategory.BLUETOOTH
+                    }
+                    sensorFusionEngine.ingestDetection(
+                        com.bp22intel.edgesentinel.fusion.ActiveDetection(
+                            sensorCategory = sensorCategory,
+                            detectionType = result.threatType.name,
+                            description = result.summary,
+                            score = result.score,
+                            timestamp = startTime
+                        )
+                    )
                 }
             }
 
