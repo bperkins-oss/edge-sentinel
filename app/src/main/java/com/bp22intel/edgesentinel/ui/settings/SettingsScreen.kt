@@ -18,38 +18,61 @@
 
 package com.bp22intel.edgesentinel.ui.settings
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.bp22intel.edgesentinel.domain.model.DetectionSensitivity
 import com.bp22intel.edgesentinel.ui.components.SectionHeader
 import com.bp22intel.edgesentinel.ui.theme.AccentBlue
 import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
+import com.bp22intel.edgesentinel.ui.theme.StatusClear
+import com.bp22intel.edgesentinel.ui.theme.StatusDangerous
 import com.bp22intel.edgesentinel.ui.theme.Surface
 import com.bp22intel.edgesentinel.ui.theme.SurfaceVariant
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
@@ -176,6 +199,15 @@ fun SettingsScreen(
             )
         }
 
+        // Permissions
+        item {
+            SectionHeader(title = "Permissions")
+        }
+
+        item {
+            PermissionsCard(context = context)
+        }
+
         // Demo mode
         item {
             SectionHeader(title = "Development")
@@ -257,6 +289,124 @@ fun SettingsScreen(
             ) {
                 Text(text = "About Edge Sentinel")
             }
+        }
+    }
+}
+
+private data class PermissionItem(
+    val name: String,
+    val permission: String,
+    val description: String
+)
+
+@Composable
+private fun PermissionsCard(context: Context) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    // Re-check permissions when returning from system settings
+    val refreshTrigger = remember { mutableStateOf(0) }
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refreshTrigger.value++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val permissions = buildList {
+        add(PermissionItem("Fine Location", Manifest.permission.ACCESS_FINE_LOCATION, "Cell tower & WiFi scanning"))
+        add(PermissionItem("Coarse Location", Manifest.permission.ACCESS_COARSE_LOCATION, "Approximate positioning"))
+        add(PermissionItem("Phone State", Manifest.permission.READ_PHONE_STATE, "Cell network info"))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            add(PermissionItem("Bluetooth Scan", Manifest.permission.BLUETOOTH_SCAN, "BLE tracker detection"))
+            add(PermissionItem("Bluetooth Connect", Manifest.permission.BLUETOOTH_CONNECT, "Mesh alerting"))
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add(PermissionItem("Notifications", Manifest.permission.POST_NOTIFICATIONS, "Threat alerts"))
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add(PermissionItem("Nearby WiFi", Manifest.permission.NEARBY_WIFI_DEVICES, "WiFi threat detection"))
+        }
+    }
+
+    // Force recomposition on refresh
+    @Suppress("UNUSED_EXPRESSION")
+    refreshTrigger.value
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            permissions.forEach { item ->
+                val granted = ContextCompat.checkSelfPermission(
+                    context, item.permission
+                ) == PackageManager.PERMISSION_GRANTED
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = if (granted) Icons.Filled.Check else Icons.Filled.Close,
+                            contentDescription = if (granted) "Granted" else "Denied",
+                            tint = if (granted) StatusClear else StatusDangerous,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Column(modifier = Modifier.padding(start = 10.dp)) {
+                            Text(
+                                text = item.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = item.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                    if (!granted) {
+                        TextButton(onClick = {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                            context.startActivity(intent)
+                        }) {
+                            Text(
+                                text = "Grant",
+                                color = AccentBlue,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            val allGranted = permissions.all {
+                ContextCompat.checkSelfPermission(context, it.permission) == PackageManager.PERMISSION_GRANTED
+            }
+            Text(
+                text = if (allGranted) "All permissions granted" else "Tap Grant to open system settings",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (allGranted) StatusClear else TextSecondary
+            )
         }
     }
 }

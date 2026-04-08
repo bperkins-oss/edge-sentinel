@@ -10,8 +10,8 @@
 10-->
 11<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 12    package="com.bp22intel.edgesentinel.debug"
-13    android:versionCode="11"
-14    android:versionName="2.0.11-debug" >
+13    android:versionCode="12"
+14    android:versionName="2.0.12-debug" >
 15
 16    <uses-sdk
 17        android:minSdkVersion="26"
