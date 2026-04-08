@@ -26,30 +26,22 @@ import javax.inject.Inject
 /**
  * Detects cipher mode anomalies (encryption downgrade attacks).
  *
- * STUB IMPLEMENTATION — requires root access and Qualcomm DIAG interface.
- *
  * Real IMSI catchers often force A5/0 (no encryption) or A5/1 (weak encryption)
  * instead of the stronger A5/3. Detecting this requires reading the Cipher Mode
- * Command from the baseband processor, which is only accessible via:
+ * Command from the baseband processor via the Qualcomm DIAG port (/dev/diag).
  *
- * - Qualcomm DIAG port (/dev/diag) — requires root
- * - Custom baseband firmware
- * - OsmocomBB-compatible hardware
+ * On rooted devices with a Qualcomm baseband, this delegates to [DiagBasedDetector]
+ * which reads actual cipher mode commands from /dev/diag.
  *
- * Without root access, this detector always returns null.
- *
- * TODO: Future DIAG integration roadmap:
- *   1. Check for root access and /dev/diag availability
- *   2. Register DIAG log mask for GSM RR messages (0x512F)
- *   3. Parse Cipher Mode Command (message type 0x35)
- *   4. Extract cipher algorithm from IE and compare against baseline
- *   5. Alert on A5/0 or A5/1 when A5/3 was previously used
- *   6. Cross-reference with SnoopSnitch's cipher detection (k1/k2 coefficients)
+ * On non-rooted devices, returns null (no detection possible — the Android
+ * Telephony API does not expose cipher algorithm information).
  *
  * TODO: Consider Samsung Shannon baseband interface as alternative to Qualcomm DIAG
  * TODO: Investigate MediaTek engineering mode for cipher info on MTK devices
  */
-class CipherModeDetector @Inject constructor() : ThreatDetector {
+class CipherModeDetector @Inject constructor(
+    private val diagBasedDetector: DiagBasedDetector,
+) : ThreatDetector {
 
     override val type: ThreatType = ThreatType.CIPHER_ANOMALY
 
@@ -57,8 +49,8 @@ class CipherModeDetector @Inject constructor() : ThreatDetector {
         cells: List<CellTower>,
         history: List<CellTower>
     ): DetectionResult? {
-        // Cannot detect cipher mode anomalies without root access.
-        // The Android Telephony API does not expose cipher algorithm information.
-        return null
+        // Delegate to the DIAG-based detector which handles root checking internally.
+        // Returns null on non-rooted devices (graceful degradation).
+        return diagBasedDetector.analyze(cells, history)
     }
 }
