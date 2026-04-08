@@ -36,6 +36,25 @@ data class KnownTowerEntity(
     @ColumnInfo(name = "longitude") val longitude: Double,
     @ColumnInfo(name = "range") val range: Int,        // estimated range in meters
     @ColumnInfo(name = "radio") val radio: String,     // GSM, UMTS, LTE, NR
+    @ColumnInfo(name = "samples") val samples: Int = 0,              // observation count (trust signal)
     @ColumnInfo(name = "source") val source: String = "opencellid", // data source
     @ColumnInfo(name = "updated") val updated: Long = System.currentTimeMillis()
-)
+) {
+    /**
+     * Trust score based on observation count.
+     * More observations = more independent users confirmed this tower exists.
+     * Scale: 0.0 (untrusted) to 1.0 (highly trusted)
+     *
+     * Rationale: An attacker would need to generate many independent
+     * observations over time to achieve a high trust score. A freshly
+     * added fake tower will have few samples and low trust.
+     */
+    val trustScore: Float get() = when {
+        samples >= 100 -> 1.0f    // High confidence — many observers
+        samples >= 50  -> 0.85f
+        samples >= 20  -> 0.7f
+        samples >= 10  -> 0.5f    // Moderate — enough to be plausible
+        samples >= 5   -> 0.3f    // Low — could be legitimate or planted
+        else           -> 0.1f    // Minimal trust
+    }
+}

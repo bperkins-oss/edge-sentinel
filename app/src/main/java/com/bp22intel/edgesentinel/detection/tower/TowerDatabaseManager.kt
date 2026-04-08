@@ -110,9 +110,14 @@ class TowerDatabaseManager @Inject constructor(
     suspend fun getTotalTowerCount(): Int = knownTowerDao.getTowerCount()
 
     /**
-     * Import towers from a CSV file (OpenCelliD format).
-     * CSV columns: radio,mcc,mnc,lac,cid,unit,lon,lat,range,samples,changeable,created,updated,averageSignal
-     * Users download the CSV from opencellid.org and import via the app.
+     * Import towers from a CSV file.
+     *
+     * Supports two formats:
+     * - Full OpenCelliD (14 cols): radio,mcc,mnc,lac,cid,unit,lon,lat,range,samples,...
+     * - Slim bundled (9 cols):     radio,mcc,mnc,lac,cid,lon,lat,range,samples
+     *
+     * Auto-detects format by checking if column 5 parses as a double (lon in slim)
+     * or an int (unit in full format).
      */
     suspend fun importFromCsv(inputStream: InputStream, filterMcc: Int? = null) {
         withContext(Dispatchers.IO) {
@@ -120,38 +125,64 @@ class TowerDatabaseManager @Inject constructor(
             val batch = mutableListOf<KnownTowerEntity>()
             var lineCount = 0
             var importedCount = 0
+            var isSlimFormat: Boolean? = null // Auto-detect on first data row
 
             reader.useLines { lines ->
                 lines.drop(1).forEach { line -> // skip header
                     lineCount++
                     try {
                         val parts = line.split(",")
-                        if (parts.size >= 9) {
-                            val radio = parts[0]
-                            val mcc = parts[1].toIntOrNull() ?: return@forEach
-                            val mnc = parts[2].toIntOrNull() ?: return@forEach
-                            val lac = parts[3].toIntOrNull() ?: return@forEach
-                            val cid = parts[4].toIntOrNull() ?: return@forEach
-                            val lon = parts[6].toDoubleOrNull() ?: return@forEach
-                            val lat = parts[7].toDoubleOrNull() ?: return@forEach
-                            val range = parts[8].toIntOrNull() ?: 1000
+                        if (parts.size < 9) return@forEach
 
-                            if (filterMcc != null && mcc != filterMcc) return@forEach
+                        // Auto-detect format on first row
+                        if (isSlimFormat == null) {
+                            // In slim format, parts[5] is longitude (a double like -73.858)
+                            // In full format, parts[5] is unit (an int or empty)
+                            val col5 = parts[5]
+                            isSlimFormat = col5.contains(".") && col5.toDoubleOrNull() != null
+                        }
 
-                            batch.add(KnownTowerEntity(
-                                mcc = mcc, mnc = mnc, lac = lac, cid = cid,
-                                latitude = lat, longitude = lon,
-                                range = range, radio = radio
-                            ))
+                        val radio = parts[0]
+                        val mcc = parts[1].toIntOrNull() ?: return@forEach
+                        val mnc = parts[2].toIntOrNull() ?: return@forEach
+                        val lac = parts[3].toIntOrNull() ?: return@forEach
+                        val cid = parts[4].toIntOrNull() ?: return@forEach
 
-                            if (batch.size >= 500) {
-                                knownTowerDao.insertTowers(batch.toList())
-                                importedCount += batch.size
-                                batch.clear()
-                                _importProgress.value = _importProgress.value?.copy(
-                                    importedRows = importedCount
-                                )
-                            }
+                        val lon: Double
+                        val lat: Double
+                        val range: Int
+                        val samples: Int
+
+                        if (isSlimFormat == true) {
+                            // Slim: radio,mcc,mnc,lac,cid,lon,lat,range,samples
+                            lon = parts[5].toDoubleOrNull() ?: return@forEach
+                            lat = parts[6].toDoubleOrNull() ?: return@forEach
+                            range = parts[7].toIntOrNull() ?: 1000
+                            samples = parts[8].toIntOrNull() ?: 0
+                        } else {
+                            // Full: radio,mcc,mnc,lac,cid,unit,lon,lat,range,samples,...
+                            lon = parts[6].toDoubleOrNull() ?: return@forEach
+                            lat = parts[7].toDoubleOrNull() ?: return@forEach
+                            range = parts[8].toIntOrNull() ?: 1000
+                            samples = parts.getOrNull(9)?.toIntOrNull() ?: 0
+                        }
+
+                        if (filterMcc != null && mcc != filterMcc) return@forEach
+
+                        batch.add(KnownTowerEntity(
+                            mcc = mcc, mnc = mnc, lac = lac, cid = cid,
+                            latitude = lat, longitude = lon,
+                            range = range, radio = radio,
+                            samples = samples
+                        ))
+
+                        if (batch.size >= 500) {
+                            knownTowerDao.insertTowers(batch.toList())
+                            importedCount += batch.size
+                            batch.clear()
+                            _importProgress.value = _importProgress.value?.copy(
+                                importedRows = importedCount
+                            )
                         }
                     } catch (_: Exception) { /* skip malformed lines */ }
                 }
@@ -168,6 +199,47 @@ class TowerDatabaseManager @Inject constructor(
                 status = ImportStatus.COMPLETE
             )
         }
+    }
+
+    /**
+     * Auto-import bundled tower data from APK assets on first launch.
+     * The asset is a gzipped CSV pre-filtered to high-confidence US towers (≥10 samples).
+     * Only runs once — checks if towers already exist before importing.
+     */
+    suspend fun autoImportBundledData() {
+        withContext(Dispatchers.IO) {
+            // Skip if towers are already loaded
+            if (knownTowerDao.getTowerCount() > 0) {
+                android.util.Log.d("TowerDB", "Towers already loaded, skipping auto-import")
+                return@withContext
+            }
+
+            try {
+                android.util.Log.d("TowerDB", "Auto-importing bundled US tower database...")
+                val assetStream = context.assets.open("us_towers.csv.gz")
+                val gzipStream = java.util.zip.GZIPInputStream(java.io.BufferedInputStream(assetStream))
+
+                // The bundled CSV has slim format: radio,mcc,mnc,lac,cid,lon,lat,range,samples
+                importFromCsv(gzipStream, null)
+                android.util.Log.d("TowerDB", "Auto-import complete: ${knownTowerDao.getTowerCount()} towers")
+            } catch (e: Exception) {
+                android.util.Log.e("TowerDB", "Auto-import from assets failed", e)
+            }
+        }
+    }
+
+    /**
+     * Look up a tower and return its trust score.
+     * Returns null if tower is not in the database.
+     * Trust score range: 0.0 (low confidence) to 1.0 (high confidence).
+     *
+     * IMPORTANT: A known tower with high trust REDUCES false positive risk
+     * but should NEVER suppress alerts when behavioral evidence (cipher anomaly,
+     * downgrade, signal anomaly) is present. The trust score is a soft signal.
+     */
+    suspend fun lookupTrust(mcc: Int, mnc: Int, lac: Int, cid: Int): Float? {
+        val tower = knownTowerDao.findTower(mcc, mnc, lac, cid) ?: return null
+        return tower.trustScore
     }
 
     suspend fun deleteCountry(mcc: Int) {

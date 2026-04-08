@@ -58,7 +58,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(4) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(5) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `cells` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `cid` INTEGER NOT NULL, `lac_tac` INTEGER NOT NULL, `mcc` INTEGER NOT NULL, `mnc` INTEGER NOT NULL, `signal_strength` INTEGER NOT NULL, `network_type` TEXT NOT NULL, `latitude` REAL, `longitude` REAL, `first_seen` INTEGER NOT NULL, `last_seen` INTEGER NOT NULL, `times_seen` INTEGER NOT NULL)");
@@ -66,11 +66,11 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
         db.execSQL("CREATE TABLE IF NOT EXISTS `scans` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `cell_count` INTEGER NOT NULL, `threat_level` TEXT NOT NULL, `duration_ms` INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `ble_devices` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `mac_address` TEXT NOT NULL, `advertising_data_hash` TEXT NOT NULL, `manufacturer_id` INTEGER, `device_name` TEXT, `first_seen` INTEGER NOT NULL, `last_seen` INTEGER NOT NULL, `location_clusters` TEXT NOT NULL, `seen_count` INTEGER NOT NULL, `is_tracker_type` INTEGER NOT NULL, `tracker_protocol` TEXT)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `baselines` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `radius` REAL NOT NULL, `label` TEXT, `cell_towers_json` TEXT NOT NULL, `wifi_aps_json` TEXT NOT NULL, `ble_count_min` INTEGER NOT NULL, `ble_count_max` INTEGER NOT NULL, `network_type_dist_json` TEXT NOT NULL, `observation_count` INTEGER NOT NULL, `confidence` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `day_profile_json` TEXT, `night_profile_json` TEXT)");
-        db.execSQL("CREATE TABLE IF NOT EXISTS `known_towers` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `mcc` INTEGER NOT NULL, `mnc` INTEGER NOT NULL, `lac` INTEGER NOT NULL, `cid` INTEGER NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `range` INTEGER NOT NULL, `radio` TEXT NOT NULL, `source` TEXT NOT NULL, `updated` INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `known_towers` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `mcc` INTEGER NOT NULL, `mnc` INTEGER NOT NULL, `lac` INTEGER NOT NULL, `cid` INTEGER NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `range` INTEGER NOT NULL, `radio` TEXT NOT NULL, `samples` INTEGER NOT NULL, `source` TEXT NOT NULL, `updated` INTEGER NOT NULL)");
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_known_towers_mcc_mnc_lac_cid` ON `known_towers` (`mcc`, `mnc`, `lac`, `cid`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `trusted_networks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `bssid` TEXT NOT NULL, `ssid` TEXT NOT NULL, `label` TEXT, `added_at` INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'fb4701e79f0ee0f938549e63cd8b7850')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9ce4923d6ed3ddd09f6aee8d5f5f026e')");
       }
 
       @Override
@@ -228,7 +228,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
                   + " Expected:\n" + _infoBaselines + "\n"
                   + " Found:\n" + _existingBaselines);
         }
-        final HashMap<String, TableInfo.Column> _columnsKnownTowers = new HashMap<String, TableInfo.Column>(11);
+        final HashMap<String, TableInfo.Column> _columnsKnownTowers = new HashMap<String, TableInfo.Column>(12);
         _columnsKnownTowers.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsKnownTowers.put("mcc", new TableInfo.Column("mcc", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsKnownTowers.put("mnc", new TableInfo.Column("mnc", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
@@ -238,6 +238,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
         _columnsKnownTowers.put("longitude", new TableInfo.Column("longitude", "REAL", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsKnownTowers.put("range", new TableInfo.Column("range", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsKnownTowers.put("radio", new TableInfo.Column("radio", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsKnownTowers.put("samples", new TableInfo.Column("samples", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsKnownTowers.put("source", new TableInfo.Column("source", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsKnownTowers.put("updated", new TableInfo.Column("updated", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         final HashSet<TableInfo.ForeignKey> _foreignKeysKnownTowers = new HashSet<TableInfo.ForeignKey>(0);
@@ -267,7 +268,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
         }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "fb4701e79f0ee0f938549e63cd8b7850", "290bfa98a7cf6a73cabd9692872a8133");
+    }, "9ce4923d6ed3ddd09f6aee8d5f5f026e", "a1674b420c11d0dd99afbef04552cd8f");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;

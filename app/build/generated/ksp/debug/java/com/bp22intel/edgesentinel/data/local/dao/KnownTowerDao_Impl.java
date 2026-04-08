@@ -44,7 +44,7 @@ public final class KnownTowerDao_Impl implements KnownTowerDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR REPLACE INTO `known_towers` (`id`,`mcc`,`mnc`,`lac`,`cid`,`latitude`,`longitude`,`range`,`radio`,`source`,`updated`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?)";
+        return "INSERT OR REPLACE INTO `known_towers` (`id`,`mcc`,`mnc`,`lac`,`cid`,`latitude`,`longitude`,`range`,`radio`,`samples`,`source`,`updated`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -59,8 +59,9 @@ public final class KnownTowerDao_Impl implements KnownTowerDao {
         statement.bindDouble(7, entity.getLongitude());
         statement.bindLong(8, entity.getRange());
         statement.bindString(9, entity.getRadio());
-        statement.bindString(10, entity.getSource());
-        statement.bindLong(11, entity.getUpdated());
+        statement.bindLong(10, entity.getSamples());
+        statement.bindString(11, entity.getSource());
+        statement.bindLong(12, entity.getUpdated());
       }
     };
     this.__preparedStmtOfDeleteTowersByCountry = new SharedSQLiteStatement(__db) {
@@ -146,6 +147,7 @@ public final class KnownTowerDao_Impl implements KnownTowerDao {
           final int _cursorIndexOfLongitude = CursorUtil.getColumnIndexOrThrow(_cursor, "longitude");
           final int _cursorIndexOfRange = CursorUtil.getColumnIndexOrThrow(_cursor, "range");
           final int _cursorIndexOfRadio = CursorUtil.getColumnIndexOrThrow(_cursor, "radio");
+          final int _cursorIndexOfSamples = CursorUtil.getColumnIndexOrThrow(_cursor, "samples");
           final int _cursorIndexOfSource = CursorUtil.getColumnIndexOrThrow(_cursor, "source");
           final int _cursorIndexOfUpdated = CursorUtil.getColumnIndexOrThrow(_cursor, "updated");
           final KnownTowerEntity _result;
@@ -168,11 +170,13 @@ public final class KnownTowerDao_Impl implements KnownTowerDao {
             _tmpRange = _cursor.getInt(_cursorIndexOfRange);
             final String _tmpRadio;
             _tmpRadio = _cursor.getString(_cursorIndexOfRadio);
+            final int _tmpSamples;
+            _tmpSamples = _cursor.getInt(_cursorIndexOfSamples);
             final String _tmpSource;
             _tmpSource = _cursor.getString(_cursorIndexOfSource);
             final long _tmpUpdated;
             _tmpUpdated = _cursor.getLong(_cursorIndexOfUpdated);
-            _result = new KnownTowerEntity(_tmpId,_tmpMcc,_tmpMnc,_tmpLac,_tmpCid,_tmpLatitude,_tmpLongitude,_tmpRange,_tmpRadio,_tmpSource,_tmpUpdated);
+            _result = new KnownTowerEntity(_tmpId,_tmpMcc,_tmpMnc,_tmpLac,_tmpCid,_tmpLatitude,_tmpLongitude,_tmpRange,_tmpRadio,_tmpSamples,_tmpSource,_tmpUpdated);
           } else {
             _result = null;
           }
@@ -213,6 +217,7 @@ public final class KnownTowerDao_Impl implements KnownTowerDao {
           final int _cursorIndexOfLongitude = CursorUtil.getColumnIndexOrThrow(_cursor, "longitude");
           final int _cursorIndexOfRange = CursorUtil.getColumnIndexOrThrow(_cursor, "range");
           final int _cursorIndexOfRadio = CursorUtil.getColumnIndexOrThrow(_cursor, "radio");
+          final int _cursorIndexOfSamples = CursorUtil.getColumnIndexOrThrow(_cursor, "samples");
           final int _cursorIndexOfSource = CursorUtil.getColumnIndexOrThrow(_cursor, "source");
           final int _cursorIndexOfUpdated = CursorUtil.getColumnIndexOrThrow(_cursor, "updated");
           final KnownTowerEntity _result;
@@ -235,11 +240,13 @@ public final class KnownTowerDao_Impl implements KnownTowerDao {
             _tmpRange = _cursor.getInt(_cursorIndexOfRange);
             final String _tmpRadio;
             _tmpRadio = _cursor.getString(_cursorIndexOfRadio);
+            final int _tmpSamples;
+            _tmpSamples = _cursor.getInt(_cursorIndexOfSamples);
             final String _tmpSource;
             _tmpSource = _cursor.getString(_cursorIndexOfSource);
             final long _tmpUpdated;
             _tmpUpdated = _cursor.getLong(_cursorIndexOfUpdated);
-            _result = new KnownTowerEntity(_tmpId,_tmpMcc,_tmpMnc,_tmpLac,_tmpCid,_tmpLatitude,_tmpLongitude,_tmpRange,_tmpRadio,_tmpSource,_tmpUpdated);
+            _result = new KnownTowerEntity(_tmpId,_tmpMcc,_tmpMnc,_tmpLac,_tmpCid,_tmpLatitude,_tmpLongitude,_tmpRange,_tmpRadio,_tmpSamples,_tmpSource,_tmpUpdated);
           } else {
             _result = null;
           }
@@ -370,6 +377,7 @@ public final class KnownTowerDao_Impl implements KnownTowerDao {
           final int _cursorIndexOfLongitude = CursorUtil.getColumnIndexOrThrow(_cursor, "longitude");
           final int _cursorIndexOfRange = CursorUtil.getColumnIndexOrThrow(_cursor, "range");
           final int _cursorIndexOfRadio = CursorUtil.getColumnIndexOrThrow(_cursor, "radio");
+          final int _cursorIndexOfSamples = CursorUtil.getColumnIndexOrThrow(_cursor, "samples");
           final int _cursorIndexOfSource = CursorUtil.getColumnIndexOrThrow(_cursor, "source");
           final int _cursorIndexOfUpdated = CursorUtil.getColumnIndexOrThrow(_cursor, "updated");
           final List<KnownTowerEntity> _result = new ArrayList<KnownTowerEntity>(_cursor.getCount());
@@ -393,11 +401,13 @@ public final class KnownTowerDao_Impl implements KnownTowerDao {
             _tmpRange = _cursor.getInt(_cursorIndexOfRange);
             final String _tmpRadio;
             _tmpRadio = _cursor.getString(_cursorIndexOfRadio);
+            final int _tmpSamples;
+            _tmpSamples = _cursor.getInt(_cursorIndexOfSamples);
             final String _tmpSource;
             _tmpSource = _cursor.getString(_cursorIndexOfSource);
             final long _tmpUpdated;
             _tmpUpdated = _cursor.getLong(_cursorIndexOfUpdated);
-            _item = new KnownTowerEntity(_tmpId,_tmpMcc,_tmpMnc,_tmpLac,_tmpCid,_tmpLatitude,_tmpLongitude,_tmpRange,_tmpRadio,_tmpSource,_tmpUpdated);
+            _item = new KnownTowerEntity(_tmpId,_tmpMcc,_tmpMnc,_tmpLac,_tmpCid,_tmpLatitude,_tmpLongitude,_tmpRange,_tmpRadio,_tmpSamples,_tmpSource,_tmpUpdated);
             _result.add(_item);
           }
           return _result;
