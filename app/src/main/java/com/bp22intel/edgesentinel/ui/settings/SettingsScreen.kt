@@ -22,10 +22,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
@@ -56,11 +54,12 @@ import com.bp22intel.edgesentinel.ui.theme.Surface
 import com.bp22intel.edgesentinel.ui.theme.SurfaceVariant
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
 import com.bp22intel.edgesentinel.ui.theme.TextSecondary
-import com.bp22intel.edgesentinel.ui.theme.TextTertiary
+
 
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    onNavigateToAbout: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val isMonitoringEnabled by viewModel.isMonitoringEnabled.collectAsState()
@@ -229,35 +228,15 @@ fun SettingsScreen(
         }
 
         item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Surface),
-                shape = MaterialTheme.shapes.medium
+            Button(
+                onClick = onNavigateToAbout,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SurfaceVariant,
+                    contentColor = TextPrimary
+                )
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    AboutRow(label = "Version", value = "1.0.0")
-                    AboutRow(label = "License", value = "GPLv3")
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = "Edge Sentinel is free software licensed under the " +
-                            "GNU General Public License v3. You are free to use, modify, " +
-                            "and distribute this software under the terms of the license.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextTertiary
-                    )
-
-                    Text(
-                        text = "Source: github.com/bp22intel/edge-sentinel",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AccentBlue
-                    )
-                }
+                Text(text = "About Edge Sentinel")
             }
         }
     }
@@ -311,25 +290,3 @@ private fun SettingsToggleItem(
     }
 }
 
-@Composable
-private fun AboutRow(
-    label: String,
-    value: String
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color = TextPrimary
-        )
-    }
-}

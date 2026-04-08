@@ -1,0 +1,265 @@
+/*
+ * Edge Sentinel — Cellular Threat Detection for Android
+ * Copyright (C) 2024 BP22 Intel
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package com.bp22intel.edgesentinel.ui.onboarding
+
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GppGood
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.bp22intel.edgesentinel.ui.theme.AccentBlue
+import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
+import com.bp22intel.edgesentinel.ui.theme.StatusClear
+import com.bp22intel.edgesentinel.ui.theme.Surface
+import com.bp22intel.edgesentinel.ui.theme.TextPrimary
+import com.bp22intel.edgesentinel.ui.theme.TextSecondary
+import com.bp22intel.edgesentinel.ui.theme.TextTertiary
+
+private data class OnboardingPage(
+    val icon: ImageVector,
+    val title: String,
+    val description: String
+)
+
+private val pages = listOf(
+    OnboardingPage(
+        icon = Icons.Default.Shield,
+        title = "Cellular Threat Detection",
+        description = "Edge Sentinel monitors your cellular environment in real-time, " +
+            "detecting fake base stations (IMSI catchers), network downgrades, silent SMS, " +
+            "and other surveillance threats."
+    ),
+    OnboardingPage(
+        icon = Icons.Default.Lock,
+        title = "Permissions Required",
+        description = "Edge Sentinel needs access to your location (for cell tower identification), " +
+            "phone state (for network info), SMS (to detect silent SMS attacks), " +
+            "and notifications (for threat alerts). All data stays on your device."
+    ),
+    OnboardingPage(
+        icon = Icons.Default.Notifications,
+        title = "Understanding Alerts",
+        description = "GREEN means all clear — no threats detected. " +
+            "YELLOW indicates suspicious activity that may need investigation. " +
+            "RED signals an active threat requiring immediate attention. " +
+            "Tap any alert for detailed analysis and recommended actions."
+    ),
+    OnboardingPage(
+        icon = Icons.Default.GppGood,
+        title = "You're Protected",
+        description = "Edge Sentinel runs quietly in the background, scanning your cellular " +
+            "environment at regular intervals. You'll be notified immediately when " +
+            "suspicious activity is detected. Stay safe out there."
+    )
+)
+
+@Composable
+fun OnboardingScreen(
+    viewModel: OnboardingViewModel = hiltViewModel(),
+    onOnboardingComplete: () -> Unit
+) {
+    val isOnboardingComplete by viewModel.isOnboardingComplete.collectAsState()
+
+    // Skip onboarding if already completed
+    LaunchedEffect(isOnboardingComplete) {
+        if (isOnboardingComplete) {
+            onOnboardingComplete()
+        }
+    }
+
+    // Don't render anything while checking DataStore
+    if (isOnboardingComplete) return
+
+    var currentPage by remember { mutableIntStateOf(0) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { /* results handled by system */ }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundPrimary)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.weight(0.1f))
+
+        // Page content with animation
+        AnimatedContent(
+            targetState = currentPage,
+            transitionSpec = {
+                (slideInHorizontally { it } + fadeIn()) togetherWith
+                    (slideOutHorizontally { -it } + fadeOut())
+            },
+            modifier = Modifier.weight(0.6f),
+            label = "onboarding_page"
+        ) { page ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Icon(
+                    imageVector = pages[page].icon,
+                    contentDescription = null,
+                    tint = StatusClear,
+                    modifier = Modifier.size(80.dp)
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Text(
+                    text = pages[page].title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = pages[page].description,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
+
+        // Page indicators
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(vertical = 24.dp)
+        ) {
+            pages.indices.forEach { index ->
+                Box(
+                    modifier = Modifier
+                        .size(if (index == currentPage) 10.dp else 8.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (index == currentPage) StatusClear else TextTertiary
+                        )
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(0.05f))
+
+        // Buttons
+        if (currentPage == 1) {
+            // Permission request page
+            Button(
+                onClick = {
+                    val permissions = mutableListOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                        Manifest.permission.READ_PHONE_STATE,
+                        Manifest.permission.RECEIVE_SMS
+                    )
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    permissionLauncher.launch(permissions.toTypedArray())
+                    currentPage++
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+            ) {
+                Text(text = "Grant Permissions", color = BackgroundPrimary)
+            }
+        } else if (currentPage == pages.lastIndex) {
+            // Last page
+            Button(
+                onClick = {
+                    viewModel.completeOnboarding()
+                    onOnboardingComplete()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = StatusClear)
+            ) {
+                Text(text = "Get Started", color = BackgroundPrimary, fontWeight = FontWeight.Bold)
+            }
+        } else {
+            Button(
+                onClick = { currentPage++ },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Surface)
+            ) {
+                Text(text = "Next", color = TextPrimary)
+            }
+        }
+
+        if (currentPage < pages.lastIndex) {
+            TextButton(onClick = {
+                viewModel.completeOnboarding()
+                onOnboardingComplete()
+            }) {
+                Text(text = "Skip", color = TextTertiary)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}

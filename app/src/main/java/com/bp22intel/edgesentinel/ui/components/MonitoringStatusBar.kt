@@ -18,6 +18,11 @@
 
 package com.bp22intel.edgesentinel.ui.components
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -76,6 +82,18 @@ fun MonitoringStatusBar(
 
     val elapsed = if (isActive) currentTime - startTime else 0L
 
+    // Breathing pulse animation for the active dot
+    val infiniteTransition = rememberInfiniteTransition(label = "breathing")
+    val breathingAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1500),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "breathing_alpha"
+    )
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -85,10 +103,11 @@ fun MonitoringStatusBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Status dot
+        // Status dot with breathing pulse
         Box(
             modifier = Modifier
                 .size(8.dp)
+                .alpha(if (isActive) breathingAlpha else 1f)
                 .clip(CircleShape)
                 .background(if (isActive) StatusClear else TextTertiary)
         )

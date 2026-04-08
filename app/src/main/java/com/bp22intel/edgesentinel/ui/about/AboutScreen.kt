@@ -1,0 +1,339 @@
+/*
+ * Edge Sentinel — Cellular Threat Detection for Android
+ * Copyright (C) 2024 BP22 Intel
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package com.bp22intel.edgesentinel.ui.about
+
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.bp22intel.edgesentinel.BuildConfig
+import com.bp22intel.edgesentinel.ui.theme.AccentBlue
+import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
+import com.bp22intel.edgesentinel.ui.theme.StatusClear
+import com.bp22intel.edgesentinel.ui.theme.Surface
+import com.bp22intel.edgesentinel.ui.theme.TextPrimary
+import com.bp22intel.edgesentinel.ui.theme.TextSecondary
+import com.bp22intel.edgesentinel.ui.theme.TextTertiary
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AboutScreen(
+    onBack: () -> Unit = {}
+) {
+    val context = LocalContext.current
+
+    Scaffold(
+        containerColor = BackgroundPrimary,
+        topBar = {
+            TopAppBar(
+                title = { Text("About") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BackgroundPrimary,
+                    titleContentColor = TextPrimary,
+                    navigationIconContentColor = TextPrimary
+                )
+            )
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // App branding
+            item {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Shield,
+                        contentDescription = null,
+                        tint = StatusClear,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Edge Sentinel",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "Cellular Threat Detection",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "by BP22 Intel",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = StatusClear
+                    )
+                }
+            }
+
+            // Version & Build Info
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Surface),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AboutRow(label = "Version", value = BuildConfig.VERSION_NAME)
+                        AboutRow(label = "Build", value = BuildConfig.VERSION_CODE.toString())
+                        AboutRow(
+                            label = "Build Type",
+                            value = if (BuildConfig.DEBUG) "Debug" else "Release"
+                        )
+                    }
+                }
+            }
+
+            // License
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Surface),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "License",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Edge Sentinel is free software licensed under the " +
+                                "GNU General Public License v3 (GPLv3). You are free to use, " +
+                                "modify, and distribute this software under the terms of the license.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                        TextButton(onClick = {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://www.gnu.org/licenses/gpl-3.0.html")
+                            )
+                            context.startActivity(intent)
+                        }) {
+                            Text(text = "View Full License Text", color = AccentBlue)
+                        }
+                    }
+                }
+            }
+
+            // Source Code
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Surface),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Source Code",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        TextButton(onClick = {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://github.com/bp22intel/edge-sentinel")
+                            )
+                            context.startActivity(intent)
+                        }) {
+                            Text(
+                                text = "github.com/bp22intel/edge-sentinel",
+                                color = AccentBlue
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Attribution
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Surface),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Attribution",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Edge Sentinel incorporates detection techniques inspired by " +
+                                "SnoopSnitch, originally developed by Security Research Labs (SRLabs) " +
+                                "and released under the GNU General Public License v3.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                        TextButton(onClick = {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://opensource.srlabs.de/projects/snoopsnitch")
+                            )
+                            context.startActivity(intent)
+                        }) {
+                            Text(text = "SnoopSnitch (SRLabs, GPLv3)", color = AccentBlue)
+                        }
+                    }
+                }
+            }
+
+            // Detection Capabilities
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Surface),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Detection Capabilities",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        val capabilities = listOf(
+                            "Fake Base Station (IMSI Catcher) Detection",
+                            "Network Downgrade Attack Detection",
+                            "Silent / Stealth SMS Detection",
+                            "Location Tracking Pattern Analysis",
+                            "Cipher Mode Anomaly Detection",
+                            "Signal Strength Anomaly Detection"
+                        )
+                        capabilities.forEach { capability ->
+                            Text(
+                                text = "  \u2022  $capability",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Copyright footer
+            item {
+                Text(
+                    text = "Copyright \u00A9 2024 BP22 Intel\nAll rights reserved under GPLv3",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextTertiary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AboutRow(
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextSecondary
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = TextPrimary
+        )
+    }
+}

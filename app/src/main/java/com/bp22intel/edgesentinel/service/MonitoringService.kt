@@ -19,9 +19,7 @@
 package com.bp22intel.edgesentinel.service
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -39,6 +37,7 @@ import com.bp22intel.edgesentinel.domain.model.ThreatLevel
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository
 import com.bp22intel.edgesentinel.domain.repository.CellRepository
 import com.bp22intel.edgesentinel.domain.repository.ScanRepository
+import com.bp22intel.edgesentinel.notification.NotificationChannels
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -64,8 +63,6 @@ class MonitoringService : LifecycleService() {
     private lateinit var notificationManager: NotificationManager
 
     companion object {
-        const val CHANNEL_ID = "edge_sentinel_monitoring"
-        const val ALERT_CHANNEL_ID = "edge_sentinel_alerts"
         private const val NOTIFICATION_ID = 1
         private const val ACTION_START = "com.bp22intel.edgesentinel.action.START"
         private const val ACTION_STOP = "com.bp22intel.edgesentinel.action.STOP"
@@ -101,7 +98,6 @@ class MonitoringService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        createNotificationChannels()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -126,31 +122,6 @@ class MonitoringService : LifecycleService() {
     override fun onDestroy() {
         stopMonitoring()
         super.onDestroy()
-    }
-
-    private fun createNotificationChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val monitoringChannel = NotificationChannel(
-                CHANNEL_ID,
-                "Monitoring Status",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Shows current monitoring status and threat level"
-                setShowBadge(false)
-            }
-
-            val alertChannel = NotificationChannel(
-                ALERT_CHANNEL_ID,
-                "Threat Alerts",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Alerts for suspicious or threatening cellular activity"
-                enableVibration(true)
-            }
-
-            notificationManager.createNotificationChannel(monitoringChannel)
-            notificationManager.createNotificationChannel(alertChannel)
-        }
     }
 
     private fun startMonitoring() {
@@ -275,7 +246,7 @@ class MonitoringService : LifecycleService() {
             ThreatLevel.THREAT -> NotificationCompat.PRIORITY_HIGH
         }
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        return NotificationCompat.Builder(this, NotificationChannels.MONITORING)
             .setContentTitle("Edge Sentinel")
             .setContentText(statusText)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
@@ -294,11 +265,19 @@ class MonitoringService : LifecycleService() {
             ThreatLevel.CLEAR -> return
         }
 
-        val notification = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+        val channelId = when (alert.severity) {
+            ThreatLevel.THREAT -> NotificationChannels.CRITICAL
+            else -> NotificationChannels.WARNING
+        }
+
+        val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle(title)
             .setContentText(alert.summary)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(
+                if (alert.severity == ThreatLevel.THREAT) NotificationCompat.PRIORITY_HIGH
+                else NotificationCompat.PRIORITY_DEFAULT
+            )
             .setAutoCancel(true)
             .build()
 

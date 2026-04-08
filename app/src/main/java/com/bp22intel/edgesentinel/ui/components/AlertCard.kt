@@ -18,6 +18,9 @@
 
 package com.bp22intel.edgesentinel.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,6 +42,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -97,58 +105,67 @@ fun AlertCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Surface),
-        shape = MaterialTheme.shapes.medium
+    // Slide-in animation when card first appears
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInHorizontally(initialOffsetX = { it / 3 }) + fadeIn()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Card(
+            onClick = onClick,
+            modifier = modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Surface),
+            shape = MaterialTheme.shapes.medium
         ) {
-            Icon(
-                imageVector = threatTypeIcon(alert.threatType),
-                contentDescription = threatTypeLabel(alert.threatType),
-                tint = TextSecondary,
-                modifier = Modifier.size(24.dp)
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Icon(
+                    imageVector = threatTypeIcon(alert.threatType),
+                    contentDescription = threatTypeLabel(alert.threatType),
+                    tint = TextSecondary,
+                    modifier = Modifier.size(24.dp)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = threatTypeLabel(alert.threatType),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        StatusBadge(
+                            text = alert.severity.label.uppercase(),
+                            threatLevel = alert.severity
+                        )
+                    }
+
                     Text(
-                        text = threatTypeLabel(alert.threatType),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = alert.summary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        maxLines = 2
                     )
-                    StatusBadge(
-                        text = alert.severity.label.uppercase(),
-                        threatLevel = alert.severity
+
+                    Text(
+                        text = formatRelativeTime(alert.timestamp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary
                     )
                 }
-
-                Text(
-                    text = alert.summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    maxLines = 2
-                )
-
-                Text(
-                    text = formatRelativeTime(alert.timestamp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary
-                )
             }
         }
     }
