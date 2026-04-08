@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Legacy backup rules (pre-Android 12).
+  ~ Exclude the Room database from auto-backup.
+  -->
+<full-backup-content>
+    <exclude domain="database" path="edge_sentinel.db" />
+    <exclude domain="database" path="edge_sentinel.db-wal" />
+    <exclude domain="database" path="edge_sentinel.db-shm" />
+</full-backup-content>

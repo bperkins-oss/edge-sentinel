@@ -130,8 +130,8 @@ class CellInfoCollector @Inject constructor(
                         mnc = identity.systemId,
                         signalStrength = signal.dbm,
                         networkType = NetworkType.CDMA,
-                        latitude = identity.latitude,
-                        longitude = identity.longitude,
+                        latitude = identity.latitude.toDouble(),
+                        longitude = identity.longitude.toDouble(),
                         firstSeen = now,
                         lastSeen = now,
                         timesSeen = 1

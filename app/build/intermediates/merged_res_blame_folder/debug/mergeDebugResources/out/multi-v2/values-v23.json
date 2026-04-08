@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.bp22intel.edgesentinel.app-mergeDebugResources-69:/values-v23/values-v23.xml",
+            "map": [
+                {
+                    "source": "/home/billperkins/.gradle/caches/transforms-4/b0b0891621560c9e9aea75ff899b9c97/transformed/work-runtime-2.10.0/res/values-v23/values-v23.xml",
+                    "from": {
+                        "startLines": "2,3",
+                        "startColumns": "4,4",
+                        "startOffsets": "55,121",
+                        "endColumns": "65,62",
+                        "endOffsets": "116,179"
+                    }
+                }
+            ]
+        }
+    ]
+}

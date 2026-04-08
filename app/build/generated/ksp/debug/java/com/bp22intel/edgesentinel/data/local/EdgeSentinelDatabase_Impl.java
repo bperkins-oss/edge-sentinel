@@ -1,0 +1,259 @@
+package com.bp22intel.edgesentinel.data.local;
+
+import androidx.annotation.NonNull;
+import androidx.room.DatabaseConfiguration;
+import androidx.room.InvalidationTracker;
+import androidx.room.RoomDatabase;
+import androidx.room.RoomOpenHelper;
+import androidx.room.migration.AutoMigrationSpec;
+import androidx.room.migration.Migration;
+import androidx.room.util.DBUtil;
+import androidx.room.util.TableInfo;
+import androidx.sqlite.db.SupportSQLiteDatabase;
+import androidx.sqlite.db.SupportSQLiteOpenHelper;
+import com.bp22intel.edgesentinel.data.local.dao.AlertDao;
+import com.bp22intel.edgesentinel.data.local.dao.AlertDao_Impl;
+import com.bp22intel.edgesentinel.data.local.dao.CellDao;
+import com.bp22intel.edgesentinel.data.local.dao.CellDao_Impl;
+import com.bp22intel.edgesentinel.data.local.dao.ScanDao;
+import com.bp22intel.edgesentinel.data.local.dao.ScanDao_Impl;
+import java.lang.Class;
+import java.lang.Override;
+import java.lang.String;
+import java.lang.SuppressWarnings;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import javax.annotation.processing.Generated;
+
+@Generated("androidx.room.RoomProcessor")
+@SuppressWarnings({"unchecked", "deprecation"})
+public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
+  private volatile CellDao _cellDao;
+
+  private volatile AlertDao _alertDao;
+
+  private volatile ScanDao _scanDao;
+
+  @Override
+  @NonNull
+  protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(1) {
+      @Override
+      public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS `cells` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `cid` INTEGER NOT NULL, `lac_tac` INTEGER NOT NULL, `mcc` INTEGER NOT NULL, `mnc` INTEGER NOT NULL, `signal_strength` INTEGER NOT NULL, `network_type` TEXT NOT NULL, `latitude` REAL, `longitude` REAL, `first_seen` INTEGER NOT NULL, `last_seen` INTEGER NOT NULL, `times_seen` INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `alerts` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `threat_type` TEXT NOT NULL, `severity` TEXT NOT NULL, `confidence` TEXT NOT NULL, `summary` TEXT NOT NULL, `details_json` TEXT NOT NULL, `cell_id` INTEGER, `acknowledged` INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `scans` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `cell_count` INTEGER NOT NULL, `threat_level` TEXT NOT NULL, `duration_ms` INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a9a73fef609faf1015548f211158e97e')");
+      }
+
+      @Override
+      public void dropAllTables(@NonNull final SupportSQLiteDatabase db) {
+        db.execSQL("DROP TABLE IF EXISTS `cells`");
+        db.execSQL("DROP TABLE IF EXISTS `alerts`");
+        db.execSQL("DROP TABLE IF EXISTS `scans`");
+        final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
+        if (_callbacks != null) {
+          for (RoomDatabase.Callback _callback : _callbacks) {
+            _callback.onDestructiveMigration(db);
+          }
+        }
+      }
+
+      @Override
+      public void onCreate(@NonNull final SupportSQLiteDatabase db) {
+        final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
+        if (_callbacks != null) {
+          for (RoomDatabase.Callback _callback : _callbacks) {
+            _callback.onCreate(db);
+          }
+        }
+      }
+
+      @Override
+      public void onOpen(@NonNull final SupportSQLiteDatabase db) {
+        mDatabase = db;
+        internalInitInvalidationTracker(db);
+        final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
+        if (_callbacks != null) {
+          for (RoomDatabase.Callback _callback : _callbacks) {
+            _callback.onOpen(db);
+          }
+        }
+      }
+
+      @Override
+      public void onPreMigrate(@NonNull final SupportSQLiteDatabase db) {
+        DBUtil.dropFtsSyncTriggers(db);
+      }
+
+      @Override
+      public void onPostMigrate(@NonNull final SupportSQLiteDatabase db) {
+      }
+
+      @Override
+      @NonNull
+      public RoomOpenHelper.ValidationResult onValidateSchema(
+          @NonNull final SupportSQLiteDatabase db) {
+        final HashMap<String, TableInfo.Column> _columnsCells = new HashMap<String, TableInfo.Column>(12);
+        _columnsCells.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsCells.put("cid", new TableInfo.Column("cid", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsCells.put("lac_tac", new TableInfo.Column("lac_tac", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsCells.put("mcc", new TableInfo.Column("mcc", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsCells.put("mnc", new TableInfo.Column("mnc", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsCells.put("signal_strength", new TableInfo.Column("signal_strength", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsCells.put("network_type", new TableInfo.Column("network_type", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsCells.put("latitude", new TableInfo.Column("latitude", "REAL", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsCells.put("longitude", new TableInfo.Column("longitude", "REAL", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsCells.put("first_seen", new TableInfo.Column("first_seen", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsCells.put("last_seen", new TableInfo.Column("last_seen", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsCells.put("times_seen", new TableInfo.Column("times_seen", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysCells = new HashSet<TableInfo.ForeignKey>(0);
+        final HashSet<TableInfo.Index> _indicesCells = new HashSet<TableInfo.Index>(0);
+        final TableInfo _infoCells = new TableInfo("cells", _columnsCells, _foreignKeysCells, _indicesCells);
+        final TableInfo _existingCells = TableInfo.read(db, "cells");
+        if (!_infoCells.equals(_existingCells)) {
+          return new RoomOpenHelper.ValidationResult(false, "cells(com.bp22intel.edgesentinel.data.local.entity.CellTowerEntity).\n"
+                  + " Expected:\n" + _infoCells + "\n"
+                  + " Found:\n" + _existingCells);
+        }
+        final HashMap<String, TableInfo.Column> _columnsAlerts = new HashMap<String, TableInfo.Column>(9);
+        _columnsAlerts.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlerts.put("timestamp", new TableInfo.Column("timestamp", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlerts.put("threat_type", new TableInfo.Column("threat_type", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlerts.put("severity", new TableInfo.Column("severity", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlerts.put("confidence", new TableInfo.Column("confidence", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlerts.put("summary", new TableInfo.Column("summary", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlerts.put("details_json", new TableInfo.Column("details_json", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlerts.put("cell_id", new TableInfo.Column("cell_id", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlerts.put("acknowledged", new TableInfo.Column("acknowledged", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysAlerts = new HashSet<TableInfo.ForeignKey>(0);
+        final HashSet<TableInfo.Index> _indicesAlerts = new HashSet<TableInfo.Index>(0);
+        final TableInfo _infoAlerts = new TableInfo("alerts", _columnsAlerts, _foreignKeysAlerts, _indicesAlerts);
+        final TableInfo _existingAlerts = TableInfo.read(db, "alerts");
+        if (!_infoAlerts.equals(_existingAlerts)) {
+          return new RoomOpenHelper.ValidationResult(false, "alerts(com.bp22intel.edgesentinel.data.local.entity.AlertEntity).\n"
+                  + " Expected:\n" + _infoAlerts + "\n"
+                  + " Found:\n" + _existingAlerts);
+        }
+        final HashMap<String, TableInfo.Column> _columnsScans = new HashMap<String, TableInfo.Column>(5);
+        _columnsScans.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsScans.put("timestamp", new TableInfo.Column("timestamp", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsScans.put("cell_count", new TableInfo.Column("cell_count", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsScans.put("threat_level", new TableInfo.Column("threat_level", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsScans.put("duration_ms", new TableInfo.Column("duration_ms", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysScans = new HashSet<TableInfo.ForeignKey>(0);
+        final HashSet<TableInfo.Index> _indicesScans = new HashSet<TableInfo.Index>(0);
+        final TableInfo _infoScans = new TableInfo("scans", _columnsScans, _foreignKeysScans, _indicesScans);
+        final TableInfo _existingScans = TableInfo.read(db, "scans");
+        if (!_infoScans.equals(_existingScans)) {
+          return new RoomOpenHelper.ValidationResult(false, "scans(com.bp22intel.edgesentinel.data.local.entity.ScanEntity).\n"
+                  + " Expected:\n" + _infoScans + "\n"
+                  + " Found:\n" + _existingScans);
+        }
+        return new RoomOpenHelper.ValidationResult(true, null);
+      }
+    }, "a9a73fef609faf1015548f211158e97e", "80d68c8d47b143de3908d9c1830f24fc");
+    final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
+    final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
+    return _helper;
+  }
+
+  @Override
+  @NonNull
+  protected InvalidationTracker createInvalidationTracker() {
+    final HashMap<String, String> _shadowTablesMap = new HashMap<String, String>(0);
+    final HashMap<String, Set<String>> _viewTables = new HashMap<String, Set<String>>(0);
+    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "cells","alerts","scans");
+  }
+
+  @Override
+  public void clearAllTables() {
+    super.assertNotMainThread();
+    final SupportSQLiteDatabase _db = super.getOpenHelper().getWritableDatabase();
+    try {
+      super.beginTransaction();
+      _db.execSQL("DELETE FROM `cells`");
+      _db.execSQL("DELETE FROM `alerts`");
+      _db.execSQL("DELETE FROM `scans`");
+      super.setTransactionSuccessful();
+    } finally {
+      super.endTransaction();
+      _db.query("PRAGMA wal_checkpoint(FULL)").close();
+      if (!_db.inTransaction()) {
+        _db.execSQL("VACUUM");
+      }
+    }
+  }
+
+  @Override
+  @NonNull
+  protected Map<Class<?>, List<Class<?>>> getRequiredTypeConverters() {
+    final HashMap<Class<?>, List<Class<?>>> _typeConvertersMap = new HashMap<Class<?>, List<Class<?>>>();
+    _typeConvertersMap.put(CellDao.class, CellDao_Impl.getRequiredConverters());
+    _typeConvertersMap.put(AlertDao.class, AlertDao_Impl.getRequiredConverters());
+    _typeConvertersMap.put(ScanDao.class, ScanDao_Impl.getRequiredConverters());
+    return _typeConvertersMap;
+  }
+
+  @Override
+  @NonNull
+  public Set<Class<? extends AutoMigrationSpec>> getRequiredAutoMigrationSpecs() {
+    final HashSet<Class<? extends AutoMigrationSpec>> _autoMigrationSpecsSet = new HashSet<Class<? extends AutoMigrationSpec>>();
+    return _autoMigrationSpecsSet;
+  }
+
+  @Override
+  @NonNull
+  public List<Migration> getAutoMigrations(
+      @NonNull final Map<Class<? extends AutoMigrationSpec>, AutoMigrationSpec> autoMigrationSpecs) {
+    final List<Migration> _autoMigrations = new ArrayList<Migration>();
+    return _autoMigrations;
+  }
+
+  @Override
+  public CellDao cellDao() {
+    if (_cellDao != null) {
+      return _cellDao;
+    } else {
+      synchronized(this) {
+        if(_cellDao == null) {
+          _cellDao = new CellDao_Impl(this);
+        }
+        return _cellDao;
+      }
+    }
+  }
+
+  @Override
+  public AlertDao alertDao() {
+    if (_alertDao != null) {
+      return _alertDao;
+    } else {
+      synchronized(this) {
+        if(_alertDao == null) {
+          _alertDao = new AlertDao_Impl(this);
+        }
+        return _alertDao;
+      }
+    }
+  }
+
+  @Override
+  public ScanDao scanDao() {
+    if (_scanDao != null) {
+      return _scanDao;
+    } else {
+      synchronized(this) {
+        if(_scanDao == null) {
+          _scanDao = new ScanDao_Impl(this);
+        }
+        return _scanDao;
+      }
+    }
+  }
+}
