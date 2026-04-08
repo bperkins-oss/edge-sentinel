@@ -40,7 +40,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -503,7 +502,7 @@ private fun SituationAnalysisCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Filled.Psychology,
+                    imageVector = Icons.Filled.Shield,
                     contentDescription = null,
                     tint = color,
                     modifier = Modifier.size(20.dp)
