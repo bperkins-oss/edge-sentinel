@@ -16,6 +16,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Home
@@ -231,9 +232,18 @@ fun EdgeSentinelNavHost() {
             }
 
             composable(Routes.THREAT_MAP) {
-                ThreatMapScreen(
-                    onBack = { navController.popBackStack() }
-                )
+                PermissionGate(
+                    permissions = listOf(
+                        android.Manifest.permission.ACCESS_FINE_LOCATION
+                    ),
+                    icon = Icons.Filled.Map,
+                    title = "Location Required",
+                    rationale = "The Threat Radar needs your location to plot detected threats on the tactical map relative to your position."
+                ) {
+                    ThreatMapScreen(
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
 
             composable(Routes.CELL_INFO) {

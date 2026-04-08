@@ -162,9 +162,12 @@ class ThreatGeolocation @Inject constructor() {
      * Convert a list of alerts to geolocated threats for radar display
      */
     fun geolocateThreats(alerts: List<Alert>, userLat: Double, userLng: Double): List<GeolocatedThreat> {
-        return alerts.mapNotNull { alert ->
+        // Don't try to geolocate if we don't have a user position yet
+        if (userLat == 0.0 && userLng == 0.0) return emptyList()
+
+        return alerts.mapIndexedNotNull { index, alert ->
             try {
-                geolocateAlert(alert, userLat, userLng)
+                geolocateAlert(alert, userLat, userLng, index)
             } catch (e: Exception) {
                 // Log error and skip this alert
                 null
@@ -172,71 +175,74 @@ class ThreatGeolocation @Inject constructor() {
         }
     }
 
-    private fun geolocateAlert(alert: Alert, userLat: Double, userLng: Double): GeolocatedThreat? {
+    private fun geolocateAlert(alert: Alert, userLat: Double, userLng: Double, index: Int): GeolocatedThreat? {
         val detailsJson = try {
             JSONObject(alert.detailsJson)
         } catch (e: Exception) {
-            return null
+            JSONObject() // Use empty JSON rather than returning null
         }
 
-        // Determine sensor category from threat type or details
+        // Determine sensor category from threat type
         val category = determineSensorCategory(alert, detailsJson)
-        
-        // Get coordinates and accuracy based on sensor category
-        val (lat, lng, accuracy, signalStrengthDbm, bearing) = when (category) {
-            SensorCategory.CELLULAR -> geolocateCellularThreat(detailsJson, userLat, userLng)
-            SensorCategory.WIFI -> geolocateWifiThreat(detailsJson, userLat, userLng)
-            SensorCategory.BLUETOOTH -> geolocateBluetoothThreat(detailsJson, userLat, userLng)
-            SensorCategory.NETWORK -> geolocateNetworkThreat(detailsJson, userLat, userLng)
-            SensorCategory.BASELINE -> geolocateBaselineThreat(detailsJson, userLat, userLng)
+
+        // Try to get signal strength from various possible field names
+        val signalStrength = detailsJson.optInt("signalStrength", Int.MIN_VALUE).let {
+            if (it == Int.MIN_VALUE) detailsJson.optInt("signalStrengthDbm", Int.MIN_VALUE) else it
+        }.let {
+            if (it == Int.MIN_VALUE) detailsJson.optInt("rssi", Int.MIN_VALUE) else it
         }
+
+        // Estimate distance based on category and available data
+        val estimatedDistanceM = when {
+            signalStrength != Int.MIN_VALUE && category == SensorCategory.CELLULAR -> {
+                PropagationModels.okumuraHataDistance(signalStrength)
+            }
+            signalStrength != Int.MIN_VALUE && category == SensorCategory.WIFI -> {
+                PropagationModels.logDistanceWifi(signalStrength)
+            }
+            signalStrength != Int.MIN_VALUE && category == SensorCategory.BLUETOOTH -> {
+                PropagationModels.logDistanceBle(signalStrength)
+            }
+            category == SensorCategory.CELLULAR -> 500.0  // Default ~500m for cell threats
+            category == SensorCategory.WIFI -> 50.0        // Default ~50m for WiFi
+            category == SensorCategory.BLUETOOTH -> 15.0   // Default ~15m for BLE
+            category == SensorCategory.NETWORK -> 30.0     // Default ~30m for network
+            else -> 200.0                                   // Default for baseline
+        }
+
+        // Place the threat around the user at the estimated distance
+        // Spread threats evenly in a circle to avoid overlap
+        val bearingDeg = ((index * 137.5) % 360.0) // Golden angle distribution
+        val bearingRad = Math.toRadians(bearingDeg)
+
+        // Approximate offset in degrees (1 degree ≈ 111km at equator)
+        val latOffset = (estimatedDistanceM / 111000.0) * cos(bearingRad)
+        val lngOffset = (estimatedDistanceM / (111000.0 * cos(Math.toRadians(userLat)))) * sin(bearingRad)
 
         return GeolocatedThreat(
             id = alert.id.toString(),
-            latitude = lat,
-            longitude = lng,
-            accuracyMeters = accuracy,
+            latitude = userLat + latOffset,
+            longitude = userLng + lngOffset,
+            accuracyMeters = estimatedDistanceM * 0.5, // Uncertainty is ~50% of estimated distance
             threatLevel = alert.severity,
             category = category,
             label = generateThreatLabel(alert, category),
             timestamp = alert.timestamp,
-            signalStrengthDbm = signalStrengthDbm,
-            bearing = bearing
+            signalStrengthDbm = if (signalStrength != Int.MIN_VALUE) signalStrength else null,
+            bearing = bearingDeg.toFloat()
         )
     }
 
     private fun determineSensorCategory(alert: Alert, detailsJson: JSONObject): SensorCategory {
-        // First try to get category from details JSON
-        if (detailsJson.has("sensorCategory")) {
-            val categoryString = detailsJson.getString("sensorCategory")
-            return try {
-                SensorCategory.valueOf(categoryString)
-            } catch (e: IllegalArgumentException) {
-                // Fall back to threat type analysis
-                determineCategoryFromThreatType(alert.threatType.toString())
-            }
-        }
-
-        return determineCategoryFromThreatType(alert.threatType.toString())
-    }
-
-    private fun determineCategoryFromThreatType(threatType: String): SensorCategory {
-        return when {
-            threatType.contains("CELL", ignoreCase = true) ||
-            threatType.contains("BTS", ignoreCase = true) ||
-            threatType.contains("IMSI", ignoreCase = true) -> SensorCategory.CELLULAR
-            
-            threatType.contains("WIFI", ignoreCase = true) ||
-            threatType.contains("AP", ignoreCase = true) -> SensorCategory.WIFI
-            
-            threatType.contains("BLE", ignoreCase = true) ||
-            threatType.contains("BLUETOOTH", ignoreCase = true) -> SensorCategory.BLUETOOTH
-            
-            threatType.contains("NETWORK", ignoreCase = true) ||
-            threatType.contains("DNS", ignoreCase = true) ||
-            threatType.contains("TLS", ignoreCase = true) -> SensorCategory.NETWORK
-            
-            else -> SensorCategory.BASELINE
+        // Map directly from the ThreatType enum — no string matching needed
+        return when (alert.threatType) {
+            com.bp22intel.edgesentinel.domain.model.ThreatType.FAKE_BTS -> SensorCategory.CELLULAR
+            com.bp22intel.edgesentinel.domain.model.ThreatType.NETWORK_DOWNGRADE -> SensorCategory.CELLULAR
+            com.bp22intel.edgesentinel.domain.model.ThreatType.SILENT_SMS -> SensorCategory.CELLULAR
+            com.bp22intel.edgesentinel.domain.model.ThreatType.CIPHER_ANOMALY -> SensorCategory.CELLULAR
+            com.bp22intel.edgesentinel.domain.model.ThreatType.SIGNAL_ANOMALY -> SensorCategory.CELLULAR
+            com.bp22intel.edgesentinel.domain.model.ThreatType.NR_ANOMALY -> SensorCategory.CELLULAR
+            com.bp22intel.edgesentinel.domain.model.ThreatType.TRACKING_PATTERN -> SensorCategory.BLUETOOTH
         }
     }
 
