@@ -89,7 +89,8 @@ class MeshViewModel @Inject constructor(
                 )
 
                 _uiState.value = _uiState.value.copy(
-                    connectedPeerCount = discoveredPeers.size
+                    connectedPeerCount = discoveredPeers.size,
+                    discoveredPeers = discoveredPeers.values.toList()
                 )
 
                 Log.d(TAG, "Peer found: ${address.takeLast(5)} RSSI: $rssi")
@@ -218,7 +219,8 @@ class MeshViewModel @Inject constructor(
         discoveredPeers.entries.removeAll { it.value.lastSeen < cutoff }
         if (discoveredPeers.size != before) {
             _uiState.value = _uiState.value.copy(
-                connectedPeerCount = discoveredPeers.size
+                connectedPeerCount = discoveredPeers.size,
+                discoveredPeers = discoveredPeers.values.toList()
             )
         }
     }
@@ -245,5 +247,6 @@ data class MeshUiState(
     val corroboratedAlertCount: Int = 0,
     val recentMeshAlerts: List<MeshAlert> = emptyList(),
     val correlatedAlerts: List<MeshAlertAggregator.CorrelatedAlert> = emptyList(),
+    val discoveredPeers: List<MeshViewModel.PeerInfo> = emptyList(),
     val error: String? = null
 )

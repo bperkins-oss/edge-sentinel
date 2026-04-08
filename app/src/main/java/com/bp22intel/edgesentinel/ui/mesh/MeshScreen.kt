@@ -135,19 +135,24 @@ fun MeshScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     
-    // Mock data for demo purposes (enhance later when backend supports these features)
-    val mockPeers = listOf(
-        MeshPeer("abc12345-...", "abc12345", -65, System.currentTimeMillis() - 5000, ThreatLevel.CLEAR, true),
-        MeshPeer("def67890-...", "def67890", -78, System.currentTimeMillis() - 12000, ThreatLevel.SUSPICIOUS, true),
-        MeshPeer("ghi09876-...", "ghi09876", -82, System.currentTimeMillis() - 8000, ThreatLevel.THREAT, false)
-    )
+    // Real discovered peers from BLE scan
+    val realPeers = uiState.discoveredPeers.map { peer ->
+        MeshPeer(
+            id = peer.deviceAddress,
+            displayName = peer.deviceName ?: peer.deviceAddress.takeLast(8),
+            rssi = peer.rssi,
+            lastSeen = peer.lastSeen,
+            threatLevel = ThreatLevel.CLEAR,
+            isConnected = (System.currentTimeMillis() - peer.lastSeen) < 60_000
+        )
+    }
     
-    val mockConsensus = if (uiState.correlatedAlerts.isNotEmpty()) {
+    val consensusAlerts = if (uiState.correlatedAlerts.isNotEmpty()) {
         uiState.correlatedAlerts.map { correlated ->
             ConsensusAlert(
                 threatDescription = "Suspicious tower CID ${correlated.cellCid ?: "unknown"}",
                 detectingPeerCount = correlated.peerCount,
-                totalNearbyPeers = mockPeers.size + 1, // +1 for this device
+                totalNearbyPeers = realPeers.size + 1, // +1 for this device
                 confidenceLevel = when {
                     correlated.peerCount >= 3 -> "Confirmed"
                     correlated.peerCount >= 2 -> "Corroborated"
@@ -159,7 +164,7 @@ fun MeshScreen(
         }
     } else emptyList()
     
-    val mockSharedAlerts = uiState.recentMeshAlerts.map { alert ->
+    val sharedAlerts = uiState.recentMeshAlerts.map { alert ->
         SharedAlert(
             id = alert.messageId,
             peerId = alert.deviceId,
@@ -172,8 +177,8 @@ fun MeshScreen(
     }
     
     val meshStats = MeshStats(
-        totalPeersToday = mockPeers.size,
-        alertsShared = 5,
+        totalPeersToday = realPeers.size,
+        alertsShared = uiState.totalAlertsReceived,
         alertsReceived = uiState.totalAlertsReceived,
         correlatedDetections = uiState.corroboratedAlertCount
     )
@@ -207,7 +212,7 @@ fun MeshScreen(
         item { 
             MeshStatusCard(
                 state = uiState,
-                peerCount = mockPeers.size,
+                peerCount = realPeers.size,
                 onStart = viewModel::startMesh,
                 onStop = viewModel::stopMesh
             ) 
@@ -246,8 +251,8 @@ fun MeshScreen(
         }
         
         if (uiState.isActive) {
-            if (mockPeers.isNotEmpty()) {
-                items(mockPeers, key = { it.id }) { peer ->
+            if (realPeers.isNotEmpty()) {
+                items(realPeers, key = { it.id }) { peer ->
                     NearbyPeerCard(peer)
                 }
             } else {
@@ -262,21 +267,21 @@ fun MeshScreen(
         }
         
         // Team Threat Consensus Section
-        if (mockConsensus.isNotEmpty()) {
+        if (consensusAlerts.isNotEmpty()) {
             item {
                 SectionHeader(title = "Team Threat Consensus")
             }
-            items(mockConsensus, key = { "${it.threatDescription}_${it.firstDetected}" }) { consensus ->
+            items(consensusAlerts, key = { "${it.threatDescription}_${it.firstDetected}" }) { consensus ->
                 ConsensusAlertCard(consensus)
             }
         }
         
         // Shared Alerts Feed Section
-        if (mockSharedAlerts.isNotEmpty()) {
+        if (sharedAlerts.isNotEmpty()) {
             item {
                 SectionHeader(title = "Shared Alerts")
             }
-            items(mockSharedAlerts, key = { it.id }) { alert ->
+            items(sharedAlerts, key = { it.id }) { alert ->
                 SharedAlertCard(alert)
             }
         }
