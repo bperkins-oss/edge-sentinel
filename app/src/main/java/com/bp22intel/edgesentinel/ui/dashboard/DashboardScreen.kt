@@ -36,9 +36,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -158,21 +160,46 @@ fun DashboardScreen(
                 FusedThreatHeader(posture = posture)
             }
 
-            // Fused Intelligence narrative (the key differentiator)
-            if (fusedAssessment.contributingSignals.isNotEmpty()) {
+            // AI Situation Analysis — the headline insight
+            item {
+                SituationAnalysisCard(
+                    posture = posture,
+                    alertCount = recentAlerts.size,
+                    fusedNarrative = if (fusedAssessment.contributingSignals.isNotEmpty())
+                        fusedAssessment.narrative else null
+                )
+            }
+
+            // Active Alerts — front and center
+            if (recentAlerts.isNotEmpty()) {
                 item {
                     SectionHeader(
-                        title = "Fusion Assessment",
-                        actionText = null,
-                        onActionClick = {}
+                        title = "Active Alerts (${recentAlerts.size})",
+                        actionText = "View All",
+                        onActionClick = { onNavigate("alerts") }
                     )
                 }
-                item {
-                    FusedNarrativeCard(narrative = fusedAssessment.narrative)
+
+                items(recentAlerts.take(5), key = { it.id }) { alert ->
+                    AlertCard(
+                        alert = alert,
+                        onClick = { onAlertClick(alert) }
+                    )
+                }
+
+                if (recentAlerts.size > 5) {
+                    item {
+                        TextButton(
+                            onClick = { onNavigate("alerts") },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("View all ${recentAlerts.size} alerts", color = AccentBlue)
+                        }
+                    }
                 }
             }
 
-            // Detection Layers — the 5 sensors, clearly laid out
+            // Detection Layers — the 5 sensors
             item {
                 SectionHeader(
                     title = "Detection Layers",
@@ -281,34 +308,7 @@ fun DashboardScreen(
                 }
             }
 
-            // Recent alerts section header
-            item {
-                SectionHeader(
-                    title = "Recent Alerts",
-                    actionText = "View All",
-                    onActionClick = { onNavigate("alerts") }
-                )
-            }
-
-            // Alert list
-            if (recentAlerts.isEmpty()) {
-                item {
-                    EmptyStateCard(
-                        icon = Icons.Filled.Shield,
-                        title = "All Clear",
-                        subtitle = "No threats detected. Monitoring is active."
-                    )
-                }
-            } else {
-                items(recentAlerts, key = { it.id }) { alert ->
-                    AlertCard(
-                        alert = alert,
-                        onClick = { onAlertClick(alert) }
-                    )
-                }
-            }
-
-            // Bottom spacer for FAB clearance
+            // Bottom spacer
             item {
                 Spacer(modifier = Modifier.height(72.dp))
             }
@@ -444,6 +444,119 @@ private fun SensorMiniIndicator(score: SensorCategoryScore, onClick: () -> Unit 
                 fontWeight = FontWeight.Bold,
                 fontSize = 10.sp
             )
+        }
+    }
+}
+
+@Composable
+private fun SituationAnalysisCard(
+    posture: DashboardPosture,
+    alertCount: Int,
+    fusedNarrative: String?
+) {
+    val color = fusedLevelColor(posture.level)
+    val (headline, detail, recommendation) = when {
+        alertCount == 0 && posture.level == FusedThreatLevel.CLEAR -> Triple(
+            "All Clear",
+            "No threats detected across any sensor. Your cellular, WiFi, Bluetooth, and network connections appear normal for this location.",
+            "No action needed. Monitoring continues in the background."
+        )
+        posture.level == FusedThreatLevel.ELEVATED -> Triple(
+            "Elevated Activity Detected",
+            fusedNarrative ?: "Multiple sensors are showing unusual activity. This could indicate surveillance equipment nearby or unusual network behavior worth monitoring.",
+            "Avoid sensitive calls and texts until the situation resolves. Consider moving to a different location."
+        )
+        posture.level == FusedThreatLevel.DANGEROUS -> Triple(
+            "High Threat Detected",
+            fusedNarrative ?: "Significant anomalies detected across multiple sensors. The pattern is consistent with active interception or surveillance equipment in your vicinity.",
+            "Do not make sensitive calls. Move to a different location. If this persists, the threat is likely following you."
+        )
+        posture.level == FusedThreatLevel.CRITICAL -> Triple(
+            "Critical — Active Threat",
+            fusedNarrative ?: "Multiple strong indicators of active surveillance or interception. Your communications may be compromised.",
+            "Stop all sensitive communications immediately. Power off your device if possible. Move to a secure location."
+        )
+        alertCount > 0 -> Triple(
+            "$alertCount Alert${if (alertCount != 1) "s" else ""} Active",
+            fusedNarrative ?: "Potential threats have been detected. Review the alerts below for details.",
+            "Review each alert and follow the recommended actions."
+        )
+        else -> Triple(
+            "Monitoring Active",
+            "Edge Sentinel is scanning all five detection layers. No significant activity detected.",
+            "No action needed."
+        )
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.08f)
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.Psychology,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Situation Analysis",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = color,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Text(
+                text = headline,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
+                lineHeight = MaterialTheme.typography.bodySmall.lineHeight
+            )
+
+            // Recommendation
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = Surface
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(10.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Shield,
+                        contentDescription = null,
+                        tint = AccentBlue,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = recommendation,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
     }
 }
