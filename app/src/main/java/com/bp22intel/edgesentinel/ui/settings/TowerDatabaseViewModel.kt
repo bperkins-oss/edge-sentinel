@@ -163,8 +163,23 @@ class TowerDatabaseViewModel @Inject constructor(
             connection.setRequestProperty("User-Agent", "EdgeSentinel/2.0")
 
             if (connection.responseCode == 200) {
-                // Decompress gzip and return input stream
-                GZIPInputStream(BufferedInputStream(connection.inputStream))
+                // OpenCelliD returns 200 even for errors — check content type
+                val contentType = connection.contentType ?: ""
+                val contentLength = connection.contentLength
+
+                // If response is tiny (<500 bytes) or JSON, it's an error message
+                if (contentLength in 1..499 || contentType.contains("json", ignoreCase = true)) {
+                    // Read the error body to log it
+                    val errorBody = try {
+                        connection.inputStream.bufferedReader().readText()
+                    } catch (_: Exception) { "unknown error" }
+                    android.util.Log.e("TowerDBVM", "OpenCelliD returned error: $errorBody")
+                    connection.disconnect()
+                    null
+                } else {
+                    // Decompress gzip and return input stream
+                    GZIPInputStream(BufferedInputStream(connection.inputStream))
+                }
             } else {
                 android.util.Log.w("TowerDBVM", "OpenCelliD returned ${connection.responseCode}")
                 connection.disconnect()
