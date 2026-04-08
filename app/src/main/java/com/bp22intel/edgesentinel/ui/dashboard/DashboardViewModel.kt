@@ -127,6 +127,43 @@ class DashboardViewModel @Inject constructor(
                 // Permission may not be granted yet
             }
         }
+
+        // Hydrate fusion engine from existing alerts on startup
+        // This ensures fusion reflects historical alerts, not just new ones
+        viewModelScope.launch {
+            try {
+                alertRepository.getRecentAlerts(50).collect { alerts ->
+                    if (alerts.isNotEmpty()) {
+                        val detections = alerts.map { alert ->
+                            val category = when (alert.threatType) {
+                                com.bp22intel.edgesentinel.domain.model.ThreatType.FAKE_BTS,
+                                com.bp22intel.edgesentinel.domain.model.ThreatType.NETWORK_DOWNGRADE,
+                                com.bp22intel.edgesentinel.domain.model.ThreatType.SILENT_SMS,
+                                com.bp22intel.edgesentinel.domain.model.ThreatType.CIPHER_ANOMALY,
+                                com.bp22intel.edgesentinel.domain.model.ThreatType.SIGNAL_ANOMALY,
+                                com.bp22intel.edgesentinel.domain.model.ThreatType.NR_ANOMALY ->
+                                    com.bp22intel.edgesentinel.domain.model.SensorCategory.CELLULAR
+                                com.bp22intel.edgesentinel.domain.model.ThreatType.TRACKING_PATTERN ->
+                                    com.bp22intel.edgesentinel.domain.model.SensorCategory.BLUETOOTH
+                            }
+                            com.bp22intel.edgesentinel.fusion.ActiveDetection(
+                                sensorCategory = category,
+                                detectionType = alert.threatType.name,
+                                description = alert.summary,
+                                score = when (alert.severity) {
+                                    com.bp22intel.edgesentinel.domain.model.ThreatLevel.THREAT -> 0.9
+                                    com.bp22intel.edgesentinel.domain.model.ThreatLevel.SUSPICIOUS -> 0.5
+                                    com.bp22intel.edgesentinel.domain.model.ThreatLevel.CLEAR -> 0.1
+                                },
+                                timestamp = alert.timestamp
+                            )
+                        }
+                        sensorFusionEngine.ingestDetections(detections)
+                    }
+                    return@collect // Only hydrate once
+                }
+            } catch (_: Exception) { /* non-critical */ }
+        }
     }
 
     fun toggleMonitoring(context: Context) {
