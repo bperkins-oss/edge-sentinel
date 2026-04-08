@@ -37,6 +37,21 @@ import javax.inject.Singleton
  * happened; the analyst explains *what it means* and *what to do about it*.
  *
  * All analysis is deterministic and runs on-device — no network calls.
+ *
+ * ## Research basis (v2)
+ *
+ * Individual alert analysis incorporates findings from:
+ * - NDSS 2025 — IMSI-catcher identity-exposing message characterisation
+ * - SMDFbs (Sensors 2023) — specification-based FBS misbehaviour detection
+ * - ICCCN 2024 — SIB1 broadcast anomaly fingerprinting
+ * - Apple-Google Joint Spec (May 2024) — unwanted BLE tracker detection
+ * - AirCatch (arXiv 2602.07656, Feb 2026) — tracker device masquerading
+ * - Forest Blizzard DNS hijacking campaign (April 2026)
+ *
+ * Situation analysis incorporates:
+ * - FBSDetector / "Gotta Detect 'Em All" (Purdue, arXiv 2401.04958) — multi-step chains
+ * - Shaik et al. (NDSS 2016) + Rupprecht et al. (IEEE S&P 2019) — LTE Layer 2 attacks
+ * - Temporal, geographic, and attack-chain correlation logic
  */
 @Singleton
 class ThreatAnalyst @Inject constructor() {
@@ -54,19 +69,23 @@ class ThreatAnalyst @Inject constructor() {
     fun analyzeAlert(alert: Alert): AlertAnalysis {
         val details = alert.detailsJson.parseJsonSafe()
         return when (alert.threatType) {
-            ThreatType.FAKE_BTS        -> analyzeFakeBts(alert, details)
+            ThreatType.FAKE_BTS         -> analyzeFakeBts(alert, details)
             ThreatType.NETWORK_DOWNGRADE -> analyzeNetworkDowngrade(alert, details)
-            ThreatType.SILENT_SMS      -> analyzeSilentSms(alert, details)
+            ThreatType.SILENT_SMS       -> analyzeSilentSms(alert, details)
             ThreatType.TRACKING_PATTERN -> analyzeTrackingPattern(alert, details)
-            ThreatType.CIPHER_ANOMALY  -> analyzeCipherAnomaly(alert, details)
-            ThreatType.SIGNAL_ANOMALY  -> analyzeSignalAnomaly(alert, details)
-            ThreatType.NR_ANOMALY      -> analyzeNrAnomaly(alert, details)
+            ThreatType.CIPHER_ANOMALY   -> analyzeCipherAnomaly(alert, details)
+            ThreatType.SIGNAL_ANOMALY   -> analyzeSignalAnomaly(alert, details)
+            ThreatType.NR_ANOMALY       -> analyzeNrAnomaly(alert, details)
         }
     }
 
     /**
      * Synthesise multiple alerts and environmental context into a holistic
      * situation brief — the "big picture" for the user.
+     *
+     * Incorporates multi-step attack chain recognition (FBSDetector, Purdue 2025),
+     * temporal correlation, geographic persistence analysis, and deliberate-
+     * downgrade cross-referencing (Shaik/Rupprecht LTE Layer 2 research).
      *
      * @param alerts   Current active/recent alerts (may be empty).
      * @param cellInfo Current serving cell information, if available.
@@ -87,24 +106,50 @@ class ThreatAnalyst @Inject constructor() {
             )
         }
 
-        // Analyse each alert individually, enriched with motion context.
+        // Analyse each alert individually.
         val analyses = alerts.map { analyzeAlert(it) }
-        val highestRisk = analyses.maxOf { it.riskLevel }
+        var highestRisk = analyses.maxOf { it.riskLevel }
+
+        // ── Attack chain recognition ────────────────────────────────────
+        val threatTypes = alerts.map { it.threatType }.toSet()
+        val detectedChains = detectAttackChains(threatTypes)
+
+        // If we matched a known chain, escalate to at least CRITICAL.
+        if (detectedChains.isNotEmpty()) {
+            highestRisk = maxOf(highestRisk, RiskLevel.CRITICAL)
+        }
+
+        // ── Deliberate downgrade cross-reference (Shaik + Rupprecht) ────
+        val hasDeliberateDowngrade = detectDeliberateDowngrade(alerts)
+        if (hasDeliberateDowngrade) {
+            highestRisk = maxOf(highestRisk, RiskLevel.CRITICAL)
+        }
+
+        // ── Temporal correlation ────────────────────────────────────────
+        val temporalCorrelation = detectTemporalCorrelation(alerts)
+
+        // Multiple distinct alert types within a tight window → escalate.
+        if (temporalCorrelation) {
+            highestRisk = maxOf(highestRisk, RiskLevel.HIGH)
+        }
+
+        // ── Geographic persistence ──────────────────────────────────────
+        val geoPersistence = detectGeographicPersistence(alerts)
 
         // Build top concerns: unique plain-English descriptions, worst first.
-        val topConcerns = analyses
-            .sortedByDescending { it.riskLevel }
-            .map { it.plainEnglish }
-            .distinct()
-            .take(MAX_TOP_CONCERNS)
+        val topConcerns = buildTopConcerns(analyses, detectedChains,
+            hasDeliberateDowngrade, temporalCorrelation, geoPersistence)
 
         // Deduplicate and prioritise recommendations.
-        val recommendations = buildRecommendations(analyses, highestRisk, isMoving)
+        val recommendations = buildRecommendations(
+            analyses, highestRisk, isMoving, detectedChains, hasDeliberateDowngrade)
 
         val allClear = highestRisk == RiskLevel.LOW &&
             analyses.none { it.shouldWorry }
 
-        val summary = buildSituationSummary(alerts, analyses, highestRisk, cellInfo, isMoving)
+        val summary = buildSituationSummary(
+            alerts, analyses, highestRisk, cellInfo, isMoving,
+            detectedChains, hasDeliberateDowngrade, temporalCorrelation, geoPersistence)
 
         return SituationBrief(
             summary = summary,
@@ -125,6 +170,10 @@ class ThreatAnalyst @Inject constructor() {
      * Key signals: unusually high signal strength while stationary suggests
      * a nearby portable transmitter. Moving through a strong-signal area
      * is less suspicious (could be a legitimate macro cell).
+     *
+     * Research enhancements:
+     * - NDSS 2025: rapid identity-request pattern detection
+     * - ICCCN 2024: SIB1 broadcast anomaly fingerprinting
      */
     private fun analyzeFakeBts(alert: Alert, details: JSONObject): AlertAnalysis {
         val signalStrength = details.optInt("signalStrength", Int.MIN_VALUE)
@@ -132,8 +181,20 @@ class ThreatAnalyst @Inject constructor() {
         val nearbyTowerCount = details.optInt("nearbyTowerCount", -1)
         val isHighSignal = signalStrength != Int.MIN_VALUE && signalStrength > -60
 
+        // NDSS 2025 — rapid identity request pattern.
+        // If the BTS sent >1 identity request within a 60-second window, this
+        // matches the 53 identity-exposing NAS/RRC messages characterised by
+        // the NDSS research. Legitimate towers rarely re-request SUPI/IMSI.
+        val identityRequestCount = details.optInt("identityRequestCount", 0)
+        val hasRapidIdentityRequests = identityRequestCount > 1
+
+        // ICCCN 2024 — SIB1 broadcast anomaly.
+        // Fake base stations frequently have misconfigured or cloned SIB1
+        // parameters that don't match the real network's broadcast.
+        val sib1Anomaly = details.optBoolean("sib1Anomaly", false)
+
         // Stationary + high signal + few legitimate towers = very suspicious.
-        val riskLevel = when {
+        var riskLevel = when {
             !isMoving && isHighSignal && nearbyTowerCount in 0..2 -> RiskLevel.CRITICAL
             !isMoving && isHighSignal -> RiskLevel.HIGH
             !isMoving -> RiskLevel.MEDIUM
@@ -141,9 +202,14 @@ class ThreatAnalyst @Inject constructor() {
             else -> RiskLevel.LOW
         }
 
+        // NDSS 2025 escalation: rapid identity requests bump to at least HIGH.
+        if (hasRapidIdentityRequests && riskLevel < RiskLevel.HIGH) {
+            riskLevel = RiskLevel.HIGH
+        }
+
         val shouldWorry = riskLevel >= RiskLevel.HIGH
 
-        val plainEnglish = when (riskLevel) {
+        var plainEnglish = when (riskLevel) {
             RiskLevel.CRITICAL ->
                 "A suspicious cell tower with an unusually strong signal appeared nearby while " +
                 "you are stationary. This is consistent with a portable surveillance device " +
@@ -157,6 +223,18 @@ class ThreatAnalyst @Inject constructor() {
             else ->
                 "A cell tower showed some irregular characteristics but the pattern is " +
                 "more consistent with normal network behaviour while in transit."
+        }
+
+        // ICCCN 2024: append SIB1 anomaly context.
+        if (sib1Anomaly) {
+            plainEnglish += " System broadcast information from this tower doesn't match " +
+                "expected network parameters."
+        }
+
+        // NDSS 2025: append identity-request context.
+        if (hasRapidIdentityRequests) {
+            plainEnglish += " This tower sent $identityRequestCount identity requests in rapid " +
+                "succession — legitimate towers rarely re-request your device identity."
         }
 
         val recommendation = when (riskLevel) {
@@ -175,6 +253,12 @@ class ThreatAnalyst @Inject constructor() {
 
         val possibleCauses = buildList {
             if (riskLevel >= RiskLevel.HIGH) add("IMSI catcher or rogue base station nearby")
+            if (hasRapidIdentityRequests) {
+                add("Rapid SUPI/IMSI identity requests detected (NDSS 2025 pattern)")
+            }
+            if (sib1Anomaly) {
+                add("SIB1 broadcast parameters inconsistent with legitimate network")
+            }
             add("Legitimate new cell tower with unusual configuration")
             add("Temporary carrier equipment (event coverage, maintenance)")
             if (isMoving) add("Passing through an area with strong tower coverage")
@@ -195,11 +279,17 @@ class ThreatAnalyst @Inject constructor() {
      *
      * In urban areas this shouldn't happen (dense 4G/5G coverage), so it's
      * more concerning. In rural areas it may be normal coverage gaps.
+     *
+     * Research enhancement:
+     * - Forest Blizzard (April 2026): DNS hijacking context for network anomalies
      */
     private fun analyzeNetworkDowngrade(alert: Alert, details: JSONObject): AlertAnalysis {
         val fromNetwork = details.optString("fromNetwork", "")
         val toNetwork = details.optString("toNetwork", "")
         val isUrban = details.optBoolean("isUrban", true) // Default to urban (more cautious)
+
+        // Forest Blizzard (April 2026) — DNS resolution anomaly context.
+        val dnsAnomaly = details.optBoolean("dnsAnomaly", false)
 
         val isSevereDowngrade = toNetwork in listOf("GSM", "2G", "CDMA")
 
@@ -215,7 +305,7 @@ class ThreatAnalyst @Inject constructor() {
         val fromLabel = fromNetwork.ifEmpty { "a newer network" }
         val toLabel = toNetwork.ifEmpty { "an older network" }
 
-        val plainEnglish = when (riskLevel) {
+        var plainEnglish = when (riskLevel) {
             RiskLevel.HIGH ->
                 "Your phone was forced from $fromLabel down to $toLabel in an area " +
                 "with good coverage. This is a common tactic used by surveillance " +
@@ -227,6 +317,11 @@ class ThreatAnalyst @Inject constructor() {
             else ->
                 "Your phone switched from $fromLabel to $toLabel. In rural or fringe " +
                 "coverage areas, this is often normal behaviour."
+        }
+
+        if (dnsAnomaly) {
+            plainEnglish += " A DNS resolution anomaly was also detected, which may " +
+                "indicate network-level tampering."
         }
 
         val recommendation = when (riskLevel) {
@@ -242,6 +337,9 @@ class ThreatAnalyst @Inject constructor() {
 
         val possibleCauses = buildList {
             if (isUrban && isSevereDowngrade) add("Deliberate downgrade attack to strip encryption")
+            if (dnsAnomaly) {
+                add("DNS hijacking similar to recent state-sponsored campaigns targeting consumer routers")
+            }
             add("Network congestion causing fallback")
             add("Coverage gap or building penetration issues")
             add("Carrier network maintenance or outage")
@@ -315,64 +413,145 @@ class ThreatAnalyst @Inject constructor() {
     }
 
     /**
-     * TRACKING_PATTERN — Location Area Code oscillation suggesting tracking.
+     * TRACKING_PATTERN — Location tracking indicators, including LAC oscillation
+     * and BLE unwanted-tracker detection.
      *
      * While stationary, rapid LAC changes mean the network (or something
      * impersonating it) is repeatedly re-registering the device — a classic
      * triangulation technique. While driving, LAC changes are expected.
+     *
+     * Research enhancements:
+     * - Apple-Google Joint Spec (May 2024): BLE tracker type identification
+     * - AirCatch (arXiv 2602.07656, Feb 2026): device masquerading detection
      */
     private fun analyzeTrackingPattern(alert: Alert, details: JSONObject): AlertAnalysis {
         val isMoving = details.optBoolean("isMoving", false)
         val lacChanges = details.optInt("lacChanges", 0)
 
-        val riskLevel = when {
-            !isMoving && lacChanges >= 4 -> RiskLevel.CRITICAL
-            !isMoving && lacChanges >= 2 -> RiskLevel.HIGH
-            !isMoving -> RiskLevel.MEDIUM
-            lacChanges >= 6 -> RiskLevel.MEDIUM  // Excessive even for driving
-            else -> RiskLevel.LOW
+        // Apple-Google Joint Spec — BLE unwanted tracker detection.
+        // The spec defines standardised advertisement patterns for AirTag,
+        // SmartTag, Tile, and other DULT-compliant trackers.
+        val bleTrackerType = details.optString("bleTrackerType", "").lowercase()
+        val hasBleTracker = bleTrackerType.isNotEmpty()
+        val durationMinutes = details.optInt("durationMinutes", 0)
+        val locationCount = details.optInt("locationCount", 0)
+
+        // Determine if this is primarily a BLE tracker alert or LAC-based.
+        val isBleTrackerAlert = hasBleTracker
+
+        var riskLevel = if (isBleTrackerAlert) {
+            // BLE tracker risk assessment per Apple-Google spec.
+            // >30 minutes at multiple locations = definitely separated & following.
+            when {
+                durationMinutes > 30 && locationCount > 1 -> RiskLevel.CRITICAL
+                durationMinutes > 30 -> RiskLevel.HIGH
+                durationMinutes > 10 -> RiskLevel.MEDIUM
+                else -> RiskLevel.LOW
+            }
+        } else {
+            // LAC oscillation risk assessment.
+            when {
+                !isMoving && lacChanges >= 4 -> RiskLevel.CRITICAL
+                !isMoving && lacChanges >= 2 -> RiskLevel.HIGH
+                !isMoving -> RiskLevel.MEDIUM
+                lacChanges >= 6 -> RiskLevel.MEDIUM  // Excessive even for driving
+                else -> RiskLevel.LOW
+            }
         }
 
         val shouldWorry = riskLevel >= RiskLevel.HIGH
 
-        val plainEnglish = when {
-            !isMoving && riskLevel >= RiskLevel.HIGH ->
-                "Your phone is repeatedly re-registering with different network zones " +
-                "even though you haven't moved. This pattern is used to triangulate " +
-                "your exact location — someone may be actively tracking you."
-            !isMoving ->
-                "Some unusual network zone switching was detected while you're stationary. " +
-                "This could indicate location tracking, but the pattern isn't conclusive yet."
-            riskLevel >= RiskLevel.MEDIUM ->
-                "An unusually high number of network zone changes occurred while moving. " +
-                "While some handovers are normal during travel, this rate is elevated."
-            else ->
-                "Network zone changes detected during movement. This is typical " +
-                "behaviour as your phone hands off between cell towers while in transit."
+        val trackerLabel = when (bleTrackerType) {
+            "airtag"   -> "an Apple AirTag"
+            "smarttag" -> "a Samsung SmartTag"
+            "tile"     -> "a Tile tracker"
+            "unknown"  -> "an unknown BLE tracker"
+            else       -> "a BLE tracker"
         }
 
-        val recommendation = when (riskLevel) {
-            RiskLevel.CRITICAL ->
-                "Active tracking is likely. Enable airplane mode if you need to break " +
-                "the tracking. Avoid this location for sensitive activities."
-            RiskLevel.HIGH ->
-                "Possible active tracking. Consider enabling airplane mode temporarily " +
-                "and moving to a different area to see if the pattern stops."
-            RiskLevel.MEDIUM ->
-                "Monitor the situation. If you see this alert repeatedly while " +
-                "stationary, take it more seriously."
-            else ->
-                "This is likely normal handover behaviour during travel. No action needed."
+        val plainEnglish = if (isBleTrackerAlert) {
+            when {
+                riskLevel >= RiskLevel.CRITICAL ->
+                    "A separated $trackerLabel has been following you for $durationMinutes " +
+                    "minutes across $locationCount different locations. This is a strong " +
+                    "indicator that someone planted a tracker on you or your belongings."
+                riskLevel >= RiskLevel.HIGH ->
+                    "A separated $trackerLabel has been near you for $durationMinutes " +
+                    "minutes. This device appears to be travelling with you and may have " +
+                    "been placed in your belongings without your knowledge."
+                riskLevel >= RiskLevel.MEDIUM ->
+                    "A separated $trackerLabel was detected nearby. It has been in range " +
+                    "for $durationMinutes minutes. This could be someone else's lost item, " +
+                    "but monitor whether it continues to follow you."
+                else ->
+                    "A $trackerLabel was briefly detected nearby. This is most likely a " +
+                    "passing device and not a concern."
+            }
+        } else {
+            when {
+                !isMoving && riskLevel >= RiskLevel.HIGH ->
+                    "Your phone is repeatedly re-registering with different network zones " +
+                    "even though you haven't moved. This pattern is used to triangulate " +
+                    "your exact location — someone may be actively tracking you."
+                !isMoving ->
+                    "Some unusual network zone switching was detected while you're stationary. " +
+                    "This could indicate location tracking, but the pattern isn't conclusive yet."
+                riskLevel >= RiskLevel.MEDIUM ->
+                    "An unusually high number of network zone changes occurred while moving. " +
+                    "While some handovers are normal during travel, this rate is elevated."
+                else ->
+                    "Network zone changes detected during movement. This is typical " +
+                    "behaviour as your phone hands off between cell towers while in transit."
+            }
+        }
+
+        val recommendation = if (isBleTrackerAlert) {
+            when (riskLevel) {
+                RiskLevel.CRITICAL ->
+                    "A tracker is actively following you. Search your belongings, bag, and " +
+                    "vehicle thoroughly. If found, disable or remove the battery. Consider " +
+                    "contacting local authorities."
+                RiskLevel.HIGH ->
+                    "Check your belongings for an unwanted tracker. Look in bags, pockets, " +
+                    "and vehicle compartments. If you find one, remove its battery."
+                RiskLevel.MEDIUM ->
+                    "Monitor whether this tracker continues to follow you. If it persists " +
+                    "for more than 30 minutes, search your belongings."
+                else ->
+                    "This is likely a passing device. No action needed, but stay aware."
+            }
+        } else {
+            when (riskLevel) {
+                RiskLevel.CRITICAL ->
+                    "Active tracking is likely. Enable airplane mode if you need to break " +
+                    "the tracking. Avoid this location for sensitive activities."
+                RiskLevel.HIGH ->
+                    "Possible active tracking. Consider enabling airplane mode temporarily " +
+                    "and moving to a different area to see if the pattern stops."
+                RiskLevel.MEDIUM ->
+                    "Monitor the situation. If you see this alert repeatedly while " +
+                    "stationary, take it more seriously."
+                else ->
+                    "This is likely normal handover behaviour during travel. No action needed."
+            }
         }
 
         val possibleCauses = buildList {
-            if (!isMoving) {
+            if (isBleTrackerAlert) {
+                add("Unwanted ${trackerLabel.removePrefix("a ").removePrefix("an ")} placed in your belongings")
+                add("Someone else's lost tracker travelling near you")
+                // AirCatch (2026) — device masquerading.
+                add("Tracker may be masquerading as a legitimate device (AirCatch 2026 finding)")
+            }
+            if (!isMoving && !isBleTrackerAlert) {
                 add("Active location triangulation via forced re-registration")
                 add("Nearby IMSI catcher causing network oscillation")
             }
-            add("Normal cell tower handovers during movement")
-            add("Network load balancing between sectors")
-            add("Carrier network reconfiguration")
+            if (!isBleTrackerAlert) {
+                add("Normal cell tower handovers during movement")
+                add("Network load balancing between sectors")
+                add("Carrier network reconfiguration")
+            }
         }
 
         return AlertAnalysis(
@@ -530,6 +709,10 @@ class ThreatAnalyst @Inject constructor() {
      *
      * Losing 5G in an urban area with known coverage is suspicious.
      * In rural/fringe areas, 5G drop to 4G is common and expected.
+     *
+     * Research enhancements:
+     * - SMDFbs (Sensors 2023): RRC protocol state violation detection
+     * - Forest Blizzard (April 2026): DNS hijacking context
      */
     private fun analyzeNrAnomaly(alert: Alert, details: JSONObject): AlertAnalysis {
         val isUrban = details.optBoolean("isUrban", true)
@@ -537,16 +720,31 @@ class ThreatAnalyst @Inject constructor() {
         val toNetwork = details.optString("toNetwork", "LTE")
         val isDowngradeToLegacy = toNetwork.uppercase() in listOf("GSM", "2G", "CDMA", "WCDMA", "3G")
 
-        val riskLevel = when {
+        // SMDFbs (Sensors 2023) — RRC protocol state machine violation detection.
+        // The 5G RRC state machine has well-defined transitions. Violations
+        // (e.g., RRC_CONNECTED → RRC_IDLE without a proper RRCRelease) are
+        // a strong indicator of a fake base station at 98% detection accuracy.
+        val rrcStateViolation = details.optBoolean("rrcStateViolation", false)
+        val stateTransitionAnomaly = details.optBoolean("stateTransitionAnomaly", false)
+
+        // Forest Blizzard (April 2026) — DNS hijacking context.
+        val dnsAnomaly = details.optBoolean("dnsAnomaly", false)
+
+        var riskLevel = when {
             isUrban && isDowngradeToLegacy -> RiskLevel.HIGH
             isUrban && fromNr -> RiskLevel.MEDIUM
             isDowngradeToLegacy -> RiskLevel.MEDIUM
             else -> RiskLevel.LOW
         }
 
+        // SMDFbs: RRC state violation immediately escalates to at least HIGH.
+        if (rrcStateViolation && riskLevel < RiskLevel.HIGH) {
+            riskLevel = RiskLevel.HIGH
+        }
+
         val shouldWorry = riskLevel >= RiskLevel.HIGH
 
-        val plainEnglish = when {
+        var plainEnglish = when {
             isUrban && isDowngradeToLegacy ->
                 "Your 5G connection was dropped all the way to $toNetwork in an area " +
                 "with good 5G coverage. Skipping past 4G to a legacy network is highly " +
@@ -560,6 +758,22 @@ class ThreatAnalyst @Inject constructor() {
             else ->
                 "Your 5G connection briefly dropped to $toNetwork. In your current area " +
                 "this is likely a normal coverage transition."
+        }
+
+        // SMDFbs: append RRC violation context.
+        if (rrcStateViolation) {
+            plainEnglish += " The 5G protocol state machine detected an illegal state " +
+                "transition — this is a strong indicator of a fake base station."
+        }
+        if (stateTransitionAnomaly) {
+            plainEnglish += " An unexpected RRC state transition was observed (e.g., " +
+                "connected → idle without proper release), which deviates from the " +
+                "5G specification."
+        }
+
+        if (dnsAnomaly) {
+            plainEnglish += " A DNS resolution anomaly was also detected, which may " +
+                "indicate network-level tampering."
         }
 
         val recommendation = when (riskLevel) {
@@ -576,6 +790,12 @@ class ThreatAnalyst @Inject constructor() {
         val possibleCauses = buildList {
             if (isUrban && isDowngradeToLegacy) {
                 add("Forced network downgrade for surveillance purposes")
+            }
+            if (rrcStateViolation || stateTransitionAnomaly) {
+                add("5G RRC protocol state violation consistent with fake base station (SMDFbs pattern)")
+            }
+            if (dnsAnomaly) {
+                add("DNS hijacking similar to recent state-sponsored campaigns targeting consumer routers")
             }
             add("5G signal obstruction or congestion")
             add("Carrier network maintenance or reconfiguration")
@@ -594,8 +814,182 @@ class ThreatAnalyst @Inject constructor() {
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    //  Multi-alert correlation (analyzeSituation helpers)
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * Known attack chain definitions, derived from FBSDetector (Purdue 2025)
+     * and real-world surveillance tradecraft.
+     *
+     * Each chain is a set of [ThreatType]s that, when observed together,
+     * indicate a specific coordinated attack rather than coincidental events.
+     */
+    private data class AttackChain(
+        val name: String,
+        val requiredTypes: Set<ThreatType>,
+        val description: String
+    )
+
+    private val knownAttackChains = listOf(
+        // FBSDetector (Purdue 2025): classic multi-step interception chain.
+        AttackChain(
+            name = "Classic IMSI catcher interception chain",
+            requiredTypes = setOf(ThreatType.FAKE_BTS, ThreatType.NETWORK_DOWNGRADE, ThreatType.CIPHER_ANOMALY),
+            description = "Multiple indicators form a coordinated attack chain: fake tower → " +
+                "encryption strip → interception. This is a textbook multi-step cellular attack."
+        ),
+        // Tower-based tracking: new suspicious tower → fake BTS confirmed → tracking.
+        AttackChain(
+            name = "Tower-based tracking operation",
+            requiredTypes = setOf(ThreatType.SIGNAL_ANOMALY, ThreatType.FAKE_BTS, ThreatType.TRACKING_PATTERN),
+            description = "A suspicious new tower appeared, was identified as a fake base station, " +
+                "and tracking patterns were detected. This indicates a tower-based tracking operation."
+        ),
+        // Shaik/Rupprecht: downgrade then ping to confirm location.
+        AttackChain(
+            name = "Location confirmation after encryption strip",
+            requiredTypes = setOf(ThreatType.NETWORK_DOWNGRADE, ThreatType.SILENT_SMS),
+            description = "Your connection was downgraded to remove encryption, then invisible " +
+                "messages were sent to confirm your location. This is a deliberate two-step attack."
+        )
+    )
+
+    /**
+     * Detect which known attack chains are present in the current alert set.
+     *
+     * @return List of matched [AttackChain]s, empty if no chains detected.
+     */
+    private fun detectAttackChains(threatTypes: Set<ThreatType>): List<AttackChain> {
+        return knownAttackChains.filter { chain ->
+            threatTypes.containsAll(chain.requiredTypes)
+        }
+    }
+
+    /**
+     * Detect deliberate downgrade attack by cross-referencing NETWORK_DOWNGRADE
+     * and CIPHER_ANOMALY alerts.
+     *
+     * Based on Shaik et al. (NDSS 2016) + Rupprecht et al. (IEEE S&P 2019):
+     * if a downgrade from 5G/LTE to 2G occurs concurrently with a cipher anomaly,
+     * the downgrade is almost certainly deliberate rather than a coverage gap.
+     */
+    private fun detectDeliberateDowngrade(alerts: List<Alert>): Boolean {
+        val downgradeAlerts = alerts.filter { it.threatType == ThreatType.NETWORK_DOWNGRADE }
+        val hasCipherAnomaly = alerts.any { it.threatType == ThreatType.CIPHER_ANOMALY }
+
+        if (!hasCipherAnomaly) return false
+
+        return downgradeAlerts.any { alert ->
+            val details = alert.detailsJson.parseJsonSafe()
+            val fromNetwork = details.optString("fromNetwork", "").uppercase()
+            val toNetwork = details.optString("toNetwork", "").uppercase()
+            val fromModern = fromNetwork in listOf("5G", "NR", "LTE", "4G")
+            val toLegacy = toNetwork in listOf("GSM", "2G", "CDMA")
+            fromModern && toLegacy
+        }
+    }
+
+    /**
+     * Detect temporal correlation: multiple different threat types within a
+     * narrow time window (5 minutes) suggest coordination rather than coincidence.
+     */
+    private fun detectTemporalCorrelation(alerts: List<Alert>): Boolean {
+        if (alerts.size < 2) return false
+
+        // Group by threat type — we need at least 2 different types.
+        val distinctTypes = alerts.map { it.threatType }.distinct()
+        if (distinctTypes.size < 2) return false
+
+        // Check if any two alerts of different types are within the time window.
+        val sorted = alerts.sortedBy { it.timestamp }
+        for (i in sorted.indices) {
+            for (j in i + 1 until sorted.size) {
+                if (sorted[i].threatType != sorted[j].threatType &&
+                    sorted[j].timestamp - sorted[i].timestamp <= TEMPORAL_WINDOW_MS) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    /**
+     * Detect geographic persistence: multiple alerts occurring at the same
+     * cell ID, suggesting a persistent threat at a specific location rather
+     * than a transient event.
+     */
+    private fun detectGeographicPersistence(alerts: List<Alert>): Boolean {
+        if (alerts.size < 2) return false
+
+        // Count alerts per cell ID (excluding null).
+        val cellCounts = alerts
+            .mapNotNull { it.cellId }
+            .groupingBy { it }
+            .eachCount()
+
+        // 2+ alerts at the same cell = geographic persistence.
+        return cellCounts.values.any { it >= 2 }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
     //  Situation brief helpers
     // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * Build the top concerns list, incorporating attack-chain and correlation
+     * insights alongside individual alert analyses.
+     */
+    private fun buildTopConcerns(
+        analyses: List<AlertAnalysis>,
+        detectedChains: List<AttackChain>,
+        hasDeliberateDowngrade: Boolean,
+        temporalCorrelation: Boolean,
+        geoPersistence: Boolean
+    ): List<String> {
+        val concerns = mutableListOf<String>()
+
+        // Attack chains are the most important — lead with them.
+        for (chain in detectedChains) {
+            concerns.add(chain.description)
+        }
+
+        // Deliberate downgrade cross-reference.
+        if (hasDeliberateDowngrade && detectedChains.none {
+                it.requiredTypes.contains(ThreatType.NETWORK_DOWNGRADE) &&
+                it.requiredTypes.contains(ThreatType.CIPHER_ANOMALY)
+            }) {
+            concerns.add(
+                "Network downgrade from a modern network to 2G occurred alongside an " +
+                "encryption anomaly — this is almost certainly a deliberate attack to " +
+                "strip your connection's security."
+            )
+        }
+
+        // Temporal correlation.
+        if (temporalCorrelation) {
+            concerns.add(
+                "Multiple threat indicators detected within a narrow time window — " +
+                "this suggests a coordinated rather than coincidental event."
+            )
+        }
+
+        // Geographic persistence.
+        if (geoPersistence) {
+            concerns.add(
+                "Repeated alerts at this location suggest a persistent threat rather " +
+                "than a transient one."
+            )
+        }
+
+        // Individual alert analyses, worst first, deduplicated.
+        analyses
+            .sortedByDescending { it.riskLevel }
+            .map { it.plainEnglish }
+            .distinct()
+            .forEach { if (it !in concerns) concerns.add(it) }
+
+        return concerns.take(MAX_TOP_CONCERNS)
+    }
 
     /**
      * Build a concise executive summary from all current alerts and context.
@@ -605,7 +999,11 @@ class ThreatAnalyst @Inject constructor() {
         analyses: List<AlertAnalysis>,
         highestRisk: RiskLevel,
         cellInfo: CellTower?,
-        isMoving: Boolean
+        isMoving: Boolean,
+        detectedChains: List<AttackChain>,
+        hasDeliberateDowngrade: Boolean,
+        temporalCorrelation: Boolean,
+        geoPersistence: Boolean
     ): String {
         val alertCount = alerts.size
         val worrySomeCount = analyses.count { it.shouldWorry }
@@ -618,9 +1016,28 @@ class ThreatAnalyst @Inject constructor() {
                 append("CRITICAL SITUATION: ")
                 append("$alertCount active alert${alertCount.plural()} detected $motionContext. ")
                 append("$worrySomeCount require${if (worrySomeCount == 1) "s" else ""} immediate attention. ")
-                if (threatTypes.size > 1) {
+
+                // Name the attack chain explicitly if detected.
+                if (detectedChains.isNotEmpty()) {
+                    val chainNames = detectedChains.joinToString("; ") { it.name }
+                    append("Attack chain identified: $chainNames. ")
+                } else if (threatTypes.size > 1) {
                     append("Multiple attack indicators present — this may be a coordinated effort. ")
                 }
+
+                if (hasDeliberateDowngrade) {
+                    append("A deliberate encryption-stripping downgrade was detected. ")
+                }
+
+                if (temporalCorrelation) {
+                    append("These alerts occurred within a narrow time window, reinforcing " +
+                        "the assessment of a coordinated attack. ")
+                }
+
+                if (geoPersistence) {
+                    append("This location has seen repeated alerts — the threat appears persistent. ")
+                }
+
                 append("Take protective action now.")
             }
             highestRisk == RiskLevel.HIGH -> buildString {
@@ -630,11 +1047,22 @@ class ThreatAnalyst @Inject constructor() {
                     append(", $worrySomeCount warranting concern")
                 }
                 append(". ")
+
+                if (temporalCorrelation) {
+                    append("Multiple indicators arrived in a narrow time window. ")
+                }
+                if (geoPersistence) {
+                    append("Repeated alerts at this location suggest a persistent threat. ")
+                }
+
                 append("Precautionary measures recommended.")
             }
             highestRisk == RiskLevel.MEDIUM -> buildString {
                 append("$alertCount alert${alertCount.plural()} detected $motionContext. ")
                 append("Nothing requires immediate action, but the situation warrants monitoring. ")
+                if (geoPersistence) {
+                    append("Note: alerts have recurred at this location. ")
+                }
                 if (cellInfo != null) {
                     append("Connected to ${cellInfo.networkType.generation} (cell ${cellInfo.cid}).")
                 }
@@ -652,9 +1080,19 @@ class ThreatAnalyst @Inject constructor() {
     private fun buildRecommendations(
         analyses: List<AlertAnalysis>,
         highestRisk: RiskLevel,
-        isMoving: Boolean
+        isMoving: Boolean,
+        detectedChains: List<AttackChain>,
+        hasDeliberateDowngrade: Boolean
     ): List<String> {
         val recs = mutableListOf<String>()
+
+        // Attack-chain-specific top recommendation.
+        if (detectedChains.isNotEmpty() || hasDeliberateDowngrade) {
+            recs.add(
+                "You are likely under active surveillance. Switch to airplane mode, then use " +
+                "Wi-Fi with a VPN for any essential communications via Signal or WhatsApp only."
+            )
+        }
 
         // Add individual recommendations from worst to least.
         analyses
@@ -668,11 +1106,11 @@ class ThreatAnalyst @Inject constructor() {
         // Universal recommendations based on overall risk.
         if (highestRisk >= RiskLevel.HIGH) {
             val encrypted = "Use end-to-end encrypted apps (Signal, WhatsApp) for all communications."
-            if (encrypted !in recs) recs.add(0, encrypted)
+            if (encrypted !in recs) recs.add(0.coerceAtMost(recs.size), encrypted)
         }
         if (highestRisk >= RiskLevel.CRITICAL && !isMoving) {
             val relocate = "Consider relocating — move at least several blocks and check if alerts clear."
-            if (relocate !in recs) recs.add(1, relocate)
+            if (relocate !in recs) recs.add(1.coerceAtMost(recs.size), relocate)
         }
 
         return recs.take(MAX_RECOMMENDATIONS)
@@ -718,5 +1156,11 @@ class ThreatAnalyst @Inject constructor() {
 
         /** Maximum number of recommendations in a situation brief. */
         private const val MAX_RECOMMENDATIONS = 6
+
+        /**
+         * Temporal correlation window: alerts of different types within this
+         * window (5 minutes) are considered potentially coordinated.
+         */
+        private const val TEMPORAL_WINDOW_MS = 5 * 60 * 1000L
     }
 }
