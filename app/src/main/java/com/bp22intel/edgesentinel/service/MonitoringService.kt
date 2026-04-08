@@ -1,0 +1,307 @@
+/*
+ * Edge Sentinel — Cellular Threat Detection for Android
+ * Copyright (C) 2024 BP22 Intel
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package com.bp22intel.edgesentinel.service
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.lifecycleScope
+import com.bp22intel.edgesentinel.data.sensor.CellInfoCollector
+import com.bp22intel.edgesentinel.data.sensor.TelephonyMonitor
+import com.bp22intel.edgesentinel.detection.engine.ThreatDetectionEngine
+import com.bp22intel.edgesentinel.domain.model.Alert
+import com.bp22intel.edgesentinel.domain.model.Confidence
+import com.bp22intel.edgesentinel.domain.model.DetectionResult
+import com.bp22intel.edgesentinel.domain.model.ScanResult
+import com.bp22intel.edgesentinel.domain.model.ThreatLevel
+import com.bp22intel.edgesentinel.domain.repository.AlertRepository
+import com.bp22intel.edgesentinel.domain.repository.CellRepository
+import com.bp22intel.edgesentinel.domain.repository.ScanRepository
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@AndroidEntryPoint
+class MonitoringService : LifecycleService() {
+
+    @Inject lateinit var cellInfoCollector: CellInfoCollector
+    @Inject lateinit var telephonyMonitor: TelephonyMonitor
+    @Inject lateinit var threatDetectionEngine: ThreatDetectionEngine
+    @Inject lateinit var cellRepository: CellRepository
+    @Inject lateinit var alertRepository: AlertRepository
+    @Inject lateinit var scanRepository: ScanRepository
+
+    private var scanJob: Job? = null
+    private lateinit var notificationManager: NotificationManager
+
+    companion object {
+        const val CHANNEL_ID = "edge_sentinel_monitoring"
+        const val ALERT_CHANNEL_ID = "edge_sentinel_alerts"
+        private const val NOTIFICATION_ID = 1
+        private const val ACTION_START = "com.bp22intel.edgesentinel.action.START"
+        private const val ACTION_STOP = "com.bp22intel.edgesentinel.action.STOP"
+
+        private const val ACTIVE_SCAN_INTERVAL_MS = 30_000L
+        private const val PASSIVE_SCAN_INTERVAL_MS = 300_000L
+
+        private val _threatLevel = MutableStateFlow(ThreatLevel.CLEAR)
+        val threatLevel: StateFlow<ThreatLevel> = _threatLevel.asStateFlow()
+
+        private val _isRunning = MutableStateFlow(false)
+        val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
+
+        fun start(context: Context) {
+            val intent = Intent(context, MonitoringService::class.java).apply {
+                action = ACTION_START
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+
+        fun stop(context: Context) {
+            val intent = Intent(context, MonitoringService::class.java).apply {
+                action = ACTION_STOP
+            }
+            context.startService(intent)
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        createNotificationChannels()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+
+        when (intent?.action) {
+            ACTION_STOP -> {
+                stopMonitoring()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            else -> {
+                startForeground(NOTIFICATION_ID, buildStatusNotification(ThreatLevel.CLEAR))
+                startMonitoring()
+            }
+        }
+
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        stopMonitoring()
+        super.onDestroy()
+    }
+
+    private fun createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val monitoringChannel = NotificationChannel(
+                CHANNEL_ID,
+                "Monitoring Status",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Shows current monitoring status and threat level"
+                setShowBadge(false)
+            }
+
+            val alertChannel = NotificationChannel(
+                ALERT_CHANNEL_ID,
+                "Threat Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Alerts for suspicious or threatening cellular activity"
+                enableVibration(true)
+            }
+
+            notificationManager.createNotificationChannel(monitoringChannel)
+            notificationManager.createNotificationChannel(alertChannel)
+        }
+    }
+
+    private fun startMonitoring() {
+        _isRunning.value = true
+        telephonyMonitor.start()
+
+        scanJob = lifecycleScope.launch {
+            while (isActive) {
+                performScan()
+                val interval = if (_threatLevel.value == ThreatLevel.CLEAR) {
+                    PASSIVE_SCAN_INTERVAL_MS
+                } else {
+                    ACTIVE_SCAN_INTERVAL_MS
+                }
+                delay(interval)
+            }
+        }
+    }
+
+    private fun stopMonitoring() {
+        _isRunning.value = false
+        _threatLevel.value = ThreatLevel.CLEAR
+        scanJob?.cancel()
+        scanJob = null
+        telephonyMonitor.stop()
+    }
+
+    private suspend fun performScan() {
+        val startTime = System.currentTimeMillis()
+
+        try {
+            val currentCells = cellInfoCollector.getCurrentCellInfo()
+            val history = cellRepository.getAllCells().first()
+
+            // Save observed cells
+            for (cell in currentCells) {
+                cellRepository.insertOrUpdateCell(cell)
+            }
+
+            // Run threat detection
+            val detectionResults = threatDetectionEngine.runScan(
+                cells = currentCells,
+                history = history
+            )
+
+            // Determine overall threat level from detection results
+            val scanThreatLevel = determineThreatLevel(detectionResults)
+            _threatLevel.value = scanThreatLevel
+
+            // Save scan result
+            val durationMs = System.currentTimeMillis() - startTime
+            val scanResult = ScanResult(
+                timestamp = startTime,
+                cellCount = currentCells.size,
+                threatLevel = scanThreatLevel,
+                durationMs = durationMs
+            )
+            scanRepository.insertScan(scanResult)
+
+            // Create alerts for suspicious or threatening results
+            for (result in detectionResults) {
+                val severity = when {
+                    result.score >= 0.7 -> ThreatLevel.THREAT
+                    result.score >= 0.4 -> ThreatLevel.SUSPICIOUS
+                    else -> ThreatLevel.CLEAR
+                }
+
+                if (severity == ThreatLevel.SUSPICIOUS || severity == ThreatLevel.THREAT) {
+                    val alert = Alert(
+                        timestamp = startTime,
+                        threatType = result.threatType,
+                        severity = severity,
+                        confidence = result.confidence,
+                        summary = result.summary,
+                        detailsJson = result.details.entries.joinToString(",") {
+                            "\"${it.key}\":\"${it.value}\""
+                        }.let { "{$it}" },
+                        cellId = currentCells.firstOrNull()?.id,
+                        acknowledged = false
+                    )
+                    alertRepository.insertAlert(alert)
+                    showAlertNotification(alert)
+                }
+            }
+
+            // Update foreground notification
+            notificationManager.notify(NOTIFICATION_ID, buildStatusNotification(scanThreatLevel))
+        } catch (e: Exception) {
+            // Log but don't crash the scan loop
+            val durationMs = System.currentTimeMillis() - startTime
+            val scanResult = ScanResult(
+                timestamp = startTime,
+                cellCount = 0,
+                threatLevel = ThreatLevel.CLEAR,
+                durationMs = durationMs
+            )
+            scanRepository.insertScan(scanResult)
+        }
+    }
+
+    private fun determineThreatLevel(results: List<DetectionResult>): ThreatLevel {
+        if (results.isEmpty()) return ThreatLevel.CLEAR
+
+        val maxScore = results.maxOf { it.score }
+        return when {
+            maxScore >= 0.7 -> ThreatLevel.THREAT
+            maxScore >= 0.4 -> ThreatLevel.SUSPICIOUS
+            else -> ThreatLevel.CLEAR
+        }
+    }
+
+    private fun buildStatusNotification(threatLevel: ThreatLevel): Notification {
+        val statusText = when (threatLevel) {
+            ThreatLevel.CLEAR -> "All clear - monitoring cellular environment"
+            ThreatLevel.SUSPICIOUS -> "Suspicious activity detected"
+            ThreatLevel.THREAT -> "THREAT DETECTED - Cellular anomaly found"
+        }
+
+        val priority = when (threatLevel) {
+            ThreatLevel.CLEAR -> NotificationCompat.PRIORITY_LOW
+            ThreatLevel.SUSPICIOUS -> NotificationCompat.PRIORITY_DEFAULT
+            ThreatLevel.THREAT -> NotificationCompat.PRIORITY_HIGH
+        }
+
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Edge Sentinel")
+            .setContentText(statusText)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setPriority(priority)
+            .setOngoing(true)
+            .setSilent(true)
+            .build()
+    }
+
+    private fun showAlertNotification(alert: Alert) {
+        val notificationId = (alert.timestamp % Int.MAX_VALUE).toInt() + 100
+
+        val title = when (alert.severity) {
+            ThreatLevel.THREAT -> "THREAT: ${alert.threatType.name}"
+            ThreatLevel.SUSPICIOUS -> "Suspicious: ${alert.threatType.name}"
+            ThreatLevel.CLEAR -> return
+        }
+
+        val notification = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(alert.summary)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(notificationId, notification)
+    }
+}

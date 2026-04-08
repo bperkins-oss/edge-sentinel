@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Shield shape -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M54,24L30,34v16c0,15.52 10.24,30.02 24,33.58 13.76,-3.56 24,-18.06 24,-33.58V34L54,24z" />
+    <!-- Inner shield detail -->
+    <path
+        android:fillColor="#0D1117"
+        android:pathData="M54,28L34,36.67v12.67c0,12.78 8.53,24.74 20,27.66 11.47,-2.92 20,-14.88 20,-27.66V36.67L54,28z" />
+    <!-- Signal bars -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M44,58v6h4v-6zM50,52v12h4v-12zM56,46v18h4v-18zM62,40v24h4v-24z" />
+</vector>

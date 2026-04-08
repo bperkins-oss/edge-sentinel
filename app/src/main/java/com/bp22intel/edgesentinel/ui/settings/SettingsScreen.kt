@@ -1,0 +1,335 @@
+/*
+ * Edge Sentinel — Cellular Threat Detection for Android
+ * Copyright (C) 2024 BP22 Intel
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package com.bp22intel.edgesentinel.ui.settings
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.bp22intel.edgesentinel.domain.model.DetectionSensitivity
+import com.bp22intel.edgesentinel.ui.components.SectionHeader
+import com.bp22intel.edgesentinel.ui.theme.AccentBlue
+import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
+import com.bp22intel.edgesentinel.ui.theme.Surface
+import com.bp22intel.edgesentinel.ui.theme.SurfaceVariant
+import com.bp22intel.edgesentinel.ui.theme.TextPrimary
+import com.bp22intel.edgesentinel.ui.theme.TextSecondary
+import com.bp22intel.edgesentinel.ui.theme.TextTertiary
+
+@Composable
+fun SettingsScreen(
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
+    val context = LocalContext.current
+    val isMonitoringEnabled by viewModel.isMonitoringEnabled.collectAsState()
+    val detectionSensitivity by viewModel.detectionSensitivity.collectAsState()
+    val notificationSound by viewModel.notificationSound.collectAsState()
+    val notificationVibration by viewModel.notificationVibration.collectAsState()
+    val isDemoMode by viewModel.isDemoMode.collectAsState()
+    val isAdvancedMode by viewModel.isAdvancedMode.collectAsState()
+    val isRooted by viewModel.isRooted.collectAsState()
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Monitoring toggle
+        item {
+            SectionHeader(title = "Monitoring")
+        }
+
+        item {
+            SettingsToggleItem(
+                title = "Enable Monitoring",
+                subtitle = "Continuously scan for cellular threats in the background",
+                checked = isMonitoringEnabled,
+                onCheckedChange = { viewModel.setMonitoringEnabled(it) }
+            )
+        }
+
+        // Detection sensitivity
+        item {
+            SectionHeader(title = "Detection Sensitivity")
+        }
+
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Surface),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    DetectionSensitivity.entries.forEach { sensitivity ->
+                        val label = when (sensitivity) {
+                            DetectionSensitivity.LOW -> "Low"
+                            DetectionSensitivity.MEDIUM -> "Medium"
+                            DetectionSensitivity.HIGH -> "High"
+                        }
+                        val description = when (sensitivity) {
+                            DetectionSensitivity.LOW -> "Fewer false positives, may miss subtle threats"
+                            DetectionSensitivity.MEDIUM -> "Balanced detection (recommended)"
+                            DetectionSensitivity.HIGH -> "Maximum sensitivity, may produce more alerts"
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = detectionSensitivity == sensitivity,
+                                onClick = { viewModel.setDetectionSensitivity(sensitivity) },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = AccentBlue,
+                                    unselectedColor = TextSecondary
+                                )
+                            )
+                            Column(modifier = Modifier.padding(start = 8.dp)) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Notification preferences
+        item {
+            SectionHeader(title = "Notifications")
+        }
+
+        item {
+            SettingsToggleItem(
+                title = "Alert Sound",
+                subtitle = "Play a sound when threats are detected",
+                checked = notificationSound,
+                onCheckedChange = { viewModel.setNotificationSound(it) }
+            )
+        }
+
+        item {
+            SettingsToggleItem(
+                title = "Vibration",
+                subtitle = "Vibrate when threats are detected",
+                checked = notificationVibration,
+                onCheckedChange = { viewModel.setNotificationVibration(it) }
+            )
+        }
+
+        // Demo mode
+        item {
+            SectionHeader(title = "Development")
+        }
+
+        item {
+            SettingsToggleItem(
+                title = "Demo Mode",
+                subtitle = "Use simulated data for testing and demonstration",
+                checked = isDemoMode,
+                onCheckedChange = { viewModel.setDemoMode(it) }
+            )
+        }
+
+        // Advanced mode (root required)
+        item {
+            SettingsToggleItem(
+                title = "Advanced Mode",
+                subtitle = if (isRooted) {
+                    "Access low-level radio data for enhanced detection"
+                } else {
+                    "Requires root access"
+                },
+                checked = isAdvancedMode,
+                onCheckedChange = { viewModel.setAdvancedMode(it) },
+                enabled = isRooted
+            )
+        }
+
+        // Export logs
+        item {
+            SectionHeader(title = "Data")
+        }
+
+        item {
+            Button(
+                onClick = { viewModel.exportLogs(context) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SurfaceVariant,
+                    contentColor = TextPrimary
+                )
+            ) {
+                Text(text = "Export Logs")
+            }
+        }
+
+        // About section
+        item {
+            SectionHeader(title = "About")
+        }
+
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Surface),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AboutRow(label = "Version", value = "1.0.0")
+                    AboutRow(label = "License", value = "GPLv3")
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "Edge Sentinel is free software licensed under the " +
+                            "GNU General Public License v3. You are free to use, modify, " +
+                            "and distribute this software under the terms of the license.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextTertiary
+                    )
+
+                    Text(
+                        text = "Source: github.com/bp22intel/edge-sentinel",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AccentBlue
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsToggleItem(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .alpha(if (enabled) 1f else 0.5f)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = TextPrimary
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            }
+            Switch(
+                checked = checked,
+                onCheckedChange = { if (enabled) onCheckedChange(it) },
+                enabled = enabled,
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = AccentBlue,
+                    checkedThumbColor = TextPrimary,
+                    uncheckedTrackColor = SurfaceVariant,
+                    uncheckedThumbColor = TextSecondary
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun AboutRow(
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextSecondary
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = TextPrimary
+        )
+    }
+}
