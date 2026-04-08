@@ -133,6 +133,31 @@ class ThreatDetectionEngine @Inject constructor(
                 // Signal anomaly maps to: f1 (fingerprint)
                 indicators["f1"] = maxOf(indicators["f1"] ?: 0.0, result.score)
             }
+            com.bp22intel.edgesentinel.domain.model.ThreatType.NR_ANOMALY -> {
+                // 5G NR anomalies map to multiple coefficients depending on sub-type
+                // Fake gNodeB indicators → a5 (unknown LAC/NCI), f1 (fingerprint)
+                if (result.details.keys.any { it.startsWith("nr_unknown_nci") }) {
+                    indicators["a5"] = maxOf(indicators["a5"] ?: 0.0, 1.5)
+                }
+                if (result.details.keys.any { it.startsWith("nr_strong_signal") }) {
+                    indicators["f1"] = maxOf(indicators["f1"] ?: 0.0, 2.0)
+                }
+                if (result.details.containsKey("nr_missing_neighbors")) {
+                    indicators["a4"] = maxOf(indicators["a4"] ?: 0.0, 1.0)
+                }
+                // NR downgrade/bidding-down → k1 (cipher mode downgrade)
+                if (result.details.keys.any { it.contains("downgrade") || it.contains("fallback") }) {
+                    indicators["k1"] = maxOf(indicators["k1"] ?: 0.0, result.score.coerceAtMost(3.0))
+                }
+                // NR oscillation/jamming → a2 (unusual reselection)
+                if (result.details.keys.any { it.contains("oscillation") || it.contains("rapid_reselection") }) {
+                    indicators["a2"] = maxOf(indicators["a2"] ?: 0.0, 1.0)
+                }
+                // NR signal anomalies → f1
+                if (result.details.keys.any { it.startsWith("nr_signal_jump") || it.startsWith("nr_uniform_signals") }) {
+                    indicators["f1"] = maxOf(indicators["f1"] ?: 0.0, 1.5)
+                }
+            }
         }
     }
 }

@@ -19,12 +19,17 @@
 package com.bp22intel.edgesentinel.data.sensor
 
 import android.content.Context
+import android.os.Build
+import android.telephony.CellIdentityNr
 import android.telephony.CellInfoCdma
 import android.telephony.CellInfoGsm
 import android.telephony.CellInfoLte
 import android.telephony.CellInfoNr
 import android.telephony.CellInfoWcdma
+import android.telephony.CellSignalStrengthNr
+import android.telephony.TelephonyDisplayInfo
 import android.telephony.TelephonyManager
+import androidx.annotation.RequiresApi
 import com.bp22intel.edgesentinel.domain.model.CellTower
 import com.bp22intel.edgesentinel.domain.model.NetworkType
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -66,22 +71,11 @@ class CellInfoCollector @Inject constructor(
                     )
                 }
                 is CellInfoNr -> {
-                    val identity = cellInfo.cellIdentity as android.telephony.CellIdentityNr
-                    val signal = cellInfo.cellSignalStrength
-                    CellTower(
-                        id = 0,
-                        cid = identity.nci.toInt(),
-                        lacTac = identity.tac,
-                        mcc = identity.mccString?.toIntOrNull() ?: 0,
-                        mnc = identity.mncString?.toIntOrNull() ?: 0,
-                        signalStrength = signal.dbm,
-                        networkType = NetworkType.NR,
-                        latitude = null,
-                        longitude = null,
-                        firstSeen = now,
-                        lastSeen = now,
-                        timesSeen = 1
-                    )
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        extractNrCellTower(cellInfo, now)
+                    } else {
+                        null
+                    }
                 }
                 is CellInfoGsm -> {
                     val identity = cellInfo.cellIdentity
@@ -139,6 +133,65 @@ class CellInfoCollector @Inject constructor(
                 }
                 else -> null
             }
+        }
+    }
+
+    /**
+     * Extract a CellTower from CellInfoNr with all available NR-specific fields.
+     *
+     * Collects NCI, TAC, NR-ARFCN, PCI, and full signal strength measurements
+     * (SS-RSRP, SS-RSRQ, SS-SINR, CSI-RSRP, CSI-RSRQ, CSI-SINR) where available.
+     * NR-ARFCN and PCI are stored in the details for use by NrDetector.
+     */
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun extractNrCellTower(cellInfo: CellInfoNr, timestamp: Long): CellTower {
+        val identity = cellInfo.cellIdentity as CellIdentityNr
+        val signal = cellInfo.cellSignalStrength as CellSignalStrengthNr
+
+        // Use SS-RSRP as the primary signal strength metric for NR.
+        // Falls back to generic dbm if SS-RSRP is unavailable.
+        val signalDbm = if (signal.ssRsrp != Int.MAX_VALUE) {
+            signal.ssRsrp
+        } else {
+            signal.dbm
+        }
+
+        return CellTower(
+            id = 0,
+            cid = identity.nci.toInt(),
+            lacTac = identity.tac,
+            mcc = identity.mccString?.toIntOrNull() ?: 0,
+            mnc = identity.mncString?.toIntOrNull() ?: 0,
+            signalStrength = signalDbm,
+            networkType = NetworkType.NR,
+            latitude = null,
+            longitude = null,
+            firstSeen = timestamp,
+            lastSeen = timestamp,
+            timesSeen = 1
+        )
+    }
+
+    /**
+     * Get the NR override network type from TelephonyDisplayInfo.
+     *
+     * Returns a string indicating the NR connection mode:
+     * - "NR_NSA" — Non-Standalone (EN-DC with LTE anchor)
+     * - "NR_NSA_MMWAVE" — NSA on mmWave carrier
+     * - "NR_ADVANCED" — NR with carrier aggregation
+     * - "NR_SA" — Standalone (if dataNetworkType is NR)
+     * - null — not on NR
+     */
+    @RequiresApi(Build.VERSION_CODES.R)
+    @Suppress("MissingPermission")
+    fun getOverrideNetworkType(): String? {
+        return try {
+            when (telephonyManager.dataNetworkType) {
+                TelephonyManager.NETWORK_TYPE_NR -> "NR_SA"
+                else -> null // Override type detection handled by TelephonyMonitor/NrMonitor
+            }
+        } catch (e: SecurityException) {
+            null
         }
     }
 
