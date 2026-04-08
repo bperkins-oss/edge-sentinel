@@ -38,6 +38,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material3.Card
@@ -86,6 +89,7 @@ import androidx.compose.material.icons.filled.CellTower
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.bp22intel.edgesentinel.ui.components.EmptyStateCard
 import com.bp22intel.edgesentinel.ui.theme.StatusClear
@@ -124,18 +128,7 @@ fun DashboardScreen(
 
     Scaffold(
         containerColor = BackgroundPrimary,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { viewModel.forceScan() },
-                containerColor = AccentBlue,
-                contentColor = BackgroundPrimary
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Radar,
-                    contentDescription = "Force Scan"
-                )
-            }
-        }
+        floatingActionButton = { }
     ) { paddingValues ->
         PullToRefreshBox(
             isRefreshing = isRefreshing,
@@ -148,6 +141,17 @@ fun DashboardScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+            // Version ID
+            item {
+                Text(
+                    text = "Edge Sentinel v${com.bp22intel.edgesentinel.BuildConfig.VERSION_NAME} (Build ${com.bp22intel.edgesentinel.BuildConfig.VERSION_CODE})",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            }
+
             // Unified fused threat indicator
             item {
                 FusedThreatHeader(posture = posture)
@@ -240,6 +244,27 @@ fun DashboardScreen(
                             }
                         }
                     }
+                }
+            }
+
+            // Force Scan button
+            item {
+                Button(
+                    onClick = { viewModel.forceScan() },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AccentBlue,
+                        contentColor = BackgroundPrimary
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Force Scan", style = MaterialTheme.typography.labelLarge)
                 }
             }
 
