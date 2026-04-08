@@ -23,6 +23,8 @@ import com.bp22intel.edgesentinel.data.local.dao.KnownTowerDao;
 import com.bp22intel.edgesentinel.data.local.dao.KnownTowerDao_Impl;
 import com.bp22intel.edgesentinel.data.local.dao.ScanDao;
 import com.bp22intel.edgesentinel.data.local.dao.ScanDao_Impl;
+import com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao;
+import com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao_Impl;
 import java.lang.Class;
 import java.lang.Override;
 import java.lang.String;
@@ -51,10 +53,12 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
 
   private volatile KnownTowerDao _knownTowerDao;
 
+  private volatile TrustedNetworkDao _trustedNetworkDao;
+
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(3) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(4) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `cells` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `cid` INTEGER NOT NULL, `lac_tac` INTEGER NOT NULL, `mcc` INTEGER NOT NULL, `mnc` INTEGER NOT NULL, `signal_strength` INTEGER NOT NULL, `network_type` TEXT NOT NULL, `latitude` REAL, `longitude` REAL, `first_seen` INTEGER NOT NULL, `last_seen` INTEGER NOT NULL, `times_seen` INTEGER NOT NULL)");
@@ -64,8 +68,9 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
         db.execSQL("CREATE TABLE IF NOT EXISTS `baselines` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `radius` REAL NOT NULL, `label` TEXT, `cell_towers_json` TEXT NOT NULL, `wifi_aps_json` TEXT NOT NULL, `ble_count_min` INTEGER NOT NULL, `ble_count_max` INTEGER NOT NULL, `network_type_dist_json` TEXT NOT NULL, `observation_count` INTEGER NOT NULL, `confidence` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `day_profile_json` TEXT, `night_profile_json` TEXT)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `known_towers` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `mcc` INTEGER NOT NULL, `mnc` INTEGER NOT NULL, `lac` INTEGER NOT NULL, `cid` INTEGER NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `range` INTEGER NOT NULL, `radio` TEXT NOT NULL, `source` TEXT NOT NULL, `updated` INTEGER NOT NULL)");
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_known_towers_mcc_mnc_lac_cid` ON `known_towers` (`mcc`, `mnc`, `lac`, `cid`)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `trusted_networks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `bssid` TEXT NOT NULL, `ssid` TEXT NOT NULL, `label` TEXT, `added_at` INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '67016a3b61121f65ad8b1d343a3c9dd8')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'fb4701e79f0ee0f938549e63cd8b7850')");
       }
 
       @Override
@@ -76,6 +81,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
         db.execSQL("DROP TABLE IF EXISTS `ble_devices`");
         db.execSQL("DROP TABLE IF EXISTS `baselines`");
         db.execSQL("DROP TABLE IF EXISTS `known_towers`");
+        db.execSQL("DROP TABLE IF EXISTS `trusted_networks`");
         final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
         if (_callbacks != null) {
           for (RoomDatabase.Callback _callback : _callbacks) {
@@ -244,9 +250,24 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
                   + " Expected:\n" + _infoKnownTowers + "\n"
                   + " Found:\n" + _existingKnownTowers);
         }
+        final HashMap<String, TableInfo.Column> _columnsTrustedNetworks = new HashMap<String, TableInfo.Column>(5);
+        _columnsTrustedNetworks.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsTrustedNetworks.put("bssid", new TableInfo.Column("bssid", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsTrustedNetworks.put("ssid", new TableInfo.Column("ssid", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsTrustedNetworks.put("label", new TableInfo.Column("label", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsTrustedNetworks.put("added_at", new TableInfo.Column("added_at", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysTrustedNetworks = new HashSet<TableInfo.ForeignKey>(0);
+        final HashSet<TableInfo.Index> _indicesTrustedNetworks = new HashSet<TableInfo.Index>(0);
+        final TableInfo _infoTrustedNetworks = new TableInfo("trusted_networks", _columnsTrustedNetworks, _foreignKeysTrustedNetworks, _indicesTrustedNetworks);
+        final TableInfo _existingTrustedNetworks = TableInfo.read(db, "trusted_networks");
+        if (!_infoTrustedNetworks.equals(_existingTrustedNetworks)) {
+          return new RoomOpenHelper.ValidationResult(false, "trusted_networks(com.bp22intel.edgesentinel.data.local.entity.TrustedNetworkEntity).\n"
+                  + " Expected:\n" + _infoTrustedNetworks + "\n"
+                  + " Found:\n" + _existingTrustedNetworks);
+        }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "67016a3b61121f65ad8b1d343a3c9dd8", "0f0552578b02c1145d550700bcc1549d");
+    }, "fb4701e79f0ee0f938549e63cd8b7850", "290bfa98a7cf6a73cabd9692872a8133");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;
@@ -257,7 +278,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
   protected InvalidationTracker createInvalidationTracker() {
     final HashMap<String, String> _shadowTablesMap = new HashMap<String, String>(0);
     final HashMap<String, Set<String>> _viewTables = new HashMap<String, Set<String>>(0);
-    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "cells","alerts","scans","ble_devices","baselines","known_towers");
+    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "cells","alerts","scans","ble_devices","baselines","known_towers","trusted_networks");
   }
 
   @Override
@@ -272,6 +293,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
       _db.execSQL("DELETE FROM `ble_devices`");
       _db.execSQL("DELETE FROM `baselines`");
       _db.execSQL("DELETE FROM `known_towers`");
+      _db.execSQL("DELETE FROM `trusted_networks`");
       super.setTransactionSuccessful();
     } finally {
       super.endTransaction();
@@ -292,6 +314,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
     _typeConvertersMap.put(BleDeviceDao.class, BleDeviceDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(BaselineDao.class, BaselineDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(KnownTowerDao.class, KnownTowerDao_Impl.getRequiredConverters());
+    _typeConvertersMap.put(TrustedNetworkDao.class, TrustedNetworkDao_Impl.getRequiredConverters());
     return _typeConvertersMap;
   }
 
@@ -390,6 +413,20 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
           _knownTowerDao = new KnownTowerDao_Impl(this);
         }
         return _knownTowerDao;
+      }
+    }
+  }
+
+  @Override
+  public TrustedNetworkDao trustedNetworkDao() {
+    if (_trustedNetworkDao != null) {
+      return _trustedNetworkDao;
+    } else {
+      synchronized(this) {
+        if(_trustedNetworkDao == null) {
+          _trustedNetworkDao = new TrustedNetworkDao_Impl(this);
+        }
+        return _trustedNetworkDao;
       }
     }
   }

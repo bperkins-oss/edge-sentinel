@@ -26,7 +26,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -158,7 +160,16 @@ fun WifiScreen(
             }
             val sortedAps = uiState.accessPoints.sortedByDescending { it.signalStrength }
             items(sortedAps, key = { it.bssid }) { ap ->
-                AccessPointCard(ap, viewModel.threatLevelForAp(ap))
+                val isTrusted = viewModel.isNetworkTrusted(ap.bssid)
+                AccessPointCard(
+                    ap = ap,
+                    threatLevel = if (isTrusted) ApThreatLevel.SAFE else viewModel.threatLevelForAp(ap),
+                    isTrusted = isTrusted,
+                    onToggleTrust = {
+                        if (isTrusted) viewModel.untrustNetwork(ap.bssid)
+                        else viewModel.trustNetwork(ap.bssid, ap.ssid)
+                    }
+                )
             }
         }
 
@@ -451,11 +462,17 @@ private fun ProbePrivacyCard(status: com.bp22intel.edgesentinel.detection.wifi.P
 }
 
 @Composable
-private fun AccessPointCard(ap: ObservedAp, threatLevel: ApThreatLevel) {
-    val threatColor = when (threatLevel) {
-        ApThreatLevel.SAFE -> Color(0xFF10B981)
-        ApThreatLevel.SUSPICIOUS -> Color(0xFFF59E0B)
-        ApThreatLevel.DANGEROUS -> Color(0xFFEF4444)
+private fun AccessPointCard(
+    ap: ObservedAp,
+    threatLevel: ApThreatLevel,
+    isTrusted: Boolean = false,
+    onToggleTrust: () -> Unit = {}
+) {
+    val threatColor = when {
+        isTrusted -> Color(0xFF06B6D4) // Cyan for trusted
+        threatLevel == ApThreatLevel.SAFE -> Color(0xFF10B981)
+        threatLevel == ApThreatLevel.SUSPICIOUS -> Color(0xFFF59E0B)
+        else -> Color(0xFFEF4444)
     }
 
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -484,11 +501,22 @@ private fun AccessPointCard(ap: ObservedAp, threatLevel: ApThreatLevel) {
             Spacer(modifier = Modifier.width(8.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    ap.ssid.ifBlank { "(Hidden Network)" },
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        ap.ssid.ifBlank { "(Hidden Network)" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (isTrusted) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "TRUSTED",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF06B6D4),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
                 Text(
                     "${ap.bssid} · ${ap.securityType.label} · ${ap.frequency} MHz",
                     style = MaterialTheme.typography.bodySmall,
@@ -502,11 +530,18 @@ private fun AccessPointCard(ap: ObservedAp, threatLevel: ApThreatLevel) {
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold
                 )
-                Text(
-                    threatLevel.label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = threatColor
-                )
+                // Trust/untrust button
+                TextButton(
+                    onClick = onToggleTrust,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    modifier = Modifier.height(28.dp)
+                ) {
+                    Text(
+                        if (isTrusted) "Untrust" else "Trust",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isTrusted) Color(0xFFF59E0B) else Color(0xFF06B6D4)
+                    )
+                }
             }
         }
     }

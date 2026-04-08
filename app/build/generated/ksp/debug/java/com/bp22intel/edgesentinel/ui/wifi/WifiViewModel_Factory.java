@@ -1,5 +1,6 @@
 package com.bp22intel.edgesentinel.ui.wifi;
 
+import com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao;
 import com.bp22intel.edgesentinel.detection.wifi.WifiEnvironmentAnalyzer;
 import com.bp22intel.edgesentinel.detection.wifi.WifiMonitor;
 import com.bp22intel.edgesentinel.detection.wifi.WifiProbeProtector;
@@ -34,31 +35,36 @@ public final class WifiViewModel_Factory implements Factory<WifiViewModel> {
 
   private final Provider<WifiProbeProtector> probeProtectorProvider;
 
+  private final Provider<TrustedNetworkDao> trustedNetworkDaoProvider;
+
   public WifiViewModel_Factory(Provider<WifiMonitor> wifiMonitorProvider,
       Provider<WifiThreatDetector> threatDetectorProvider,
       Provider<WifiEnvironmentAnalyzer> environmentAnalyzerProvider,
-      Provider<WifiProbeProtector> probeProtectorProvider) {
+      Provider<WifiProbeProtector> probeProtectorProvider,
+      Provider<TrustedNetworkDao> trustedNetworkDaoProvider) {
     this.wifiMonitorProvider = wifiMonitorProvider;
     this.threatDetectorProvider = threatDetectorProvider;
     this.environmentAnalyzerProvider = environmentAnalyzerProvider;
     this.probeProtectorProvider = probeProtectorProvider;
+    this.trustedNetworkDaoProvider = trustedNetworkDaoProvider;
   }
 
   @Override
   public WifiViewModel get() {
-    return newInstance(wifiMonitorProvider.get(), threatDetectorProvider.get(), environmentAnalyzerProvider.get(), probeProtectorProvider.get());
+    return newInstance(wifiMonitorProvider.get(), threatDetectorProvider.get(), environmentAnalyzerProvider.get(), probeProtectorProvider.get(), trustedNetworkDaoProvider.get());
   }
 
   public static WifiViewModel_Factory create(Provider<WifiMonitor> wifiMonitorProvider,
       Provider<WifiThreatDetector> threatDetectorProvider,
       Provider<WifiEnvironmentAnalyzer> environmentAnalyzerProvider,
-      Provider<WifiProbeProtector> probeProtectorProvider) {
-    return new WifiViewModel_Factory(wifiMonitorProvider, threatDetectorProvider, environmentAnalyzerProvider, probeProtectorProvider);
+      Provider<WifiProbeProtector> probeProtectorProvider,
+      Provider<TrustedNetworkDao> trustedNetworkDaoProvider) {
+    return new WifiViewModel_Factory(wifiMonitorProvider, threatDetectorProvider, environmentAnalyzerProvider, probeProtectorProvider, trustedNetworkDaoProvider);
   }
 
   public static WifiViewModel newInstance(WifiMonitor wifiMonitor,
       WifiThreatDetector threatDetector, WifiEnvironmentAnalyzer environmentAnalyzer,
-      WifiProbeProtector probeProtector) {
-    return new WifiViewModel(wifiMonitor, threatDetector, environmentAnalyzer, probeProtector);
+      WifiProbeProtector probeProtector, TrustedNetworkDao trustedNetworkDao) {
+    return new WifiViewModel(wifiMonitor, threatDetector, environmentAnalyzer, probeProtector, trustedNetworkDao);
   }
 }

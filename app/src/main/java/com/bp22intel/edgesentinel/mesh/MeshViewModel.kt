@@ -59,16 +59,17 @@ class MeshViewModel @Inject constructor(
     }
 
     init {
-        tryBindToService()
+        // Don't auto-bind — let user explicitly start mesh from the UI
     }
 
     private fun tryBindToService() {
+        if (bound) return
         try {
             val intent = Intent(context, MeshService::class.java)
-            context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            bound = context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
         } catch (e: Exception) {
             android.util.Log.w("MeshViewModel", "Could not bind to MeshService: ${e.message}")
-            // Service not available — UI will show default state
+            bound = false
         }
     }
 
@@ -113,8 +114,12 @@ class MeshViewModel @Inject constructor(
     }
 
     fun startMesh() {
-        MeshService.start(context)
-        if (!bound) tryBindToService()
+        try {
+            MeshService.start(context)
+            tryBindToService()
+        } catch (e: Exception) {
+            android.util.Log.w("MeshViewModel", "Could not start MeshService: ${e.message}")
+        }
     }
 
     fun stopMesh() {

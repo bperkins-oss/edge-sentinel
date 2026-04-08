@@ -29,6 +29,8 @@ import com.bp22intel.edgesentinel.detection.wifi.WifiEnvironmentAnalyzer
 import com.bp22intel.edgesentinel.detection.wifi.WifiMonitor
 import com.bp22intel.edgesentinel.detection.wifi.WifiProbeProtector
 import com.bp22intel.edgesentinel.detection.wifi.WifiThreatDetector
+import com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao
+import com.bp22intel.edgesentinel.data.local.entity.TrustedNetworkEntity
 import com.bp22intel.edgesentinel.domain.model.WifiThreatType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +48,8 @@ data class WifiUiState(
     val environmentAnalysis: EnvironmentAnalysis? = null,
     val probeStatus: ProbePrivacyStatus? = null,
     val healthScore: Int = 100,
+    val trustedBssids: Set<String> = emptySet(),
+    val trustedNetworks: List<TrustedNetworkEntity> = emptyList(),
     val error: String? = null
 )
 
@@ -54,7 +58,8 @@ class WifiViewModel @Inject constructor(
     private val wifiMonitor: WifiMonitor,
     private val threatDetector: WifiThreatDetector,
     private val environmentAnalyzer: WifiEnvironmentAnalyzer,
-    private val probeProtector: WifiProbeProtector
+    private val probeProtector: WifiProbeProtector,
+    private val trustedNetworkDao: TrustedNetworkDao
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WifiUiState())
@@ -65,6 +70,42 @@ class WifiViewModel @Inject constructor(
     init {
         startMonitoring()
         assessProbePrivacy()
+        loadTrustedNetworks()
+    }
+
+    private fun loadTrustedNetworks() {
+        viewModelScope.launch {
+            trustedNetworkDao.getAllTrusted().collect { trusted ->
+                _uiState.update { state ->
+                    state.copy(
+                        trustedBssids = trusted.map { it.bssid }.toSet(),
+                        trustedNetworks = trusted
+                    )
+                }
+            }
+        }
+    }
+
+    fun trustNetwork(bssid: String, ssid: String, label: String? = null) {
+        viewModelScope.launch {
+            trustedNetworkDao.insert(
+                TrustedNetworkEntity(
+                    bssid = bssid,
+                    ssid = ssid,
+                    label = label ?: ssid
+                )
+            )
+        }
+    }
+
+    fun untrustNetwork(bssid: String) {
+        viewModelScope.launch {
+            trustedNetworkDao.removeByBssid(bssid)
+        }
+    }
+
+    fun isNetworkTrusted(bssid: String): Boolean {
+        return _uiState.value.trustedBssids.contains(bssid)
     }
 
     private fun startMonitoring() {
@@ -85,7 +126,14 @@ class WifiViewModel @Inject constructor(
 
                     // Add probe leak detection
                     val probeLeak = probeProtector.detectProbeLeak()
-                    val allThreats = if (probeLeak != null) threats + probeLeak else threats
+                    val allThreatsRaw = if (probeLeak != null) threats + probeLeak else threats
+
+                    // Filter out threats involving only trusted networks
+                    val trustedBssids = _uiState.value.trustedBssids
+                    val allThreats = allThreatsRaw.filter { result ->
+                        // Keep threat if ANY involved AP is NOT trusted
+                        result.involvedAps.any { !trustedBssids.contains(it.bssid) }
+                    }
 
                     _uiState.update { state ->
                         state.copy(

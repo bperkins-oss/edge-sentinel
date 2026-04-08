@@ -121,6 +121,10 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideTrustedNetworkDao(db: EdgeSentinelDatabase): com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao = db.trustedNetworkDao()
+
+    @Provides
+    @Singleton
     fun provideCellInfoCollector(
         @ApplicationContext context: Context
     ): CellInfoCollector {
