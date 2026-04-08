@@ -13,6 +13,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
 import androidx.sqlite.db.SupportSQLiteOpenHelper;
 import com.bp22intel.edgesentinel.data.local.dao.AlertDao;
 import com.bp22intel.edgesentinel.data.local.dao.AlertDao_Impl;
+import com.bp22intel.edgesentinel.data.local.dao.AlertFeedbackDao;
+import com.bp22intel.edgesentinel.data.local.dao.AlertFeedbackDao_Impl;
 import com.bp22intel.edgesentinel.data.local.dao.BaselineDao;
 import com.bp22intel.edgesentinel.data.local.dao.BaselineDao_Impl;
 import com.bp22intel.edgesentinel.data.local.dao.BleDeviceDao;
@@ -55,14 +57,17 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
 
   private volatile TrustedNetworkDao _trustedNetworkDao;
 
+  private volatile AlertFeedbackDao _alertFeedbackDao;
+
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(5) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(6) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `cells` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `cid` INTEGER NOT NULL, `lac_tac` INTEGER NOT NULL, `mcc` INTEGER NOT NULL, `mnc` INTEGER NOT NULL, `signal_strength` INTEGER NOT NULL, `network_type` TEXT NOT NULL, `latitude` REAL, `longitude` REAL, `first_seen` INTEGER NOT NULL, `last_seen` INTEGER NOT NULL, `times_seen` INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `alerts` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `threat_type` TEXT NOT NULL, `severity` TEXT NOT NULL, `confidence` TEXT NOT NULL, `summary` TEXT NOT NULL, `details_json` TEXT NOT NULL, `cell_id` INTEGER, `acknowledged` INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `alert_feedback` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `alert_id` INTEGER NOT NULL, `threat_type` TEXT NOT NULL, `feedback` TEXT NOT NULL, `cell_id` INTEGER, `lac` INTEGER, `mcc` INTEGER, `mnc` INTEGER, `bssid` TEXT, `signal_strength` INTEGER, `latitude` REAL, `longitude` REAL, `timestamp` INTEGER NOT NULL, `details_snapshot` TEXT NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `scans` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `cell_count` INTEGER NOT NULL, `threat_level` TEXT NOT NULL, `duration_ms` INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `ble_devices` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `mac_address` TEXT NOT NULL, `advertising_data_hash` TEXT NOT NULL, `manufacturer_id` INTEGER, `device_name` TEXT, `first_seen` INTEGER NOT NULL, `last_seen` INTEGER NOT NULL, `location_clusters` TEXT NOT NULL, `seen_count` INTEGER NOT NULL, `is_tracker_type` INTEGER NOT NULL, `tracker_protocol` TEXT)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `baselines` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `radius` REAL NOT NULL, `label` TEXT, `cell_towers_json` TEXT NOT NULL, `wifi_aps_json` TEXT NOT NULL, `ble_count_min` INTEGER NOT NULL, `ble_count_max` INTEGER NOT NULL, `network_type_dist_json` TEXT NOT NULL, `observation_count` INTEGER NOT NULL, `confidence` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `day_profile_json` TEXT, `night_profile_json` TEXT)");
@@ -70,13 +75,14 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_known_towers_mcc_mnc_lac_cid` ON `known_towers` (`mcc`, `mnc`, `lac`, `cid`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `trusted_networks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `bssid` TEXT NOT NULL, `ssid` TEXT NOT NULL, `label` TEXT, `added_at` INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9ce4923d6ed3ddd09f6aee8d5f5f026e')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '584732293c5da4816caddbbf1900d405')");
       }
 
       @Override
       public void dropAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("DROP TABLE IF EXISTS `cells`");
         db.execSQL("DROP TABLE IF EXISTS `alerts`");
+        db.execSQL("DROP TABLE IF EXISTS `alert_feedback`");
         db.execSQL("DROP TABLE IF EXISTS `scans`");
         db.execSQL("DROP TABLE IF EXISTS `ble_devices`");
         db.execSQL("DROP TABLE IF EXISTS `baselines`");
@@ -165,6 +171,30 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
           return new RoomOpenHelper.ValidationResult(false, "alerts(com.bp22intel.edgesentinel.data.local.entity.AlertEntity).\n"
                   + " Expected:\n" + _infoAlerts + "\n"
                   + " Found:\n" + _existingAlerts);
+        }
+        final HashMap<String, TableInfo.Column> _columnsAlertFeedback = new HashMap<String, TableInfo.Column>(14);
+        _columnsAlertFeedback.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlertFeedback.put("alert_id", new TableInfo.Column("alert_id", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlertFeedback.put("threat_type", new TableInfo.Column("threat_type", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlertFeedback.put("feedback", new TableInfo.Column("feedback", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlertFeedback.put("cell_id", new TableInfo.Column("cell_id", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlertFeedback.put("lac", new TableInfo.Column("lac", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlertFeedback.put("mcc", new TableInfo.Column("mcc", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlertFeedback.put("mnc", new TableInfo.Column("mnc", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlertFeedback.put("bssid", new TableInfo.Column("bssid", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlertFeedback.put("signal_strength", new TableInfo.Column("signal_strength", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlertFeedback.put("latitude", new TableInfo.Column("latitude", "REAL", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlertFeedback.put("longitude", new TableInfo.Column("longitude", "REAL", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlertFeedback.put("timestamp", new TableInfo.Column("timestamp", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsAlertFeedback.put("details_snapshot", new TableInfo.Column("details_snapshot", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysAlertFeedback = new HashSet<TableInfo.ForeignKey>(0);
+        final HashSet<TableInfo.Index> _indicesAlertFeedback = new HashSet<TableInfo.Index>(0);
+        final TableInfo _infoAlertFeedback = new TableInfo("alert_feedback", _columnsAlertFeedback, _foreignKeysAlertFeedback, _indicesAlertFeedback);
+        final TableInfo _existingAlertFeedback = TableInfo.read(db, "alert_feedback");
+        if (!_infoAlertFeedback.equals(_existingAlertFeedback)) {
+          return new RoomOpenHelper.ValidationResult(false, "alert_feedback(com.bp22intel.edgesentinel.data.local.entity.AlertFeedbackEntity).\n"
+                  + " Expected:\n" + _infoAlertFeedback + "\n"
+                  + " Found:\n" + _existingAlertFeedback);
         }
         final HashMap<String, TableInfo.Column> _columnsScans = new HashMap<String, TableInfo.Column>(5);
         _columnsScans.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
@@ -268,7 +298,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
         }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "9ce4923d6ed3ddd09f6aee8d5f5f026e", "a1674b420c11d0dd99afbef04552cd8f");
+    }, "584732293c5da4816caddbbf1900d405", "b9fbbd34b4d44a95315d69d8eabff6bd");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;
@@ -279,7 +309,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
   protected InvalidationTracker createInvalidationTracker() {
     final HashMap<String, String> _shadowTablesMap = new HashMap<String, String>(0);
     final HashMap<String, Set<String>> _viewTables = new HashMap<String, Set<String>>(0);
-    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "cells","alerts","scans","ble_devices","baselines","known_towers","trusted_networks");
+    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "cells","alerts","alert_feedback","scans","ble_devices","baselines","known_towers","trusted_networks");
   }
 
   @Override
@@ -290,6 +320,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
       super.beginTransaction();
       _db.execSQL("DELETE FROM `cells`");
       _db.execSQL("DELETE FROM `alerts`");
+      _db.execSQL("DELETE FROM `alert_feedback`");
       _db.execSQL("DELETE FROM `scans`");
       _db.execSQL("DELETE FROM `ble_devices`");
       _db.execSQL("DELETE FROM `baselines`");
@@ -316,6 +347,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
     _typeConvertersMap.put(BaselineDao.class, BaselineDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(KnownTowerDao.class, KnownTowerDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(TrustedNetworkDao.class, TrustedNetworkDao_Impl.getRequiredConverters());
+    _typeConvertersMap.put(AlertFeedbackDao.class, AlertFeedbackDao_Impl.getRequiredConverters());
     return _typeConvertersMap;
   }
 
@@ -428,6 +460,20 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
           _trustedNetworkDao = new TrustedNetworkDao_Impl(this);
         }
         return _trustedNetworkDao;
+      }
+    }
+  }
+
+  @Override
+  public AlertFeedbackDao alertFeedbackDao() {
+    if (_alertFeedbackDao != null) {
+      return _alertFeedbackDao;
+    } else {
+      synchronized(this) {
+        if(_alertFeedbackDao == null) {
+          _alertFeedbackDao = new AlertFeedbackDao_Impl(this);
+        }
+        return _alertFeedbackDao;
       }
     }
   }

@@ -24,6 +24,8 @@ import com.bp22intel.edgesentinel.data.sensor.CellInfoCollector
 import com.bp22intel.edgesentinel.data.sensor.TelephonyMonitor
 import com.bp22intel.edgesentinel.detection.bluetooth.BleAlertManager
 import com.bp22intel.edgesentinel.detection.bluetooth.BleTrackingDetector
+import com.bp22intel.edgesentinel.analysis.FalsePositiveFilter
+import com.bp22intel.edgesentinel.analysis.SuppressionAction
 import com.bp22intel.edgesentinel.detection.engine.ThreatDetectionEngine
 import com.bp22intel.edgesentinel.detection.network.CaptivePortalDetector
 import com.bp22intel.edgesentinel.detection.network.DnsIntegrityChecker
@@ -60,6 +62,7 @@ class MonitoringService : LifecycleService() {
     @Inject lateinit var cellInfoCollector: CellInfoCollector
     @Inject lateinit var telephonyMonitor: TelephonyMonitor
     @Inject lateinit var threatDetectionEngine: ThreatDetectionEngine
+    @Inject lateinit var falsePositiveFilter: FalsePositiveFilter
     @Inject lateinit var cellRepository: CellRepository
     @Inject lateinit var alertRepository: AlertRepository
     @Inject lateinit var scanRepository: ScanRepository
@@ -457,7 +460,7 @@ class MonitoringService : LifecycleService() {
                 }
 
                 if (severity == ThreatLevel.SUSPICIOUS || severity == ThreatLevel.THREAT) {
-                    // Build enriched detailsJson with cell tower context + motion state
+                    // Build enriched detailsJson with cell tower context + motion state.
                     val detailsJson = org.json.JSONObject().apply {
                         // Copy detection indicators
                         result.details.forEach { (k, v) -> put(k, v) }
@@ -486,8 +489,27 @@ class MonitoringService : LifecycleService() {
                         cellId = currentCells.firstOrNull()?.id,
                         acknowledged = false
                     )
-                    alertRepository.insertAlert(alert)
-                    showAlertNotification(alert)
+                    // Check false-positive filter before persisting.
+                    val filterResult = falsePositiveFilter.evaluate(alert)
+                    if (filterResult.action == SuppressionAction.SUPPRESS) {
+                        // Learned suppression — skip this alert entirely.
+                        continue
+                    }
+
+                    // If REDUCE, lower severity by one level.
+                    val finalAlert = if (filterResult.action == SuppressionAction.REDUCE) {
+                        val reducedSeverity = when (severity) {
+                            ThreatLevel.THREAT -> ThreatLevel.SUSPICIOUS
+                            else -> ThreatLevel.CLEAR
+                        }
+                        if (reducedSeverity == ThreatLevel.CLEAR) continue
+                        alert.copy(severity = reducedSeverity)
+                    } else {
+                        alert
+                    }
+
+                    alertRepository.insertAlert(finalAlert)
+                    showAlertNotification(finalAlert)
 
                     // Track last alert time for adaptive interval logic
                     lastAlertTimestamp = startTime

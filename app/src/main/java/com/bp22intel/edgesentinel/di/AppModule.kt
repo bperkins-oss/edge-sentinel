@@ -19,6 +19,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.bp22intel.edgesentinel.data.local.EdgeSentinelDatabase
 import com.bp22intel.edgesentinel.data.local.dao.AlertDao
+import com.bp22intel.edgesentinel.data.local.dao.AlertFeedbackDao
 import com.bp22intel.edgesentinel.data.local.dao.BaselineDao
 import com.bp22intel.edgesentinel.data.local.dao.BleDeviceDao
 import com.bp22intel.edgesentinel.data.local.dao.CellDao
@@ -110,6 +111,9 @@ object AppModule {
 
     @Provides
     fun provideKnownTowerDao(db: EdgeSentinelDatabase): KnownTowerDao = db.knownTowerDao()
+
+    @Provides
+    fun provideAlertFeedbackDao(db: EdgeSentinelDatabase): AlertFeedbackDao = db.alertFeedbackDao()
 
     @Provides
     @Singleton

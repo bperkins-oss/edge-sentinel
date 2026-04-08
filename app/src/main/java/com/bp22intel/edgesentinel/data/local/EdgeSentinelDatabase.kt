@@ -14,6 +14,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.bp22intel.edgesentinel.data.local.dao.AlertDao
+import com.bp22intel.edgesentinel.data.local.dao.AlertFeedbackDao
 import com.bp22intel.edgesentinel.data.local.dao.BaselineDao
 import com.bp22intel.edgesentinel.data.local.dao.BleDeviceDao
 import com.bp22intel.edgesentinel.data.local.dao.CellDao
@@ -21,6 +22,7 @@ import com.bp22intel.edgesentinel.data.local.dao.KnownTowerDao
 import com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao
 import com.bp22intel.edgesentinel.data.local.dao.ScanDao
 import com.bp22intel.edgesentinel.data.local.entity.AlertEntity
+import com.bp22intel.edgesentinel.data.local.entity.AlertFeedbackEntity
 import com.bp22intel.edgesentinel.data.local.entity.BaselineEntity
 import com.bp22intel.edgesentinel.data.local.entity.BleDeviceEntity
 import com.bp22intel.edgesentinel.data.local.entity.CellTowerEntity
@@ -32,13 +34,14 @@ import com.bp22intel.edgesentinel.data.local.entity.TrustedNetworkEntity
     entities = [
         CellTowerEntity::class,
         AlertEntity::class,
+        AlertFeedbackEntity::class,
         ScanEntity::class,
         BleDeviceEntity::class,
         BaselineEntity::class,
         KnownTowerEntity::class,
         TrustedNetworkEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -50,4 +53,5 @@ abstract class EdgeSentinelDatabase : RoomDatabase() {
     abstract fun baselineDao(): BaselineDao
     abstract fun knownTowerDao(): KnownTowerDao
     abstract fun trustedNetworkDao(): TrustedNetworkDao
+    abstract fun alertFeedbackDao(): AlertFeedbackDao
 }

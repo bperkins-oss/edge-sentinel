@@ -1,5 +1,6 @@
 package com.bp22intel.edgesentinel.service;
 
+import com.bp22intel.edgesentinel.analysis.FalsePositiveFilter;
 import com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao;
 import com.bp22intel.edgesentinel.data.sensor.CellInfoCollector;
 import com.bp22intel.edgesentinel.data.sensor.TelephonyMonitor;
@@ -44,6 +45,8 @@ public final class MonitoringService_MembersInjector implements MembersInjector<
 
   private final Provider<ThreatDetectionEngine> threatDetectionEngineProvider;
 
+  private final Provider<FalsePositiveFilter> falsePositiveFilterProvider;
+
   private final Provider<CellRepository> cellRepositoryProvider;
 
   private final Provider<AlertRepository> alertRepositoryProvider;
@@ -75,6 +78,7 @@ public final class MonitoringService_MembersInjector implements MembersInjector<
   public MonitoringService_MembersInjector(Provider<CellInfoCollector> cellInfoCollectorProvider,
       Provider<TelephonyMonitor> telephonyMonitorProvider,
       Provider<ThreatDetectionEngine> threatDetectionEngineProvider,
+      Provider<FalsePositiveFilter> falsePositiveFilterProvider,
       Provider<CellRepository> cellRepositoryProvider,
       Provider<AlertRepository> alertRepositoryProvider,
       Provider<ScanRepository> scanRepositoryProvider,
@@ -91,6 +95,7 @@ public final class MonitoringService_MembersInjector implements MembersInjector<
     this.cellInfoCollectorProvider = cellInfoCollectorProvider;
     this.telephonyMonitorProvider = telephonyMonitorProvider;
     this.threatDetectionEngineProvider = threatDetectionEngineProvider;
+    this.falsePositiveFilterProvider = falsePositiveFilterProvider;
     this.cellRepositoryProvider = cellRepositoryProvider;
     this.alertRepositoryProvider = alertRepositoryProvider;
     this.scanRepositoryProvider = scanRepositoryProvider;
@@ -111,6 +116,7 @@ public final class MonitoringService_MembersInjector implements MembersInjector<
       Provider<CellInfoCollector> cellInfoCollectorProvider,
       Provider<TelephonyMonitor> telephonyMonitorProvider,
       Provider<ThreatDetectionEngine> threatDetectionEngineProvider,
+      Provider<FalsePositiveFilter> falsePositiveFilterProvider,
       Provider<CellRepository> cellRepositoryProvider,
       Provider<AlertRepository> alertRepositoryProvider,
       Provider<ScanRepository> scanRepositoryProvider,
@@ -124,7 +130,7 @@ public final class MonitoringService_MembersInjector implements MembersInjector<
       Provider<TlsIntegrityChecker> tlsIntegrityCheckerProvider,
       Provider<CaptivePortalDetector> captivePortalDetectorProvider,
       Provider<VpnMonitor> vpnMonitorProvider) {
-    return new MonitoringService_MembersInjector(cellInfoCollectorProvider, telephonyMonitorProvider, threatDetectionEngineProvider, cellRepositoryProvider, alertRepositoryProvider, scanRepositoryProvider, sensorFusionEngineProvider, motionDetectorProvider, wifiMonitorProvider, wifiThreatDetectorProvider, trustedNetworkDaoProvider, bleTrackingDetectorProvider, bleAlertManagerProvider, dnsIntegrityCheckerProvider, tlsIntegrityCheckerProvider, captivePortalDetectorProvider, vpnMonitorProvider);
+    return new MonitoringService_MembersInjector(cellInfoCollectorProvider, telephonyMonitorProvider, threatDetectionEngineProvider, falsePositiveFilterProvider, cellRepositoryProvider, alertRepositoryProvider, scanRepositoryProvider, sensorFusionEngineProvider, motionDetectorProvider, wifiMonitorProvider, wifiThreatDetectorProvider, trustedNetworkDaoProvider, bleTrackingDetectorProvider, bleAlertManagerProvider, dnsIntegrityCheckerProvider, tlsIntegrityCheckerProvider, captivePortalDetectorProvider, vpnMonitorProvider);
   }
 
   @Override
@@ -132,6 +138,7 @@ public final class MonitoringService_MembersInjector implements MembersInjector<
     injectCellInfoCollector(instance, cellInfoCollectorProvider.get());
     injectTelephonyMonitor(instance, telephonyMonitorProvider.get());
     injectThreatDetectionEngine(instance, threatDetectionEngineProvider.get());
+    injectFalsePositiveFilter(instance, falsePositiveFilterProvider.get());
     injectCellRepository(instance, cellRepositoryProvider.get());
     injectAlertRepository(instance, alertRepositoryProvider.get());
     injectScanRepository(instance, scanRepositoryProvider.get());
@@ -164,6 +171,12 @@ public final class MonitoringService_MembersInjector implements MembersInjector<
   public static void injectThreatDetectionEngine(MonitoringService instance,
       ThreatDetectionEngine threatDetectionEngine) {
     instance.threatDetectionEngine = threatDetectionEngine;
+  }
+
+  @InjectedFieldSignature("com.bp22intel.edgesentinel.service.MonitoringService.falsePositiveFilter")
+  public static void injectFalsePositiveFilter(MonitoringService instance,
+      FalsePositiveFilter falsePositiveFilter) {
+    instance.falsePositiveFilter = falsePositiveFilter;
   }
 
   @InjectedFieldSignature("com.bp22intel.edgesentinel.service.MonitoringService.cellRepository")

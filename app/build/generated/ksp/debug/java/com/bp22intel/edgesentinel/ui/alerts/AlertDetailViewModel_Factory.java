@@ -2,6 +2,7 @@ package com.bp22intel.edgesentinel.ui.alerts;
 
 import androidx.lifecycle.SavedStateHandle;
 import com.bp22intel.edgesentinel.analysis.ThreatAnalyst;
+import com.bp22intel.edgesentinel.data.local.dao.AlertFeedbackDao;
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -31,28 +32,33 @@ public final class AlertDetailViewModel_Factory implements Factory<AlertDetailVi
 
   private final Provider<ThreatAnalyst> threatAnalystProvider;
 
+  private final Provider<AlertFeedbackDao> feedbackDaoProvider;
+
   public AlertDetailViewModel_Factory(Provider<SavedStateHandle> savedStateHandleProvider,
       Provider<AlertRepository> alertRepositoryProvider,
-      Provider<ThreatAnalyst> threatAnalystProvider) {
+      Provider<ThreatAnalyst> threatAnalystProvider,
+      Provider<AlertFeedbackDao> feedbackDaoProvider) {
     this.savedStateHandleProvider = savedStateHandleProvider;
     this.alertRepositoryProvider = alertRepositoryProvider;
     this.threatAnalystProvider = threatAnalystProvider;
+    this.feedbackDaoProvider = feedbackDaoProvider;
   }
 
   @Override
   public AlertDetailViewModel get() {
-    return newInstance(savedStateHandleProvider.get(), alertRepositoryProvider.get(), threatAnalystProvider.get());
+    return newInstance(savedStateHandleProvider.get(), alertRepositoryProvider.get(), threatAnalystProvider.get(), feedbackDaoProvider.get());
   }
 
   public static AlertDetailViewModel_Factory create(
       Provider<SavedStateHandle> savedStateHandleProvider,
       Provider<AlertRepository> alertRepositoryProvider,
-      Provider<ThreatAnalyst> threatAnalystProvider) {
-    return new AlertDetailViewModel_Factory(savedStateHandleProvider, alertRepositoryProvider, threatAnalystProvider);
+      Provider<ThreatAnalyst> threatAnalystProvider,
+      Provider<AlertFeedbackDao> feedbackDaoProvider) {
+    return new AlertDetailViewModel_Factory(savedStateHandleProvider, alertRepositoryProvider, threatAnalystProvider, feedbackDaoProvider);
   }
 
   public static AlertDetailViewModel newInstance(SavedStateHandle savedStateHandle,
-      AlertRepository alertRepository, ThreatAnalyst threatAnalyst) {
-    return new AlertDetailViewModel(savedStateHandle, alertRepository, threatAnalyst);
+      AlertRepository alertRepository, ThreatAnalyst threatAnalyst, AlertFeedbackDao feedbackDao) {
+    return new AlertDetailViewModel(savedStateHandle, alertRepository, threatAnalyst, feedbackDao);
   }
 }

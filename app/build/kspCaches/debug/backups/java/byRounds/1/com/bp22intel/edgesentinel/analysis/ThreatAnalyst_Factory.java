@@ -5,6 +5,7 @@ import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
 import dagger.internal.ScopeMetadata;
 import javax.annotation.processing.Generated;
+import javax.inject.Provider;
 
 @ScopeMetadata("javax.inject.Singleton")
 @QualifierMetadata
@@ -21,20 +22,23 @@ import javax.annotation.processing.Generated;
     "cast"
 })
 public final class ThreatAnalyst_Factory implements Factory<ThreatAnalyst> {
+  private final Provider<FalsePositiveFilter> falsePositiveFilterProvider;
+
+  public ThreatAnalyst_Factory(Provider<FalsePositiveFilter> falsePositiveFilterProvider) {
+    this.falsePositiveFilterProvider = falsePositiveFilterProvider;
+  }
+
   @Override
   public ThreatAnalyst get() {
-    return newInstance();
+    return newInstance(falsePositiveFilterProvider.get());
   }
 
-  public static ThreatAnalyst_Factory create() {
-    return InstanceHolder.INSTANCE;
+  public static ThreatAnalyst_Factory create(
+      Provider<FalsePositiveFilter> falsePositiveFilterProvider) {
+    return new ThreatAnalyst_Factory(falsePositiveFilterProvider);
   }
 
-  public static ThreatAnalyst newInstance() {
-    return new ThreatAnalyst();
-  }
-
-  private static final class InstanceHolder {
-    private static final ThreatAnalyst_Factory INSTANCE = new ThreatAnalyst_Factory();
+  public static ThreatAnalyst newInstance(FalsePositiveFilter falsePositiveFilter) {
+    return new ThreatAnalyst(falsePositiveFilter);
   }
 }

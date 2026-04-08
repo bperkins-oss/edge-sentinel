@@ -46,7 +46,9 @@ import javax.inject.Singleton
  * - Temporal, geographic, and attack-chain correlation logic
  */
 @Singleton
-class ThreatAnalyst @Inject constructor() {
+class ThreatAnalyst @Inject constructor(
+    private val falsePositiveFilter: FalsePositiveFilter
+) {
 
     // ──────────────────────────────────────────────────────────────────────
     //  Public API
@@ -57,6 +59,12 @@ class ThreatAnalyst @Inject constructor() {
      *
      * The returned [AlertAnalysis] contains everything the UI needs to
      * display a clear, actionable explanation to the user.
+     */
+    /**
+     * Analyse a single alert and produce a human-readable assessment.
+     *
+     * This is the synchronous version that does NOT apply false-positive
+     * filtering. Use [analyzeAlertWithLearning] for the full pipeline.
      */
     fun analyzeAlert(alert: Alert): AlertAnalysis {
         val details = alert.detailsJson.parseJsonSafe()
@@ -69,6 +77,66 @@ class ThreatAnalyst @Inject constructor() {
             ThreatType.SIGNAL_ANOMALY   -> analyzeSignalAnomaly(alert, details)
             ThreatType.NR_ANOMALY       -> analyzeNrAnomaly(alert, details)
         }
+    }
+
+    /**
+     * Analyse a single alert with false-positive learning applied.
+     *
+     * Runs the base analysis, then consults [FalsePositiveFilter] to
+     * potentially SUPPRESS, REDUCE severity, ANNOTATE, or BOOST the result.
+     *
+     * @return A pair of the (possibly adjusted) [AlertAnalysis] and the
+     *         [FilterRecommendation] containing learning notes for the UI.
+     */
+    suspend fun analyzeAlertWithLearning(alert: Alert): Pair<AlertAnalysis, FilterRecommendation> {
+        val baseAnalysis = analyzeAlert(alert)
+        val recommendation = falsePositiveFilter.evaluate(alert)
+
+        val adjustedAnalysis = when (recommendation.action) {
+            SuppressionAction.SUPPRESS -> baseAnalysis.copy(
+                riskLevel = RiskLevel.LOW,
+                shouldWorry = false,
+                plainEnglish = baseAnalysis.plainEnglish +
+                    " (Suppressed: you've reported similar alerts as false positives multiple times.)"
+            )
+            SuppressionAction.REDUCE -> {
+                val reducedRisk = when (baseAnalysis.riskLevel) {
+                    RiskLevel.CRITICAL -> RiskLevel.HIGH
+                    RiskLevel.HIGH -> RiskLevel.MEDIUM
+                    RiskLevel.MEDIUM -> RiskLevel.LOW
+                    RiskLevel.LOW -> RiskLevel.LOW
+                }
+                baseAnalysis.copy(
+                    riskLevel = reducedRisk,
+                    shouldWorry = reducedRisk >= RiskLevel.HIGH
+                )
+            }
+            SuppressionAction.ANNOTATE -> baseAnalysis // Notes shown in UI via learningNotes
+            SuppressionAction.BOOST -> {
+                val boostedRisk = when (baseAnalysis.riskLevel) {
+                    RiskLevel.LOW -> RiskLevel.MEDIUM
+                    else -> baseAnalysis.riskLevel
+                }
+                baseAnalysis.copy(
+                    riskLevel = boostedRisk,
+                    confidence = (baseAnalysis.confidence + 0.1f).coerceAtMost(1.0f),
+                    shouldWorry = boostedRisk >= RiskLevel.HIGH || baseAnalysis.shouldWorry
+                )
+            }
+            SuppressionAction.NONE -> baseAnalysis
+        }
+
+        return adjustedAnalysis to recommendation
+    }
+
+    /**
+     * Check if an alert should be suppressed entirely (not shown to the user).
+     *
+     * Called by [MonitoringService] before creating an alert.
+     */
+    suspend fun shouldSuppressAlert(alert: Alert): Boolean {
+        val recommendation = falsePositiveFilter.evaluate(alert)
+        return recommendation.action == SuppressionAction.SUPPRESS
     }
 
     /**
@@ -98,7 +166,8 @@ class ThreatAnalyst @Inject constructor() {
             )
         }
 
-        // Analyse each alert individually.
+        // Analyse each alert individually (sync — no FP filter in situation brief;
+        // suppressed alerts are already filtered out by MonitoringService).
         val analyses = alerts.map { analyzeAlert(it) }
         var highestRisk = analyses.maxOf { it.riskLevel }
 

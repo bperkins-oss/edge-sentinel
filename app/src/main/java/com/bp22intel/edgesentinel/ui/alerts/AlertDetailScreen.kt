@@ -14,6 +14,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,11 +39,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.GppBad
 import androidx.compose.material.icons.filled.GppMaybe
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.NetworkCheck
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SignalCellular4Bar
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -51,6 +57,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -64,6 +71,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bp22intel.edgesentinel.analysis.AlertAnalysis
+import com.bp22intel.edgesentinel.analysis.FilterRecommendation
 import com.bp22intel.edgesentinel.analysis.RiskLevel
 import com.bp22intel.edgesentinel.domain.model.Alert
 import com.bp22intel.edgesentinel.domain.model.ThreatLevel
@@ -125,26 +133,36 @@ fun AlertDetailScreen(
                 // 1. Alert type + severity badge (large)
                 AlertHeader(alert = alert)
 
-                // 2. AI Analysis
+                // 2. Learning status (if system has prior knowledge)
+                LearningStatusCard(filterRecommendation = uiState.filterRecommendation)
+
+                // 3. AI Analysis
                 AnalysisCard(analysis = analysis)
 
-                // 3. Tower details
+                // 4. Tower details
                 TowerDetailsCard(detailsJson = alert.detailsJson)
 
-                // 4. Possible causes
+                // 5. Possible causes
                 PossibleCausesCard(causes = analysis.possibleCauses)
 
-                // 5. Recommended actions
+                // 6. Recommended actions
                 RecommendationCard(recommendation = analysis.recommendation)
 
-                // 6. Timestamp + duration
+                // 7. Timestamp + duration
                 TimestampCard(alert = alert)
 
-                // 7 & 8. Action buttons
+                // 8. Action buttons (acknowledge + share)
                 ActionButtons(
                     isAcknowledged = uiState.isAcknowledged,
                     onAcknowledge = { viewModel.acknowledgeAlert() },
                     onShare = { shareAlertToClipboard(context, alert, analysis) }
+                )
+
+                // 9. Feedback buttons
+                FeedbackSection(
+                    feedbackGiven = uiState.feedbackGiven,
+                    feedbackConfirmation = uiState.feedbackConfirmation,
+                    onFeedback = { feedback -> viewModel.submitFeedback(feedback) }
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -515,6 +533,204 @@ private fun ActionButtons(
                 text = "Share",
                 color = TextPrimary
             )
+        }
+    }
+}
+
+// ── Learning Status Card ───────────────────────────────────────────────
+
+@Composable
+private fun LearningStatusCard(filterRecommendation: FilterRecommendation?) {
+    val notes = filterRecommendation?.learningNotes ?: return
+    if (notes.isEmpty()) return
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = AccentBlue.copy(alpha = 0.1f)
+        ),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Security,
+                    contentDescription = "Learning",
+                    tint = AccentBlue,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Learning System",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentBlue
+                )
+            }
+            notes.forEach { note ->
+                Text(
+                    text = note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            }
+        }
+    }
+}
+
+// ── Feedback Section ──────────────────────────────────────────────────
+
+@Composable
+private fun FeedbackSection(
+    feedbackGiven: String?,
+    feedbackConfirmation: String?,
+    onFeedback: (String) -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Was this a real threat?",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Text(
+                text = "Your feedback helps Edge Sentinel learn and reduce false alerts.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+
+            // Show confirmation if feedback was just given.
+            AnimatedVisibility(
+                visible = feedbackConfirmation != null,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                if (feedbackConfirmation != null) {
+                    Text(
+                        text = feedbackConfirmation,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = StatusClear,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(StatusClear.copy(alpha = 0.1f))
+                            .padding(12.dp)
+                    )
+                }
+            }
+
+            if (feedbackGiven == null) {
+                // ── No feedback yet — show the three buttons ───────────
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // "Not a Threat" — outlined
+                    OutlinedButton(
+                        onClick = { onFeedback("FALSE_POSITIVE") },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = null,
+                            tint = StatusClear,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Not a Threat",
+                            color = StatusClear,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+
+                    // "Real Threat" — filled red
+                    Button(
+                        onClick = { onFeedback("CONFIRMED_THREAT") },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = StatusThreat
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Real Threat",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+
+                // "Not Sure" — text button, centered
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    TextButton(onClick = { onFeedback("UNSURE") }) {
+                        Icon(
+                            imageVector = Icons.Default.HelpOutline,
+                            contentDescription = null,
+                            tint = TextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Not Sure",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+            } else {
+                // ── Feedback already given — show what they chose ──────
+                val (label, color) = when (feedbackGiven) {
+                    "FALSE_POSITIVE" -> "Marked as Not a Threat" to StatusClear
+                    "CONFIRMED_THREAT" -> "Confirmed as Real Threat" to StatusThreat
+                    else -> "Marked as Unsure" to TextSecondary
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(color.copy(alpha = 0.1f))
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = color,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = color
+                    )
+                }
+            }
         }
     }
 }

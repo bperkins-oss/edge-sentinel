@@ -14,6 +14,8 @@ import androidx.lifecycle.SavedStateHandle;
 import androidx.lifecycle.ViewModel;
 import androidx.work.ListenableWorker;
 import androidx.work.WorkerParameters;
+import com.bp22intel.edgesentinel.analysis.FalsePositiveFilter;
+import com.bp22intel.edgesentinel.analysis.LocationProfile;
 import com.bp22intel.edgesentinel.analysis.ThreatAnalyst;
 import com.bp22intel.edgesentinel.baseline.BaselineLearner;
 import com.bp22intel.edgesentinel.baseline.BaselineManager;
@@ -21,6 +23,7 @@ import com.bp22intel.edgesentinel.baseline.BaselineScorer;
 import com.bp22intel.edgesentinel.calibration.CalibrationService;
 import com.bp22intel.edgesentinel.data.local.EdgeSentinelDatabase;
 import com.bp22intel.edgesentinel.data.local.dao.AlertDao;
+import com.bp22intel.edgesentinel.data.local.dao.AlertFeedbackDao;
 import com.bp22intel.edgesentinel.data.local.dao.BaselineDao;
 import com.bp22intel.edgesentinel.data.local.dao.BleDeviceDao;
 import com.bp22intel.edgesentinel.data.local.dao.CellDao;
@@ -60,6 +63,7 @@ import com.bp22intel.edgesentinel.detection.wifi.WifiMonitor;
 import com.bp22intel.edgesentinel.detection.wifi.WifiProbeProtector;
 import com.bp22intel.edgesentinel.detection.wifi.WifiThreatDetector;
 import com.bp22intel.edgesentinel.di.AppModule_ProvideAlertDaoFactory;
+import com.bp22intel.edgesentinel.di.AppModule_ProvideAlertFeedbackDaoFactory;
 import com.bp22intel.edgesentinel.di.AppModule_ProvideBaselineDaoFactory;
 import com.bp22intel.edgesentinel.di.AppModule_ProvideBleDeviceDaoFactory;
 import com.bp22intel.edgesentinel.di.AppModule_ProvideCellDaoFactory;
@@ -493,80 +497,80 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_bp22intel_edgesentinel_ui_wifi_WifiViewModel = "com.bp22intel.edgesentinel.ui.wifi.WifiViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_bluetooth_BluetoothViewModel = "com.bp22intel.edgesentinel.ui.bluetooth.BluetoothViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_settings_CalibrationViewModel = "com.bp22intel.edgesentinel.ui.settings.CalibrationViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel = "com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel";
+      static String com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel = "com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel";
 
       static String com_bp22intel_edgesentinel_ui_network_NetworkIntegrityViewModel = "com.bp22intel.edgesentinel.ui.network.NetworkIntegrityViewModel";
 
-      static String com_bp22intel_edgesentinel_ui_map_ThreatMapViewModel = "com.bp22intel.edgesentinel.ui.map.ThreatMapViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel = "com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel";
+      static String com_bp22intel_edgesentinel_ui_settings_TowerDatabaseViewModel = "com.bp22intel.edgesentinel.ui.settings.TowerDatabaseViewModel";
 
       static String com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertDetailViewModel";
 
-      static String com_bp22intel_edgesentinel_ui_settings_TowerDatabaseViewModel = "com.bp22intel.edgesentinel.ui.settings.TowerDatabaseViewModel";
+      static String com_bp22intel_edgesentinel_ui_settings_SettingsViewModel = "com.bp22intel.edgesentinel.ui.settings.SettingsViewModel";
 
-      static String com_bp22intel_edgesentinel_ui_baseline_BaselineViewModel = "com.bp22intel.edgesentinel.ui.baseline.BaselineViewModel";
-
-      static String com_bp22intel_edgesentinel_mesh_MeshViewModel = "com.bp22intel.edgesentinel.mesh.MeshViewModel";
+      static String com_bp22intel_edgesentinel_ui_wifi_WifiViewModel = "com.bp22intel.edgesentinel.ui.wifi.WifiViewModel";
 
       static String com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertsViewModel";
 
+      static String com_bp22intel_edgesentinel_ui_bluetooth_BluetoothViewModel = "com.bp22intel.edgesentinel.ui.bluetooth.BluetoothViewModel";
+
       static String com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel = "com.bp22intel.edgesentinel.ui.cellinfo.CellInfoViewModel";
+
+      static String com_bp22intel_edgesentinel_ui_settings_CalibrationViewModel = "com.bp22intel.edgesentinel.ui.settings.CalibrationViewModel";
 
       static String com_bp22intel_edgesentinel_ui_components_CellInfoCardViewModel = "com.bp22intel.edgesentinel.ui.components.CellInfoCardViewModel";
 
-      static String com_bp22intel_edgesentinel_ui_settings_SettingsViewModel = "com.bp22intel.edgesentinel.ui.settings.SettingsViewModel";
+      static String com_bp22intel_edgesentinel_mesh_MeshViewModel = "com.bp22intel.edgesentinel.mesh.MeshViewModel";
 
-      @KeepFieldType
-      WifiViewModel com_bp22intel_edgesentinel_ui_wifi_WifiViewModel2;
+      static String com_bp22intel_edgesentinel_ui_map_ThreatMapViewModel = "com.bp22intel.edgesentinel.ui.map.ThreatMapViewModel";
 
-      @KeepFieldType
-      BluetoothViewModel com_bp22intel_edgesentinel_ui_bluetooth_BluetoothViewModel2;
+      static String com_bp22intel_edgesentinel_ui_baseline_BaselineViewModel = "com.bp22intel.edgesentinel.ui.baseline.BaselineViewModel";
 
-      @KeepFieldType
-      CalibrationViewModel com_bp22intel_edgesentinel_ui_settings_CalibrationViewModel2;
-
-      @KeepFieldType
-      DashboardViewModel com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel2;
-
-      @KeepFieldType
-      NetworkIntegrityViewModel com_bp22intel_edgesentinel_ui_network_NetworkIntegrityViewModel2;
-
-      @KeepFieldType
-      ThreatMapViewModel com_bp22intel_edgesentinel_ui_map_ThreatMapViewModel2;
+      static String com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel = "com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel";
 
       @KeepFieldType
       OnboardingViewModel com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel2;
 
       @KeepFieldType
-      AlertDetailViewModel com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel2;
+      NetworkIntegrityViewModel com_bp22intel_edgesentinel_ui_network_NetworkIntegrityViewModel2;
 
       @KeepFieldType
       TowerDatabaseViewModel com_bp22intel_edgesentinel_ui_settings_TowerDatabaseViewModel2;
 
       @KeepFieldType
-      BaselineViewModel com_bp22intel_edgesentinel_ui_baseline_BaselineViewModel2;
+      AlertDetailViewModel com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel2;
 
       @KeepFieldType
-      MeshViewModel com_bp22intel_edgesentinel_mesh_MeshViewModel2;
+      SettingsViewModel com_bp22intel_edgesentinel_ui_settings_SettingsViewModel2;
+
+      @KeepFieldType
+      WifiViewModel com_bp22intel_edgesentinel_ui_wifi_WifiViewModel2;
 
       @KeepFieldType
       AlertsViewModel com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel2;
 
       @KeepFieldType
+      BluetoothViewModel com_bp22intel_edgesentinel_ui_bluetooth_BluetoothViewModel2;
+
+      @KeepFieldType
       CellInfoViewModel com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel2;
+
+      @KeepFieldType
+      CalibrationViewModel com_bp22intel_edgesentinel_ui_settings_CalibrationViewModel2;
 
       @KeepFieldType
       CellInfoCardViewModel com_bp22intel_edgesentinel_ui_components_CellInfoCardViewModel2;
 
       @KeepFieldType
-      SettingsViewModel com_bp22intel_edgesentinel_ui_settings_SettingsViewModel2;
+      MeshViewModel com_bp22intel_edgesentinel_mesh_MeshViewModel2;
+
+      @KeepFieldType
+      ThreatMapViewModel com_bp22intel_edgesentinel_ui_map_ThreatMapViewModel2;
+
+      @KeepFieldType
+      BaselineViewModel com_bp22intel_edgesentinel_ui_baseline_BaselineViewModel2;
+
+      @KeepFieldType
+      DashboardViewModel com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel2;
     }
   }
 
@@ -651,80 +655,80 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_bp22intel_edgesentinel_ui_wifi_WifiViewModel = "com.bp22intel.edgesentinel.ui.wifi.WifiViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_bluetooth_BluetoothViewModel = "com.bp22intel.edgesentinel.ui.bluetooth.BluetoothViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_settings_CalibrationViewModel = "com.bp22intel.edgesentinel.ui.settings.CalibrationViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel = "com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel = "com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_components_CellInfoCardViewModel = "com.bp22intel.edgesentinel.ui.components.CellInfoCardViewModel";
-
       static String com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertsViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_settings_TowerDatabaseViewModel = "com.bp22intel.edgesentinel.ui.settings.TowerDatabaseViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel = "com.bp22intel.edgesentinel.ui.cellinfo.CellInfoViewModel";
 
       static String com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertDetailViewModel";
 
-      static String com_bp22intel_edgesentinel_mesh_MeshViewModel = "com.bp22intel.edgesentinel.mesh.MeshViewModel";
+      static String com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel = "com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel";
 
-      static String com_bp22intel_edgesentinel_ui_map_ThreatMapViewModel = "com.bp22intel.edgesentinel.ui.map.ThreatMapViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_settings_SettingsViewModel = "com.bp22intel.edgesentinel.ui.settings.SettingsViewModel";
+      static String com_bp22intel_edgesentinel_ui_settings_CalibrationViewModel = "com.bp22intel.edgesentinel.ui.settings.CalibrationViewModel";
 
       static String com_bp22intel_edgesentinel_ui_baseline_BaselineViewModel = "com.bp22intel.edgesentinel.ui.baseline.BaselineViewModel";
 
+      static String com_bp22intel_edgesentinel_mesh_MeshViewModel = "com.bp22intel.edgesentinel.mesh.MeshViewModel";
+
+      static String com_bp22intel_edgesentinel_ui_settings_TowerDatabaseViewModel = "com.bp22intel.edgesentinel.ui.settings.TowerDatabaseViewModel";
+
+      static String com_bp22intel_edgesentinel_ui_components_CellInfoCardViewModel = "com.bp22intel.edgesentinel.ui.components.CellInfoCardViewModel";
+
       static String com_bp22intel_edgesentinel_ui_network_NetworkIntegrityViewModel = "com.bp22intel.edgesentinel.ui.network.NetworkIntegrityViewModel";
 
-      @KeepFieldType
-      WifiViewModel com_bp22intel_edgesentinel_ui_wifi_WifiViewModel2;
+      static String com_bp22intel_edgesentinel_ui_wifi_WifiViewModel = "com.bp22intel.edgesentinel.ui.wifi.WifiViewModel";
 
-      @KeepFieldType
-      BluetoothViewModel com_bp22intel_edgesentinel_ui_bluetooth_BluetoothViewModel2;
+      static String com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel = "com.bp22intel.edgesentinel.ui.cellinfo.CellInfoViewModel";
 
-      @KeepFieldType
-      CalibrationViewModel com_bp22intel_edgesentinel_ui_settings_CalibrationViewModel2;
+      static String com_bp22intel_edgesentinel_ui_settings_SettingsViewModel = "com.bp22intel.edgesentinel.ui.settings.SettingsViewModel";
 
-      @KeepFieldType
-      OnboardingViewModel com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel2;
+      static String com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel = "com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel";
 
-      @KeepFieldType
-      DashboardViewModel com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel2;
+      static String com_bp22intel_edgesentinel_ui_bluetooth_BluetoothViewModel = "com.bp22intel.edgesentinel.ui.bluetooth.BluetoothViewModel";
 
-      @KeepFieldType
-      CellInfoCardViewModel com_bp22intel_edgesentinel_ui_components_CellInfoCardViewModel2;
+      static String com_bp22intel_edgesentinel_ui_map_ThreatMapViewModel = "com.bp22intel.edgesentinel.ui.map.ThreatMapViewModel";
 
       @KeepFieldType
       AlertsViewModel com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel2;
 
       @KeepFieldType
-      TowerDatabaseViewModel com_bp22intel_edgesentinel_ui_settings_TowerDatabaseViewModel2;
-
-      @KeepFieldType
-      CellInfoViewModel com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel2;
-
-      @KeepFieldType
       AlertDetailViewModel com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel2;
 
       @KeepFieldType
-      MeshViewModel com_bp22intel_edgesentinel_mesh_MeshViewModel2;
+      DashboardViewModel com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel2;
 
       @KeepFieldType
-      ThreatMapViewModel com_bp22intel_edgesentinel_ui_map_ThreatMapViewModel2;
-
-      @KeepFieldType
-      SettingsViewModel com_bp22intel_edgesentinel_ui_settings_SettingsViewModel2;
+      CalibrationViewModel com_bp22intel_edgesentinel_ui_settings_CalibrationViewModel2;
 
       @KeepFieldType
       BaselineViewModel com_bp22intel_edgesentinel_ui_baseline_BaselineViewModel2;
 
       @KeepFieldType
+      MeshViewModel com_bp22intel_edgesentinel_mesh_MeshViewModel2;
+
+      @KeepFieldType
+      TowerDatabaseViewModel com_bp22intel_edgesentinel_ui_settings_TowerDatabaseViewModel2;
+
+      @KeepFieldType
+      CellInfoCardViewModel com_bp22intel_edgesentinel_ui_components_CellInfoCardViewModel2;
+
+      @KeepFieldType
       NetworkIntegrityViewModel com_bp22intel_edgesentinel_ui_network_NetworkIntegrityViewModel2;
+
+      @KeepFieldType
+      WifiViewModel com_bp22intel_edgesentinel_ui_wifi_WifiViewModel2;
+
+      @KeepFieldType
+      CellInfoViewModel com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel2;
+
+      @KeepFieldType
+      SettingsViewModel com_bp22intel_edgesentinel_ui_settings_SettingsViewModel2;
+
+      @KeepFieldType
+      OnboardingViewModel com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel2;
+
+      @KeepFieldType
+      BluetoothViewModel com_bp22intel_edgesentinel_ui_bluetooth_BluetoothViewModel2;
+
+      @KeepFieldType
+      ThreatMapViewModel com_bp22intel_edgesentinel_ui_map_ThreatMapViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
@@ -749,7 +753,7 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
       public T get() {
         switch (id) {
           case 0: // com.bp22intel.edgesentinel.ui.alerts.AlertDetailViewModel 
-          return (T) new AlertDetailViewModel(viewModelCImpl.savedStateHandle, singletonCImpl.alertRepositoryImplProvider.get(), singletonCImpl.threatAnalystProvider.get());
+          return (T) new AlertDetailViewModel(viewModelCImpl.savedStateHandle, singletonCImpl.alertRepositoryImplProvider.get(), singletonCImpl.threatAnalystProvider.get(), singletonCImpl.alertFeedbackDao());
 
           case 1: // com.bp22intel.edgesentinel.ui.alerts.AlertsViewModel 
           return (T) new AlertsViewModel(singletonCImpl.alertRepositoryImplProvider.get(), singletonCImpl.alertExporterProvider.get());
@@ -886,6 +890,7 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
       MonitoringService_MembersInjector.injectCellInfoCollector(instance, singletonCImpl.provideCellInfoCollectorProvider.get());
       MonitoringService_MembersInjector.injectTelephonyMonitor(instance, telephonyMonitor());
       MonitoringService_MembersInjector.injectThreatDetectionEngine(instance, singletonCImpl.threatDetectionEngineProvider.get());
+      MonitoringService_MembersInjector.injectFalsePositiveFilter(instance, singletonCImpl.falsePositiveFilterProvider.get());
       MonitoringService_MembersInjector.injectCellRepository(instance, singletonCImpl.cellRepositoryImplProvider.get());
       MonitoringService_MembersInjector.injectAlertRepository(instance, singletonCImpl.alertRepositoryImplProvider.get());
       MonitoringService_MembersInjector.injectScanRepository(instance, singletonCImpl.scanRepositoryImplProvider.get());
@@ -940,6 +945,10 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
     private Provider<ScanWorker_AssistedFactory> scanWorker_AssistedFactoryProvider;
 
     private Provider<TowerDatabaseManager> towerDatabaseManagerProvider;
+
+    private Provider<LocationProfile> locationProfileProvider;
+
+    private Provider<FalsePositiveFilter> falsePositiveFilterProvider;
 
     private Provider<ThreatAnalyst> threatAnalystProvider;
 
@@ -1036,6 +1045,10 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
       return AppModule_ProvideKnownTowerDaoFactory.provideKnownTowerDao(provideDatabaseProvider.get());
     }
 
+    private AlertFeedbackDao alertFeedbackDao() {
+      return AppModule_ProvideAlertFeedbackDaoFactory.provideAlertFeedbackDao(provideDatabaseProvider.get());
+    }
+
     private BleDeviceDao bleDeviceDao() {
       return AppModule_ProvideBleDeviceDaoFactory.provideBleDeviceDao(provideDatabaseProvider.get());
     }
@@ -1058,28 +1071,30 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
       this.scanRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<ScanRepositoryImpl>(singletonCImpl, 14));
       this.scanWorker_AssistedFactoryProvider = SingleCheck.provider(new SwitchingProvider<ScanWorker_AssistedFactory>(singletonCImpl, 0));
       this.towerDatabaseManagerProvider = DoubleCheck.provider(new SwitchingProvider<TowerDatabaseManager>(singletonCImpl, 15));
+      this.locationProfileProvider = DoubleCheck.provider(new SwitchingProvider<LocationProfile>(singletonCImpl, 18));
+      this.falsePositiveFilterProvider = DoubleCheck.provider(new SwitchingProvider<FalsePositiveFilter>(singletonCImpl, 17));
       this.threatAnalystProvider = DoubleCheck.provider(new SwitchingProvider<ThreatAnalyst>(singletonCImpl, 16));
-      this.alertExporterProvider = DoubleCheck.provider(new SwitchingProvider<AlertExporter>(singletonCImpl, 17));
-      this.bleTrackerIdentifierProvider = DoubleCheck.provider(new SwitchingProvider<BleTrackerIdentifier>(singletonCImpl, 20));
-      this.bleDeviceTrackerProvider = DoubleCheck.provider(new SwitchingProvider<BleDeviceTracker>(singletonCImpl, 19));
-      this.bleAlertManagerProvider = DoubleCheck.provider(new SwitchingProvider<BleAlertManager>(singletonCImpl, 21));
-      this.bleTrackingDetectorProvider = DoubleCheck.provider(new SwitchingProvider<BleTrackingDetector>(singletonCImpl, 18));
-      this.calibrationServiceProvider = DoubleCheck.provider(new SwitchingProvider<CalibrationService>(singletonCImpl, 22));
-      this.threatNarratorProvider = DoubleCheck.provider(new SwitchingProvider<ThreatNarrator>(singletonCImpl, 24));
-      this.sensorFusionEngineProvider = DoubleCheck.provider(new SwitchingProvider<SensorFusionEngine>(singletonCImpl, 23));
-      this.overallThreatDashboardProvider = DoubleCheck.provider(new SwitchingProvider<OverallThreatDashboard>(singletonCImpl, 25));
-      this.motionDetectorProvider = DoubleCheck.provider(new SwitchingProvider<MotionDetector>(singletonCImpl, 26));
-      this.vpnMonitorProvider = DoubleCheck.provider(new SwitchingProvider<VpnMonitor>(singletonCImpl, 27));
-      this.dnsIntegrityCheckerProvider = DoubleCheck.provider(new SwitchingProvider<DnsIntegrityChecker>(singletonCImpl, 28));
-      this.tlsIntegrityCheckerProvider = DoubleCheck.provider(new SwitchingProvider<TlsIntegrityChecker>(singletonCImpl, 29));
-      this.captivePortalDetectorProvider = DoubleCheck.provider(new SwitchingProvider<CaptivePortalDetector>(singletonCImpl, 30));
-      this.provideDataStoreProvider = DoubleCheck.provider(new SwitchingProvider<DataStore<Preferences>>(singletonCImpl, 31));
-      this.threatGeolocationProvider = DoubleCheck.provider(new SwitchingProvider<ThreatGeolocation>(singletonCImpl, 32));
-      this.wifiMonitorProvider = DoubleCheck.provider(new SwitchingProvider<WifiMonitor>(singletonCImpl, 33));
-      this.provideTrustedNetworkDaoProvider = DoubleCheck.provider(new SwitchingProvider<TrustedNetworkDao>(singletonCImpl, 35));
-      this.wifiThreatDetectorProvider = DoubleCheck.provider(new SwitchingProvider<WifiThreatDetector>(singletonCImpl, 34));
-      this.wifiEnvironmentAnalyzerProvider = DoubleCheck.provider(new SwitchingProvider<WifiEnvironmentAnalyzer>(singletonCImpl, 36));
-      this.wifiProbeProtectorProvider = DoubleCheck.provider(new SwitchingProvider<WifiProbeProtector>(singletonCImpl, 37));
+      this.alertExporterProvider = DoubleCheck.provider(new SwitchingProvider<AlertExporter>(singletonCImpl, 19));
+      this.bleTrackerIdentifierProvider = DoubleCheck.provider(new SwitchingProvider<BleTrackerIdentifier>(singletonCImpl, 22));
+      this.bleDeviceTrackerProvider = DoubleCheck.provider(new SwitchingProvider<BleDeviceTracker>(singletonCImpl, 21));
+      this.bleAlertManagerProvider = DoubleCheck.provider(new SwitchingProvider<BleAlertManager>(singletonCImpl, 23));
+      this.bleTrackingDetectorProvider = DoubleCheck.provider(new SwitchingProvider<BleTrackingDetector>(singletonCImpl, 20));
+      this.calibrationServiceProvider = DoubleCheck.provider(new SwitchingProvider<CalibrationService>(singletonCImpl, 24));
+      this.threatNarratorProvider = DoubleCheck.provider(new SwitchingProvider<ThreatNarrator>(singletonCImpl, 26));
+      this.sensorFusionEngineProvider = DoubleCheck.provider(new SwitchingProvider<SensorFusionEngine>(singletonCImpl, 25));
+      this.overallThreatDashboardProvider = DoubleCheck.provider(new SwitchingProvider<OverallThreatDashboard>(singletonCImpl, 27));
+      this.motionDetectorProvider = DoubleCheck.provider(new SwitchingProvider<MotionDetector>(singletonCImpl, 28));
+      this.vpnMonitorProvider = DoubleCheck.provider(new SwitchingProvider<VpnMonitor>(singletonCImpl, 29));
+      this.dnsIntegrityCheckerProvider = DoubleCheck.provider(new SwitchingProvider<DnsIntegrityChecker>(singletonCImpl, 30));
+      this.tlsIntegrityCheckerProvider = DoubleCheck.provider(new SwitchingProvider<TlsIntegrityChecker>(singletonCImpl, 31));
+      this.captivePortalDetectorProvider = DoubleCheck.provider(new SwitchingProvider<CaptivePortalDetector>(singletonCImpl, 32));
+      this.provideDataStoreProvider = DoubleCheck.provider(new SwitchingProvider<DataStore<Preferences>>(singletonCImpl, 33));
+      this.threatGeolocationProvider = DoubleCheck.provider(new SwitchingProvider<ThreatGeolocation>(singletonCImpl, 34));
+      this.wifiMonitorProvider = DoubleCheck.provider(new SwitchingProvider<WifiMonitor>(singletonCImpl, 35));
+      this.provideTrustedNetworkDaoProvider = DoubleCheck.provider(new SwitchingProvider<TrustedNetworkDao>(singletonCImpl, 37));
+      this.wifiThreatDetectorProvider = DoubleCheck.provider(new SwitchingProvider<WifiThreatDetector>(singletonCImpl, 36));
+      this.wifiEnvironmentAnalyzerProvider = DoubleCheck.provider(new SwitchingProvider<WifiEnvironmentAnalyzer>(singletonCImpl, 38));
+      this.wifiProbeProtectorProvider = DoubleCheck.provider(new SwitchingProvider<WifiProbeProtector>(singletonCImpl, 39));
     }
 
     @Override
@@ -1177,69 +1192,75 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
           return (T) new TowerDatabaseManager(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.knownTowerDao());
 
           case 16: // com.bp22intel.edgesentinel.analysis.ThreatAnalyst 
-          return (T) new ThreatAnalyst();
+          return (T) new ThreatAnalyst(singletonCImpl.falsePositiveFilterProvider.get());
 
-          case 17: // com.bp22intel.edgesentinel.export.AlertExporter 
+          case 17: // com.bp22intel.edgesentinel.analysis.FalsePositiveFilter 
+          return (T) new FalsePositiveFilter(singletonCImpl.alertFeedbackDao(), singletonCImpl.locationProfileProvider.get());
+
+          case 18: // com.bp22intel.edgesentinel.analysis.LocationProfile 
+          return (T) new LocationProfile(singletonCImpl.cellDao());
+
+          case 19: // com.bp22intel.edgesentinel.export.AlertExporter 
           return (T) new AlertExporter(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 18: // com.bp22intel.edgesentinel.detection.bluetooth.BleTrackingDetector 
+          case 20: // com.bp22intel.edgesentinel.detection.bluetooth.BleTrackingDetector 
           return (T) new BleTrackingDetector(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.bleDeviceTrackerProvider.get(), singletonCImpl.bleAlertManagerProvider.get(), singletonCImpl.bleTrackerIdentifierProvider.get());
 
-          case 19: // com.bp22intel.edgesentinel.detection.bluetooth.BleDeviceTracker 
+          case 21: // com.bp22intel.edgesentinel.detection.bluetooth.BleDeviceTracker 
           return (T) new BleDeviceTracker(singletonCImpl.bleDeviceDao(), singletonCImpl.bleTrackerIdentifierProvider.get());
 
-          case 20: // com.bp22intel.edgesentinel.detection.bluetooth.BleTrackerIdentifier 
+          case 22: // com.bp22intel.edgesentinel.detection.bluetooth.BleTrackerIdentifier 
           return (T) new BleTrackerIdentifier();
 
-          case 21: // com.bp22intel.edgesentinel.detection.bluetooth.BleAlertManager 
+          case 23: // com.bp22intel.edgesentinel.detection.bluetooth.BleAlertManager 
           return (T) new BleAlertManager(singletonCImpl.bleDeviceTrackerProvider.get());
 
-          case 22: // com.bp22intel.edgesentinel.calibration.CalibrationService 
+          case 24: // com.bp22intel.edgesentinel.calibration.CalibrationService 
           return (T) new CalibrationService(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 23: // com.bp22intel.edgesentinel.fusion.SensorFusionEngine 
+          case 25: // com.bp22intel.edgesentinel.fusion.SensorFusionEngine 
           return (T) new SensorFusionEngine(singletonCImpl.threatNarratorProvider.get());
 
-          case 24: // com.bp22intel.edgesentinel.fusion.ThreatNarrator 
+          case 26: // com.bp22intel.edgesentinel.fusion.ThreatNarrator 
           return (T) new ThreatNarrator();
 
-          case 25: // com.bp22intel.edgesentinel.fusion.OverallThreatDashboard 
+          case 27: // com.bp22intel.edgesentinel.fusion.OverallThreatDashboard 
           return (T) new OverallThreatDashboard(singletonCImpl.sensorFusionEngineProvider.get(), singletonCImpl.threatNarratorProvider.get());
 
-          case 26: // com.bp22intel.edgesentinel.sensor.MotionDetector 
+          case 28: // com.bp22intel.edgesentinel.sensor.MotionDetector 
           return (T) new MotionDetector(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 27: // com.bp22intel.edgesentinel.detection.network.VpnMonitor 
+          case 29: // com.bp22intel.edgesentinel.detection.network.VpnMonitor 
           return (T) new VpnMonitor(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 28: // com.bp22intel.edgesentinel.detection.network.DnsIntegrityChecker 
+          case 30: // com.bp22intel.edgesentinel.detection.network.DnsIntegrityChecker 
           return (T) new DnsIntegrityChecker();
 
-          case 29: // com.bp22intel.edgesentinel.detection.network.TlsIntegrityChecker 
+          case 31: // com.bp22intel.edgesentinel.detection.network.TlsIntegrityChecker 
           return (T) new TlsIntegrityChecker(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 30: // com.bp22intel.edgesentinel.detection.network.CaptivePortalDetector 
+          case 32: // com.bp22intel.edgesentinel.detection.network.CaptivePortalDetector 
           return (T) new CaptivePortalDetector();
 
-          case 31: // androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> 
+          case 33: // androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> 
           return (T) AppModule_ProvideDataStoreFactory.provideDataStore(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 32: // com.bp22intel.edgesentinel.detection.geo.ThreatGeolocation 
+          case 34: // com.bp22intel.edgesentinel.detection.geo.ThreatGeolocation 
           return (T) new ThreatGeolocation();
 
-          case 33: // com.bp22intel.edgesentinel.detection.wifi.WifiMonitor 
+          case 35: // com.bp22intel.edgesentinel.detection.wifi.WifiMonitor 
           return (T) new WifiMonitor(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 34: // com.bp22intel.edgesentinel.detection.wifi.WifiThreatDetector 
+          case 36: // com.bp22intel.edgesentinel.detection.wifi.WifiThreatDetector 
           return (T) new WifiThreatDetector(singletonCImpl.provideTrustedNetworkDaoProvider.get());
 
-          case 35: // com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao 
+          case 37: // com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao 
           return (T) AppModule_ProvideTrustedNetworkDaoFactory.provideTrustedNetworkDao(singletonCImpl.provideDatabaseProvider.get());
 
-          case 36: // com.bp22intel.edgesentinel.detection.wifi.WifiEnvironmentAnalyzer 
+          case 38: // com.bp22intel.edgesentinel.detection.wifi.WifiEnvironmentAnalyzer 
           return (T) new WifiEnvironmentAnalyzer();
 
-          case 37: // com.bp22intel.edgesentinel.detection.wifi.WifiProbeProtector 
+          case 39: // com.bp22intel.edgesentinel.detection.wifi.WifiProbeProtector 
           return (T) new WifiProbeProtector(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           default: throw new AssertionError(id);
