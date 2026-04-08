@@ -6,14 +6,6 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 package com.bp22intel.edgesentinel.ui.navigation
@@ -24,15 +16,10 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.SignalCellular4Bar
-import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -50,19 +37,19 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.bp22intel.edgesentinel.ui.bluetooth.BluetoothScreen
 import com.bp22intel.edgesentinel.ui.about.AboutScreen
-import com.bp22intel.edgesentinel.ui.baseline.BaselineScreen
-import com.bp22intel.edgesentinel.ui.dashboard.DashboardScreen
-import com.bp22intel.edgesentinel.ui.alerts.AlertListScreen
 import com.bp22intel.edgesentinel.ui.alerts.AlertDetailScreen
+import com.bp22intel.edgesentinel.ui.alerts.AlertListScreen
+import com.bp22intel.edgesentinel.ui.baseline.BaselineScreen
+import com.bp22intel.edgesentinel.ui.bluetooth.BluetoothScreen
 import com.bp22intel.edgesentinel.ui.cellinfo.CellInfoScreen
+import com.bp22intel.edgesentinel.ui.dashboard.DashboardScreen
 import com.bp22intel.edgesentinel.ui.mesh.MeshScreen
 import com.bp22intel.edgesentinel.ui.network.NetworkIntegrityScreen
 import com.bp22intel.edgesentinel.ui.onboarding.OnboardingScreen
 import com.bp22intel.edgesentinel.ui.settings.SettingsScreen
-import com.bp22intel.edgesentinel.ui.wifi.WifiScreen
 import com.bp22intel.edgesentinel.ui.travel.TravelModeScreen
+import com.bp22intel.edgesentinel.ui.wifi.WifiScreen
 
 /**
  * Navigation routes for the app.
@@ -86,7 +73,9 @@ object Routes {
 }
 
 /**
- * Bottom navigation tab definitions.
+ * Bottom navigation — 4 primary tabs only.
+ * Sensor-specific screens (Cell, WiFi, BLE, Network, Mesh, Baseline) are
+ * accessible from the Dashboard sensor icons and from Settings.
  */
 enum class BottomNavTab(
     val route: String,
@@ -95,12 +84,7 @@ enum class BottomNavTab(
 ) {
     DASHBOARD(Routes.DASHBOARD, "Dashboard", Icons.Default.Home),
     ALERTS(Routes.ALERTS, "Alerts", Icons.Default.Notifications),
-    CELL_INFO(Routes.CELL_INFO, "Cell Info", Icons.Default.SignalCellular4Bar),
-    WIFI(Routes.WIFI, "WiFi", Icons.Default.Wifi),
-    BLUETOOTH(Routes.BLUETOOTH, "BLE", Icons.Default.Bluetooth),
     TRAVEL(Routes.TRAVEL, "Travel", Icons.Default.Flight),
-    MESH(Routes.MESH, "Mesh", Icons.Default.Share),
-    NETWORK(Routes.NETWORK, "Network", Icons.Default.Security),
     SETTINGS(Routes.SETTINGS, "Settings", Icons.Default.Settings)
 }
 
@@ -110,10 +94,11 @@ fun EdgeSentinelNavHost() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    // Hide bottom bar on onboarding, about, baseline, and alert detail screens
+    // Hide bottom bar on onboarding, about, baseline, and detail screens
     val showBottomBar = currentDestination?.route?.let { route ->
-        route != Routes.ONBOARDING && route != Routes.ABOUT &&
-                route != Routes.ALERT_DETAIL && route != Routes.BASELINE
+        route != Routes.ONBOARDING &&
+        route != Routes.ABOUT &&
+        route != Routes.ALERT_DETAIL
     } ?: true
 
     Scaffold(
@@ -151,6 +136,7 @@ fun EdgeSentinelNavHost() {
             popEnterTransition = { fadeIn() + slideInHorizontally { -it / 4 } },
             popExitTransition = { fadeOut() + slideOutHorizontally { it / 4 } }
         ) {
+            // Onboarding
             composable(Routes.ONBOARDING) {
                 OnboardingScreen(
                     onOnboardingComplete = {
@@ -160,6 +146,8 @@ fun EdgeSentinelNavHost() {
                     }
                 )
             }
+
+            // Primary tabs
             composable(Routes.DASHBOARD) {
                 DashboardScreen(
                     onAlertClick = { alert ->
@@ -167,15 +155,12 @@ fun EdgeSentinelNavHost() {
                     },
                     onNavigate = { route ->
                         navController.navigate(route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
                             launchSingleTop = true
-                            restoreState = true
                         }
                     }
                 )
             }
+
             composable(Routes.ALERTS) {
                 AlertListScreen(
                     onAlertClick = { alert ->
@@ -183,29 +168,11 @@ fun EdgeSentinelNavHost() {
                     }
                 )
             }
-            composable(
-                route = Routes.ALERT_DETAIL,
-                arguments = listOf(navArgument("alertId") { type = NavType.LongType })
-            ) { backStackEntry ->
-                val alertId = backStackEntry.arguments?.getLong("alertId") ?: 0L
-                AlertDetailScreen(alertId = alertId)
-            }
-            composable(Routes.CELL_INFO) {
-                CellInfoScreen()
-            }
-            composable(Routes.WIFI) {
-                WifiScreen()
-            composable(Routes.BLUETOOTH) {
-                BluetoothScreen()
+
             composable(Routes.TRAVEL) {
                 TravelModeScreen()
             }
-            composable(Routes.MESH) {
-                MeshScreen()
-            }
-            composable(Routes.NETWORK) {
-                NetworkIntegrityScreen()
-            }
+
             composable(Routes.SETTINGS) {
                 SettingsScreen(
                     onNavigateToAbout = {
@@ -222,11 +189,42 @@ fun EdgeSentinelNavHost() {
                     }
                 )
             }
+
+            // Detail screens (navigated from Dashboard sensor icons or Settings)
+            composable(
+                route = Routes.ALERT_DETAIL,
+                arguments = listOf(navArgument("alertId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val alertId = backStackEntry.arguments?.getLong("alertId") ?: 0L
+                AlertDetailScreen(alertId = alertId)
+            }
+
+            composable(Routes.CELL_INFO) {
+                CellInfoScreen()
+            }
+
+            composable(Routes.WIFI) {
+                WifiScreen()
+            }
+
+            composable(Routes.BLUETOOTH) {
+                BluetoothScreen()
+            }
+
+            composable(Routes.NETWORK) {
+                NetworkIntegrityScreen()
+            }
+
+            composable(Routes.MESH) {
+                MeshScreen()
+            }
+
             composable(Routes.BASELINE) {
                 BaselineScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
+
             composable(Routes.ABOUT) {
                 AboutScreen(
                     onBack = { navController.popBackStack() }
@@ -234,6 +232,4 @@ fun EdgeSentinelNavHost() {
             }
         }
     }
-}
-}
 }
