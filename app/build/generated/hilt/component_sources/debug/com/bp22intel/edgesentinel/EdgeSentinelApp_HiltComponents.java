@@ -1,6 +1,7 @@
 package com.bp22intel.edgesentinel;
 
 import androidx.hilt.work.HiltWrapper_WorkerFactoryModule;
+import com.bp22intel.edgesentinel.di.AnalysisModule;
 import com.bp22intel.edgesentinel.di.AppModule;
 import com.bp22intel.edgesentinel.di.DetectionModule;
 import com.bp22intel.edgesentinel.di.RepositoryModule;
@@ -145,6 +146,7 @@ public final class EdgeSentinelApp_HiltComponents {
 
   @Component(
       modules = {
+          AnalysisModule.class,
           AppModule.class,
           ApplicationContextModule.class,
           DetectionModule.class,
