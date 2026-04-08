@@ -109,8 +109,9 @@ class WifiViewModel @Inject constructor(
                 .collect { snapshot ->
                     val history = wifiMonitor.getHistory()
 
-                    // Run threat detection
-                    val threats = threatDetector.analyze(snapshot, history, disconnectTimestamps)
+                    // Run threat detection with trusted network awareness
+                    val trustedBssids = _uiState.value.trustedBssids
+                    val threats = threatDetector.analyze(snapshot, history, disconnectTimestamps, trustedBssids)
 
                     // Run environment analysis
                     val baseline = environmentAnalyzer.buildBaseline(history)
@@ -121,7 +122,6 @@ class WifiViewModel @Inject constructor(
                     val allThreatsRaw = if (probeLeak != null) threats + probeLeak else threats
 
                     // Filter out threats involving only trusted networks
-                    val trustedBssids = _uiState.value.trustedBssids
                     val allThreats = allThreatsRaw.filter { result ->
                         // Keep threat if ANY involved AP is NOT trusted
                         result.involvedAps.any { !trustedBssids.contains(it.bssid) }

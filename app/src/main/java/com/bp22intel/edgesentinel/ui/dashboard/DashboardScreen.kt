@@ -10,6 +10,7 @@
 
 package com.bp22intel.edgesentinel.ui.dashboard
 
+import android.content.Intent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,9 +33,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.NavigateNext
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material.icons.filled.People
@@ -67,6 +71,7 @@ import com.bp22intel.edgesentinel.domain.model.SensorCategory
 import com.bp22intel.edgesentinel.domain.model.SensorCategoryScore
 import com.bp22intel.edgesentinel.domain.model.ThreatTrend
 import com.bp22intel.edgesentinel.fusion.DashboardPosture
+import com.bp22intel.edgesentinel.export.AlertExporter
 import com.bp22intel.edgesentinel.ui.components.AlertCard
 import com.bp22intel.edgesentinel.ui.components.CellInfoCard
 import com.bp22intel.edgesentinel.ui.components.CellInfoCardWithVerification
@@ -320,7 +325,7 @@ fun DashboardScreen(
                 }
             }
 
-            // Force Scan button
+            // Force Scan + Export buttons
             item {
                 Button(
                     onClick = { viewModel.forceScan() },
@@ -338,6 +343,61 @@ fun DashboardScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Force Scan", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+
+            // Export actions
+            if (recentAlerts.isNotEmpty()) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val alertExporter = viewModel.alertExporter
+                        Button(
+                            onClick = {
+                                val intent = alertExporter.shareTextReport(
+                                    alerts = recentAlerts,
+                                    situationBrief = situationBrief
+                                )
+                                context.startActivity(Intent.createChooser(intent, "Share Report"))
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Surface,
+                                contentColor = TextPrimary
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Description,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Export Report", style = MaterialTheme.typography.labelMedium)
+                        }
+                        Button(
+                            onClick = {
+                                val intent = alertExporter.shareCsvExport(recentAlerts)
+                                context.startActivity(Intent.createChooser(intent, "Share CSV"))
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Surface,
+                                contentColor = TextPrimary
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.TableChart,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Export CSV", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
                 }
             }
 

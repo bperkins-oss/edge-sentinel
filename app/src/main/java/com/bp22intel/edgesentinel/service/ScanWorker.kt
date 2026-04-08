@@ -63,6 +63,12 @@ class ScanWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
+        // Skip if the foreground MonitoringService is already running —
+        // it handles scanning on its own schedule.
+        if (MonitoringService.isRunning.value) {
+            return Result.success()
+        }
+
         val startTime = System.currentTimeMillis()
 
         return try {

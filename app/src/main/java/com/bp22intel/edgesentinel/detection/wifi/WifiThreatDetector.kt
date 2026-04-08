@@ -10,6 +10,7 @@
 
 package com.bp22intel.edgesentinel.detection.wifi
 
+import com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao
 import com.bp22intel.edgesentinel.domain.model.Confidence
 import com.bp22intel.edgesentinel.domain.model.WifiThreatType
 import javax.inject.Inject
@@ -40,7 +41,9 @@ data class WifiDetectionResult(
  * All detection is LOCAL — no data ever leaves the device.
  */
 @Singleton
-class WifiThreatDetector @Inject constructor() {
+class WifiThreatDetector @Inject constructor(
+    private val trustedNetworkDao: TrustedNetworkDao
+) {
 
     companion object {
         /** Signal stronger than this for a new AP is suspicious. */
@@ -74,11 +77,15 @@ class WifiThreatDetector @Inject constructor() {
 
     /**
      * Run all detectors against the current scan and historical data.
+     *
+     * When [trustedBssids] is provided, detections involving ONLY trusted APs
+     * are suppressed entirely, and mixed detections have their score reduced.
      */
     fun analyze(
         current: WifiScanSnapshot,
         history: List<WifiScanSnapshot>,
-        disconnectTimestamps: List<Long> = emptyList()
+        disconnectTimestamps: List<Long> = emptyList(),
+        trustedBssids: Set<String> = emptySet()
     ): List<WifiDetectionResult> {
         val results = mutableListOf<WifiDetectionResult>()
 
@@ -88,7 +95,35 @@ class WifiThreatDetector @Inject constructor() {
         detectSsidSpoofing(current)?.let { results.addAll(it) }
         detectKarmaAttack(current, history)?.let { results.addAll(it) }
 
-        return results
+        if (trustedBssids.isEmpty()) return results
+
+        // Filter / attenuate results based on trusted networks
+        return results.mapNotNull { result ->
+            val involvedBssids = result.involvedAps.map { it.bssid }.toSet()
+            when {
+                // All involved APs are trusted — suppress entirely
+                involvedBssids.isNotEmpty() && involvedBssids.all { it in trustedBssids } -> null
+                // Some involved APs are trusted — reduce score
+                involvedBssids.any { it in trustedBssids } -> result.copy(
+                    score = result.score * 0.5,
+                    confidence = scoreToConfidence(result.score * 0.5)
+                )
+                // No trusted APs involved — keep as-is
+                else -> result
+            }
+        }
+    }
+
+    /**
+     * Convenience: load trusted BSSIDs from the database and run analysis.
+     */
+    suspend fun analyzeWithTrustedNetworks(
+        current: WifiScanSnapshot,
+        history: List<WifiScanSnapshot>,
+        disconnectTimestamps: List<Long> = emptyList()
+    ): List<WifiDetectionResult> {
+        val trustedBssids = trustedNetworkDao.getAllTrustedBssids().toSet()
+        return analyze(current, history, disconnectTimestamps, trustedBssids)
     }
 
     /**

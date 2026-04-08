@@ -1,6 +1,7 @@
 package com.bp22intel.edgesentinel.ui.alerts;
 
 import androidx.lifecycle.SavedStateHandle;
+import com.bp22intel.edgesentinel.analysis.ThreatAnalyst;
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -24,29 +25,34 @@ import javax.inject.Provider;
     "cast"
 })
 public final class AlertDetailViewModel_Factory implements Factory<AlertDetailViewModel> {
-  private final Provider<AlertRepository> alertRepositoryProvider;
-
   private final Provider<SavedStateHandle> savedStateHandleProvider;
 
-  public AlertDetailViewModel_Factory(Provider<AlertRepository> alertRepositoryProvider,
-      Provider<SavedStateHandle> savedStateHandleProvider) {
-    this.alertRepositoryProvider = alertRepositoryProvider;
+  private final Provider<AlertRepository> alertRepositoryProvider;
+
+  private final Provider<ThreatAnalyst> threatAnalystProvider;
+
+  public AlertDetailViewModel_Factory(Provider<SavedStateHandle> savedStateHandleProvider,
+      Provider<AlertRepository> alertRepositoryProvider,
+      Provider<ThreatAnalyst> threatAnalystProvider) {
     this.savedStateHandleProvider = savedStateHandleProvider;
+    this.alertRepositoryProvider = alertRepositoryProvider;
+    this.threatAnalystProvider = threatAnalystProvider;
   }
 
   @Override
   public AlertDetailViewModel get() {
-    return newInstance(alertRepositoryProvider.get(), savedStateHandleProvider.get());
+    return newInstance(savedStateHandleProvider.get(), alertRepositoryProvider.get(), threatAnalystProvider.get());
   }
 
   public static AlertDetailViewModel_Factory create(
+      Provider<SavedStateHandle> savedStateHandleProvider,
       Provider<AlertRepository> alertRepositoryProvider,
-      Provider<SavedStateHandle> savedStateHandleProvider) {
-    return new AlertDetailViewModel_Factory(alertRepositoryProvider, savedStateHandleProvider);
+      Provider<ThreatAnalyst> threatAnalystProvider) {
+    return new AlertDetailViewModel_Factory(savedStateHandleProvider, alertRepositoryProvider, threatAnalystProvider);
   }
 
-  public static AlertDetailViewModel newInstance(AlertRepository alertRepository,
-      SavedStateHandle savedStateHandle) {
-    return new AlertDetailViewModel(alertRepository, savedStateHandle);
+  public static AlertDetailViewModel newInstance(SavedStateHandle savedStateHandle,
+      AlertRepository alertRepository, ThreatAnalyst threatAnalyst) {
+    return new AlertDetailViewModel(savedStateHandle, alertRepository, threatAnalyst);
   }
 }

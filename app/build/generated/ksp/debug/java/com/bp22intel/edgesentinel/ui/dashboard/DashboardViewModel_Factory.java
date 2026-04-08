@@ -6,8 +6,10 @@ import com.bp22intel.edgesentinel.detection.engine.DemoDataGenerator;
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository;
 import com.bp22intel.edgesentinel.domain.repository.CellRepository;
 import com.bp22intel.edgesentinel.domain.repository.ScanRepository;
+import com.bp22intel.edgesentinel.export.AlertExporter;
 import com.bp22intel.edgesentinel.fusion.OverallThreatDashboard;
 import com.bp22intel.edgesentinel.fusion.SensorFusionEngine;
+import com.bp22intel.edgesentinel.sensor.MotionDetector;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
@@ -46,6 +48,10 @@ public final class DashboardViewModel_Factory implements Factory<DashboardViewMo
 
   private final Provider<ThreatAnalyst> threatAnalystProvider;
 
+  private final Provider<MotionDetector> motionDetectorProvider;
+
+  private final Provider<AlertExporter> alertExporterProvider;
+
   public DashboardViewModel_Factory(Provider<AlertRepository> alertRepositoryProvider,
       Provider<CellRepository> cellRepositoryProvider,
       Provider<ScanRepository> scanRepositoryProvider,
@@ -53,7 +59,9 @@ public final class DashboardViewModel_Factory implements Factory<DashboardViewMo
       Provider<CellInfoCollector> cellInfoCollectorProvider,
       Provider<SensorFusionEngine> sensorFusionEngineProvider,
       Provider<OverallThreatDashboard> overallThreatDashboardProvider,
-      Provider<ThreatAnalyst> threatAnalystProvider) {
+      Provider<ThreatAnalyst> threatAnalystProvider,
+      Provider<MotionDetector> motionDetectorProvider,
+      Provider<AlertExporter> alertExporterProvider) {
     this.alertRepositoryProvider = alertRepositoryProvider;
     this.cellRepositoryProvider = cellRepositoryProvider;
     this.scanRepositoryProvider = scanRepositoryProvider;
@@ -62,11 +70,13 @@ public final class DashboardViewModel_Factory implements Factory<DashboardViewMo
     this.sensorFusionEngineProvider = sensorFusionEngineProvider;
     this.overallThreatDashboardProvider = overallThreatDashboardProvider;
     this.threatAnalystProvider = threatAnalystProvider;
+    this.motionDetectorProvider = motionDetectorProvider;
+    this.alertExporterProvider = alertExporterProvider;
   }
 
   @Override
   public DashboardViewModel get() {
-    return newInstance(alertRepositoryProvider.get(), cellRepositoryProvider.get(), scanRepositoryProvider.get(), demoDataGeneratorProvider.get(), cellInfoCollectorProvider.get(), sensorFusionEngineProvider.get(), overallThreatDashboardProvider.get(), threatAnalystProvider.get());
+    return newInstance(alertRepositoryProvider.get(), cellRepositoryProvider.get(), scanRepositoryProvider.get(), demoDataGeneratorProvider.get(), cellInfoCollectorProvider.get(), sensorFusionEngineProvider.get(), overallThreatDashboardProvider.get(), threatAnalystProvider.get(), motionDetectorProvider.get(), alertExporterProvider.get());
   }
 
   public static DashboardViewModel_Factory create(Provider<AlertRepository> alertRepositoryProvider,
@@ -76,15 +86,17 @@ public final class DashboardViewModel_Factory implements Factory<DashboardViewMo
       Provider<CellInfoCollector> cellInfoCollectorProvider,
       Provider<SensorFusionEngine> sensorFusionEngineProvider,
       Provider<OverallThreatDashboard> overallThreatDashboardProvider,
-      Provider<ThreatAnalyst> threatAnalystProvider) {
-    return new DashboardViewModel_Factory(alertRepositoryProvider, cellRepositoryProvider, scanRepositoryProvider, demoDataGeneratorProvider, cellInfoCollectorProvider, sensorFusionEngineProvider, overallThreatDashboardProvider, threatAnalystProvider);
+      Provider<ThreatAnalyst> threatAnalystProvider,
+      Provider<MotionDetector> motionDetectorProvider,
+      Provider<AlertExporter> alertExporterProvider) {
+    return new DashboardViewModel_Factory(alertRepositoryProvider, cellRepositoryProvider, scanRepositoryProvider, demoDataGeneratorProvider, cellInfoCollectorProvider, sensorFusionEngineProvider, overallThreatDashboardProvider, threatAnalystProvider, motionDetectorProvider, alertExporterProvider);
   }
 
   public static DashboardViewModel newInstance(AlertRepository alertRepository,
       CellRepository cellRepository, ScanRepository scanRepository,
       DemoDataGenerator demoDataGenerator, CellInfoCollector cellInfoCollector,
       SensorFusionEngine sensorFusionEngine, OverallThreatDashboard overallThreatDashboard,
-      ThreatAnalyst threatAnalyst) {
-    return new DashboardViewModel(alertRepository, cellRepository, scanRepository, demoDataGenerator, cellInfoCollector, sensorFusionEngine, overallThreatDashboard, threatAnalyst);
+      ThreatAnalyst threatAnalyst, MotionDetector motionDetector, AlertExporter alertExporter) {
+    return new DashboardViewModel(alertRepository, cellRepository, scanRepository, demoDataGenerator, cellInfoCollector, sensorFusionEngine, overallThreatDashboard, threatAnalyst, motionDetector, alertExporter);
   }
 }

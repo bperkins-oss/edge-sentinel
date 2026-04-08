@@ -11,7 +11,12 @@
 package com.bp22intel.edgesentinel.ui.onboarding
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -35,6 +40,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.GppGood
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LocationOn
@@ -53,6 +59,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,6 +67,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -75,7 +83,8 @@ private data class OnboardingPage(
     val icon: ImageVector,
     val title: String,
     val description: String,
-    val isPermissionPage: Boolean = false
+    val isPermissionPage: Boolean = false,
+    val isBatteryPage: Boolean = false
 )
 
 private data class PermissionItem(
@@ -137,6 +146,13 @@ private val pages = listOf(
             "Tap any alert for detailed analysis and recommended actions."
     ),
     OnboardingPage(
+        icon = Icons.Default.BatteryFull,
+        title = "Continuous Protection",
+        description = "Edge Sentinel needs to run continuously to detect threats. " +
+            "Without this, Android will stop monitoring when your screen is off.",
+        isBatteryPage = true
+    ),
+    OnboardingPage(
         icon = Icons.Default.GppGood,
         title = "You're Protected",
         description = "Edge Sentinel runs quietly in the background, scanning your cellular " +
@@ -163,6 +179,8 @@ fun OnboardingScreen(
     if (isOnboardingComplete) return
 
     var currentPage by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    var batteryOptExempt by remember { mutableStateOf(isBatteryOptimizationExempt(context)) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -311,7 +329,27 @@ fun OnboardingScreen(
         Spacer(modifier = Modifier.weight(0.05f))
 
         // Buttons
-        if (currentPage == 1) {
+        if (pages[currentPage].isBatteryPage) {
+            // Battery optimization page
+            Button(
+                onClick = {
+                    if (!batteryOptExempt) {
+                        requestBatteryOptimizationExemption(context)
+                    }
+                    batteryOptExempt = isBatteryOptimizationExempt(context)
+                    currentPage++
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (batteryOptExempt) StatusClear else AccentBlue
+                )
+            ) {
+                Text(
+                    text = if (batteryOptExempt) "Already Exempt ✓" else "Disable Battery Optimization",
+                    color = BackgroundPrimary
+                )
+            }
+        } else if (currentPage == 1) {
             // Permission request page
             Button(
                 onClick = {
@@ -365,4 +403,16 @@ fun OnboardingScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
     }
+}
+
+private fun isBatteryOptimizationExempt(context: Context): Boolean {
+    val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    return pm.isIgnoringBatteryOptimizations(context.packageName)
+}
+
+private fun requestBatteryOptimizationExemption(context: Context) {
+    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+        data = Uri.parse("package:${context.packageName}")
+    }
+    context.startActivity(intent)
 }

@@ -34,6 +34,9 @@
     <!-- Notifications for threat alerts -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Battery optimization exemption for continuous monitoring -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- Background monitoring service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
@@ -94,6 +97,17 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/threat_status_widget_info" />
         </receiver>
+
+        <!-- FileProvider for sharing exported files -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_provider_paths" />
+        </provider>
 
         <!-- Disable default WorkManager initialization (we use HiltWorkerFactory) -->
         <provider

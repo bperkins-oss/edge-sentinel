@@ -17,6 +17,7 @@ import com.bp22intel.edgesentinel.domain.model.SensorCategory
 import com.bp22intel.edgesentinel.domain.model.ThreatLevel
 import com.bp22intel.edgesentinel.domain.model.ThreatType
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository
+import com.bp22intel.edgesentinel.export.AlertExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -38,7 +39,8 @@ enum class CategoryFilter {
 
 @HiltViewModel
 class AlertsViewModel @Inject constructor(
-    private val alertRepository: AlertRepository
+    private val alertRepository: AlertRepository,
+    val alertExporter: AlertExporter
 ) : ViewModel() {
 
     private val _selectedFilter = MutableStateFlow(AlertFilter.ALL)

@@ -1,6 +1,7 @@
 package com.bp22intel.edgesentinel;
 
 import androidx.hilt.work.HiltWorkerFactory;
+import com.bp22intel.edgesentinel.data.local.dao.AlertDao;
 import com.bp22intel.edgesentinel.detection.tower.TowerDatabaseManager;
 import dagger.MembersInjector;
 import dagger.internal.DaggerGenerated;
@@ -27,22 +28,28 @@ public final class EdgeSentinelApp_MembersInjector implements MembersInjector<Ed
 
   private final Provider<TowerDatabaseManager> towerDatabaseManagerProvider;
 
+  private final Provider<AlertDao> alertDaoProvider;
+
   public EdgeSentinelApp_MembersInjector(Provider<HiltWorkerFactory> workerFactoryProvider,
-      Provider<TowerDatabaseManager> towerDatabaseManagerProvider) {
+      Provider<TowerDatabaseManager> towerDatabaseManagerProvider,
+      Provider<AlertDao> alertDaoProvider) {
     this.workerFactoryProvider = workerFactoryProvider;
     this.towerDatabaseManagerProvider = towerDatabaseManagerProvider;
+    this.alertDaoProvider = alertDaoProvider;
   }
 
   public static MembersInjector<EdgeSentinelApp> create(
       Provider<HiltWorkerFactory> workerFactoryProvider,
-      Provider<TowerDatabaseManager> towerDatabaseManagerProvider) {
-    return new EdgeSentinelApp_MembersInjector(workerFactoryProvider, towerDatabaseManagerProvider);
+      Provider<TowerDatabaseManager> towerDatabaseManagerProvider,
+      Provider<AlertDao> alertDaoProvider) {
+    return new EdgeSentinelApp_MembersInjector(workerFactoryProvider, towerDatabaseManagerProvider, alertDaoProvider);
   }
 
   @Override
   public void injectMembers(EdgeSentinelApp instance) {
     injectWorkerFactory(instance, workerFactoryProvider.get());
     injectTowerDatabaseManager(instance, towerDatabaseManagerProvider.get());
+    injectAlertDao(instance, alertDaoProvider.get());
   }
 
   @InjectedFieldSignature("com.bp22intel.edgesentinel.EdgeSentinelApp.workerFactory")
@@ -55,5 +62,10 @@ public final class EdgeSentinelApp_MembersInjector implements MembersInjector<Ed
   public static void injectTowerDatabaseManager(EdgeSentinelApp instance,
       TowerDatabaseManager towerDatabaseManager) {
     instance.towerDatabaseManager = towerDatabaseManager;
+  }
+
+  @InjectedFieldSignature("com.bp22intel.edgesentinel.EdgeSentinelApp.alertDao")
+  public static void injectAlertDao(EdgeSentinelApp instance, AlertDao alertDao) {
+    instance.alertDao = alertDao;
   }
 }

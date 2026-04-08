@@ -10,48 +10,64 @@
 
 package com.bp22intel.edgesentinel.ui.alerts
 
-import android.content.Intent
-import androidx.compose.animation.AnimatedVisibility
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.GppBad
+import androidx.compose.material.icons.filled.GppMaybe
+import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.SignalCellular4Bar
+import androidx.compose.material.icons.filled.Sms
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.bp22intel.edgesentinel.domain.model.Confidence
+import com.bp22intel.edgesentinel.analysis.AlertAnalysis
+import com.bp22intel.edgesentinel.analysis.RiskLevel
+import com.bp22intel.edgesentinel.domain.model.Alert
+import com.bp22intel.edgesentinel.domain.model.ThreatLevel
 import com.bp22intel.edgesentinel.domain.model.ThreatType
-import com.bp22intel.edgesentinel.ui.components.StatusBadge
 import com.bp22intel.edgesentinel.ui.theme.AccentBlue
 import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
 import com.bp22intel.edgesentinel.ui.theme.StatusClear
@@ -61,336 +77,514 @@ import com.bp22intel.edgesentinel.ui.theme.Surface
 import com.bp22intel.edgesentinel.ui.theme.SurfaceVariant
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
 import com.bp22intel.edgesentinel.ui.theme.TextSecondary
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-private fun threatTypeLabel(type: ThreatType): String {
-    return when (type) {
-        ThreatType.FAKE_BTS -> "Fake Base Station (IMSI Catcher)"
-        ThreatType.NETWORK_DOWNGRADE -> "Network Downgrade Attack"
-        ThreatType.SILENT_SMS -> "Silent SMS (Type-0)"
-        ThreatType.TRACKING_PATTERN -> "Location Tracking Pattern"
-        ThreatType.CIPHER_ANOMALY -> "Cipher/Encryption Anomaly"
-        ThreatType.SIGNAL_ANOMALY -> "Signal Anomaly"
-        ThreatType.NR_ANOMALY -> "5G NR Anomaly"
-    }
-}
-
-private fun confidenceProgress(confidence: Confidence): Float {
-    return when (confidence) {
-        Confidence.LOW -> 0.33f
-        Confidence.MEDIUM -> 0.66f
-        Confidence.HIGH -> 1.0f
-    }
-}
-
-private fun confidenceColor(confidence: Confidence) = when (confidence) {
-    Confidence.LOW -> StatusClear
-    Confidence.MEDIUM -> StatusSuspicious
-    Confidence.HIGH -> StatusThreat
-}
-
-private fun parseDetailsJson(json: String): Map<String, String> {
-    return try {
-        val content = json.trim().removePrefix("{").removeSuffix("}")
-        if (content.isBlank()) return emptyMap()
-
-        val result = mutableMapOf<String, String>()
-        // Simple JSON key-value parser for flat objects
-        val regex = "\"([^\"]+)\"\\s*:\\s*\"([^\"]*?)\"".toRegex()
-        regex.findAll(content).forEach { match ->
-            result[match.groupValues[1]] = match.groupValues[2]
-        }
-        result
-    } catch (_: Exception) {
-        mapOf("raw" to json)
-    }
-}
 
 @Composable
 fun AlertDetailScreen(
     alertId: Long,
     viewModel: AlertDetailViewModel = hiltViewModel()
 ) {
-    val alert by viewModel.alert.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    var technicalDetailsExpanded by remember { mutableStateOf(false) }
 
-    val currentAlert = alert
+    when {
+        uiState.isLoading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = AccentBlue)
+            }
+        }
+        uiState.alert == null -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Alert not found",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = TextSecondary
+                )
+            }
+        }
+        else -> {
+            val alert = uiState.alert!!
+            val analysis = uiState.analysis!!
 
-    if (currentAlert == null) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // 1. Alert type + severity badge (large)
+                AlertHeader(alert = alert)
+
+                // 2. AI Analysis
+                AnalysisCard(analysis = analysis)
+
+                // 3. Tower details
+                TowerDetailsCard(detailsJson = alert.detailsJson)
+
+                // 4. Possible causes
+                PossibleCausesCard(causes = analysis.possibleCauses)
+
+                // 5. Recommended actions
+                RecommendationCard(recommendation = analysis.recommendation)
+
+                // 6. Timestamp + duration
+                TimestampCard(alert = alert)
+
+                // 7 & 8. Action buttons
+                ActionButtons(
+                    isAcknowledged = uiState.isAcknowledged,
+                    onAcknowledge = { viewModel.acknowledgeAlert() },
+                    onShare = { shareAlertToClipboard(context, alert, analysis) }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlertHeader(alert: Alert) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = threatTypeIcon(alert.threatType),
+                contentDescription = threatTypeLabel(alert.threatType),
+                tint = severityColor(alert.severity),
+                modifier = Modifier.size(48.dp)
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = threatTypeLabel(alert.threatType),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SeverityBadge(
+                        text = alert.severity.label.uppercase(),
+                        color = severityColor(alert.severity)
+                    )
+                    Text(
+                        text = "Confidence: ${alert.confidence.name}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextSecondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeverityBadge(text: String, color: Color) {
+    Text(
+        text = text,
+        color = BackgroundPrimary,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(color)
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+    )
+}
+
+@Composable
+private fun AnalysisCard(analysis: AlertAnalysis) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = MaterialTheme.shapes.medium
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Loading alert...",
-                style = MaterialTheme.typography.bodyLarge,
+                text = "AI Analysis",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+
+            // Plain English explanation
+            Text(
+                text = analysis.plainEnglish,
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextPrimary
+            )
+
+            // Risk level + confidence row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Column {
+                    Text(
+                        text = "Risk Level",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary
+                    )
+                    Text(
+                        text = analysis.riskLevel.label,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(analysis.riskLevel.color)
+                    )
+                }
+                Column {
+                    Text(
+                        text = "Confidence",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary
+                    )
+                    Text(
+                        text = "${(analysis.confidence * 100).toInt()}%",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                }
+                Column {
+                    Text(
+                        text = "Should Worry",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary
+                    )
+                    Text(
+                        text = if (analysis.shouldWorry) "Yes" else "No",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (analysis.shouldWorry) StatusThreat else StatusClear
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TowerDetailsCard(detailsJson: String) {
+    val details = try { JSONObject(detailsJson) } catch (_: Exception) { return }
+    if (details.length() == 0) return
+
+    val chips = mutableListOf<Pair<String, String>>()
+
+    if (details.has("cellId")) chips.add("CID" to details.optString("cellId", ""))
+    if (details.has("lac")) chips.add("LAC" to details.optString("lac", ""))
+    if (details.has("mcc") && details.has("mnc")) {
+        chips.add("MCC/MNC" to "${details.optInt("mcc")}/${details.optInt("mnc")}")
+    }
+    if (details.has("signalStrength")) {
+        val sig = details.optInt("signalStrength", 0)
+        if (sig != 0) chips.add("Signal" to "$sig dBm")
+    }
+    if (details.has("networkType")) chips.add("Network" to details.optString("networkType", ""))
+    if (details.has("nearbyTowerCount")) {
+        chips.add("Nearby Towers" to "${details.optInt("nearbyTowerCount")}")
+    }
+    if (details.has("ssid")) chips.add("SSID" to details.optString("ssid", ""))
+    if (details.has("bssid")) chips.add("BSSID" to details.optString("bssid", ""))
+    if (details.has("fromNetwork") && details.has("toNetwork")) {
+        chips.add("Downgrade" to "${details.optString("fromNetwork")} → ${details.optString("toNetwork")}")
+    }
+    if (details.has("cipher")) chips.add("Cipher" to details.optString("cipher", ""))
+    if (details.has("previousCipher")) chips.add("Previous Cipher" to details.optString("previousCipher", ""))
+
+    if (chips.isEmpty()) return
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Tower Details",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                chips.forEach { (label, value) ->
+                    SuggestionChip(
+                        onClick = {},
+                        label = {
+                            Text(
+                                text = "$label: $value",
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1
+                            )
+                        },
+                        modifier = Modifier.heightIn(min = 28.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PossibleCausesCard(causes: List<String>) {
+    if (causes.isEmpty()) return
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Possible Causes",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+
+            causes.forEachIndexed { index, cause ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = "${index + 1}.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AccentBlue,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.width(24.dp)
+                    )
+                    Text(
+                        text = cause,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecommendationCard(recommendation: String) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SurfaceVariant),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Recommended Action",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Text(
+                text = recommendation,
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextPrimary
+            )
+        }
+    }
+}
+
+@Composable
+private fun TimestampCard(alert: Alert) {
+    val dateFormat = SimpleDateFormat("EEEE, MMMM d, yyyy 'at' h:mm:ss a", Locale.getDefault())
+    val formattedTime = dateFormat.format(Date(alert.timestamp))
+    val elapsed = System.currentTimeMillis() - alert.timestamp
+    val elapsedText = formatDuration(elapsed)
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Timestamp",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Text(
+                text = formattedTime,
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextPrimary
+            )
+            Text(
+                text = "$elapsedText ago",
+                style = MaterialTheme.typography.bodySmall,
                 color = TextSecondary
             )
         }
-        return
     }
+}
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+@Composable
+private fun ActionButtons(
+    isAcknowledged: Boolean,
+    onAcknowledge: () -> Unit,
+    onShare: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Header: threat type and severity badge
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Button(
+            onClick = onAcknowledge,
+            enabled = !isAcknowledged,
+            modifier = Modifier.weight(1f),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isAcknowledged) StatusClear.copy(alpha = 0.3f) else AccentBlue,
+                disabledContainerColor = StatusClear.copy(alpha = 0.2f),
+                disabledContentColor = StatusClear
+            )
         ) {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = threatTypeLabel(currentAlert.threatType),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                modifier = Modifier.weight(1f)
-            )
-            StatusBadge(
-                text = currentAlert.severity.label.uppercase(),
-                threatLevel = currentAlert.severity
+                text = if (isAcknowledged) "Acknowledged" else "Acknowledge"
             )
         }
 
-        // Timestamp
-        Text(
-            text = SimpleDateFormat("MMM dd, yyyy  HH:mm:ss", Locale.getDefault())
-                .format(Date(currentAlert.timestamp)),
-            style = MaterialTheme.typography.bodySmall,
-            color = TextSecondary
-        )
-
-        // "What was detected" section
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Surface),
-            shape = MaterialTheme.shapes.medium
+        OutlinedButton(
+            onClick = onShare,
+            modifier = Modifier.weight(1f)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "What was detected",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-                Text(
-                    text = currentAlert.summary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
-            }
-        }
-
-        // Confidence level indicator
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Surface),
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Confidence Level",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = currentAlert.confidence.name,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = confidenceColor(currentAlert.confidence)
-                    )
-                }
-                LinearProgressIndicator(
-                    progress = { confidenceProgress(currentAlert.confidence) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp),
-                    color = confidenceColor(currentAlert.confidence),
-                    trackColor = SurfaceVariant
-                )
-            }
-        }
-
-        // Recommended action section
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Surface),
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Recommended Action",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-                Text(
-                    text = viewModel.getRecommendedAction(currentAlert.threatType),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary
-                )
-            }
-        }
-
-        // Expandable technical details section
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Surface),
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { technicalDetailsExpanded = !technicalDetailsExpanded }
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Technical Details",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Icon(
-                        imageVector = if (technicalDetailsExpanded) {
-                            Icons.Filled.ExpandLess
-                        } else {
-                            Icons.Filled.ExpandMore
-                        },
-                        contentDescription = if (technicalDetailsExpanded) "Collapse" else "Expand",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                AnimatedVisibility(visible = technicalDetailsExpanded) {
-                    val details = parseDetailsJson(currentAlert.detailsJson)
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        if (details.isEmpty()) {
-                            Text(
-                                text = "No additional details available",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                        } else {
-                            details.forEach { (key, value) ->
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(
-                                            SurfaceVariant,
-                                            MaterialTheme.shapes.small
-                                        )
-                                        .padding(8.dp)
-                                ) {
-                                    Text(
-                                        text = key,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = AccentBlue
-                                    )
-                                    Text(
-                                        text = value,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontFamily = FontFamily.Monospace,
-                                        color = TextPrimary
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = "Cell ID: ${currentAlert.cellId ?: "N/A"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
-                        )
-                        Text(
-                            text = "Alert ID: ${currentAlert.id}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
-                        )
-                    }
-                }
-            }
-        }
-
-        // Share button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            IconButton(
-                onClick = {
-                    val shareText = buildString {
-                        appendLine("Edge Sentinel Alert Report")
-                        appendLine("=========================")
-                        appendLine("Type: ${threatTypeLabel(currentAlert.threatType)}")
-                        appendLine("Severity: ${currentAlert.severity.label}")
-                        appendLine("Confidence: ${currentAlert.confidence.name}")
-                        appendLine()
-                        appendLine("Summary: ${currentAlert.summary}")
-                        appendLine()
-                        appendLine("Recommended Action:")
-                        appendLine(viewModel.getRecommendedAction(currentAlert.threatType))
-                        appendLine()
-                        appendLine("Timestamp: ${
-                            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                                .format(Date(currentAlert.timestamp))
-                        }")
-                        appendLine("Cell ID: ${currentAlert.cellId ?: "N/A"}")
-                    }
-
-                    val sendIntent = Intent().apply {
-                        action = Intent.ACTION_SEND
-                        putExtra(Intent.EXTRA_TEXT, shareText)
-                        type = "text/plain"
-                    }
-                    context.startActivity(
-                        Intent.createChooser(sendIntent, "Share Alert Report")
-                    )
-                }
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Share,
-                    contentDescription = "Share alert",
-                    tint = AccentBlue
-                )
-            }
+            Icon(
+                imageVector = Icons.Default.Share,
+                contentDescription = null,
+                tint = TextPrimary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Share",
+                color = TextPrimary
+            )
         }
     }
+}
+
+// ── Helper functions ──────────────────────────────────────────────────
+
+private fun threatTypeIcon(type: ThreatType): ImageVector {
+    return when (type) {
+        ThreatType.FAKE_BTS -> Icons.Filled.SignalCellular4Bar
+        ThreatType.NETWORK_DOWNGRADE -> Icons.Filled.NetworkCheck
+        ThreatType.SILENT_SMS -> Icons.Filled.Sms
+        ThreatType.TRACKING_PATTERN -> Icons.Filled.TrackChanges
+        ThreatType.CIPHER_ANOMALY -> Icons.Filled.GppBad
+        ThreatType.SIGNAL_ANOMALY -> Icons.Filled.GppMaybe
+        ThreatType.NR_ANOMALY -> Icons.Filled.NetworkCheck
+    }
+}
+
+private fun threatTypeLabel(type: ThreatType): String {
+    return when (type) {
+        ThreatType.FAKE_BTS -> "Fake Base Station"
+        ThreatType.NETWORK_DOWNGRADE -> "Network Downgrade"
+        ThreatType.SILENT_SMS -> "Silent SMS"
+        ThreatType.TRACKING_PATTERN -> "Tracking Pattern"
+        ThreatType.CIPHER_ANOMALY -> "Cipher Anomaly"
+        ThreatType.SIGNAL_ANOMALY -> "Signal Anomaly"
+        ThreatType.NR_ANOMALY -> "5G NR Anomaly"
+    }
+}
+
+private fun severityColor(level: ThreatLevel): Color {
+    return when (level) {
+        ThreatLevel.CLEAR -> StatusClear
+        ThreatLevel.SUSPICIOUS -> StatusSuspicious
+        ThreatLevel.THREAT -> StatusThreat
+    }
+}
+
+private fun formatDuration(ms: Long): String {
+    val seconds = ms / 1000
+    val minutes = seconds / 60
+    val hours = minutes / 60
+    val days = hours / 24
+
+    return when {
+        days > 0 -> "$days day${if (days != 1L) "s" else ""}, ${hours % 24} hr"
+        hours > 0 -> "$hours hour${if (hours != 1L) "s" else ""}, ${minutes % 60} min"
+        minutes > 0 -> "$minutes minute${if (minutes != 1L) "s" else ""}"
+        else -> "Less than a minute"
+    }
+}
+
+private fun shareAlertToClipboard(context: Context, alert: Alert, analysis: AlertAnalysis) {
+    val text = buildString {
+        appendLine("⚠️ Edge Sentinel Alert")
+        appendLine("Type: ${threatTypeLabel(alert.threatType)}")
+        appendLine("Severity: ${alert.severity.label}")
+        appendLine("Risk Level: ${analysis.riskLevel.label}")
+        appendLine()
+        appendLine("Analysis:")
+        appendLine(analysis.plainEnglish)
+        appendLine()
+        appendLine("Recommendation:")
+        appendLine(analysis.recommendation)
+        appendLine()
+        appendLine("Confidence: ${(analysis.confidence * 100).toInt()}%")
+        appendLine("Time: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(alert.timestamp))}")
+    }
+
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText("Edge Sentinel Alert", text))
+    Toast.makeText(context, "Alert copied to clipboard", Toast.LENGTH_SHORT).show()
 }

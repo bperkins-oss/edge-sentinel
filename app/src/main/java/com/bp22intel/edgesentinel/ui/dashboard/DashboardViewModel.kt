@@ -15,6 +15,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bp22intel.edgesentinel.data.sensor.CellInfoCollector
 import com.bp22intel.edgesentinel.detection.engine.DemoDataGenerator
+import com.bp22intel.edgesentinel.export.AlertExporter
 import com.bp22intel.edgesentinel.domain.model.Alert
 import com.bp22intel.edgesentinel.domain.model.CellTower
 import com.bp22intel.edgesentinel.domain.model.FusedThreatAssessment
@@ -25,6 +26,8 @@ import com.bp22intel.edgesentinel.domain.repository.ScanRepository
 import com.bp22intel.edgesentinel.fusion.DashboardPosture
 import com.bp22intel.edgesentinel.fusion.OverallThreatDashboard
 import com.bp22intel.edgesentinel.fusion.SensorFusionEngine
+import com.bp22intel.edgesentinel.sensor.MotionDetector
+import com.bp22intel.edgesentinel.sensor.MotionState
 import com.bp22intel.edgesentinel.service.MonitoringService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +48,9 @@ class DashboardViewModel @Inject constructor(
     private val cellInfoCollector: CellInfoCollector,
     private val sensorFusionEngine: SensorFusionEngine,
     private val overallThreatDashboard: OverallThreatDashboard,
-    private val threatAnalyst: com.bp22intel.edgesentinel.analysis.ThreatAnalyst
+    private val threatAnalyst: com.bp22intel.edgesentinel.analysis.ThreatAnalyst,
+    private val motionDetector: MotionDetector,
+    val alertExporter: AlertExporter
 ) : ViewModel() {
 
     val currentThreatLevel: StateFlow<ThreatLevel> = MonitoringService.threatLevel
@@ -77,13 +82,20 @@ class DashboardViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    /** Current motion state from accelerometer-based motion detector. */
+    val motionState: StateFlow<MotionState> = motionDetector.motionState
+
     /** AI situation brief — real analysis from ThreatAnalyst engine */
     val situationBrief: StateFlow<com.bp22intel.edgesentinel.analysis.SituationBrief> =
-        kotlinx.coroutines.flow.combine(recentAlerts, _currentCell) { alerts, cell ->
+        kotlinx.coroutines.flow.combine(
+            recentAlerts,
+            _currentCell,
+            motionDetector.motionState
+        ) { alerts, cell, motion ->
             threatAnalyst.analyzeSituation(
                 alerts = alerts,
                 cellInfo = cell,
-                isMoving = false // TODO: wire to motion sensor
+                isMoving = motion == MotionState.WALKING || motion == MotionState.DRIVING
             )
         }.stateIn(
             viewModelScope,

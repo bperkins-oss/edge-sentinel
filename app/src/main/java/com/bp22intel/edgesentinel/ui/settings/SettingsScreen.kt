@@ -87,6 +87,7 @@ fun SettingsScreen(
     val isDemoMode by viewModel.isDemoMode.collectAsState()
     val isAdvancedMode by viewModel.isAdvancedMode.collectAsState()
     val isRooted by viewModel.isRooted.collectAsState()
+    val alertRetentionDays by viewModel.alertRetentionDays.collectAsState()
 
     LazyColumn(
         modifier = Modifier
@@ -282,6 +283,63 @@ fun SettingsScreen(
         // Data section
         item {
             SectionHeader(title = "Data")
+        }
+
+        // Alert retention period
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Surface),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Alert Retention",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "How long to keep alert history",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    listOf(7, 14, 30).forEach { days ->
+                        val label = when (days) {
+                            7 -> "7 days"
+                            14 -> "14 days"
+                            30 -> "30 days"
+                            else -> "$days days"
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = alertRetentionDays == days,
+                                onClick = { viewModel.setAlertRetentionDays(days) },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = AccentBlue,
+                                    unselectedColor = TextSecondary
+                                )
+                            )
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         item {

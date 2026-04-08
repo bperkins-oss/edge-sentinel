@@ -1,4 +1,5 @@
-com.bp22intel.edgesentinel.debug:xml/threat_status_widget_info = 0x7f110002
+com.bp22intel.edgesentinel.debug:xml/threat_status_widget_info = 0x7f110003
+com.bp22intel.edgesentinel.debug:xml/file_provider_paths = 0x7f110002
 com.bp22intel.edgesentinel.debug:styleable/Navigator = 0x7f100010
 com.bp22intel.edgesentinel.debug:styleable/NavHost = 0x7f10000e
 com.bp22intel.edgesentinel.debug:styleable/NavGraphNavigator = 0x7f10000d

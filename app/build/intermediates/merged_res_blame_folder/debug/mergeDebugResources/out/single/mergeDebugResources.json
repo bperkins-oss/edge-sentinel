@@ -1,34 +1,38 @@
 [
     {
-        "merged": "com.bp22intel.edgesentinel.app-debug-76:/mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "com.bp22intel.edgesentinel.app-main-78:/mipmap-anydpi-v26/ic_launcher.xml"
+        "merged": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-debug-76:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-main-78:/drawable/ic_launcher_foreground.xml"
     },
     {
-        "merged": "com.bp22intel.edgesentinel.app-debug-76:/xml_data_extraction_rules.xml.flat",
-        "source": "com.bp22intel.edgesentinel.app-main-78:/xml/data_extraction_rules.xml"
+        "merged": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-debug-76:/xml_data_extraction_rules.xml.flat",
+        "source": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-main-78:/xml/data_extraction_rules.xml"
     },
     {
-        "merged": "com.bp22intel.edgesentinel.app-debug-76:/xml_threat_status_widget_info.xml.flat",
-        "source": "com.bp22intel.edgesentinel.app-main-78:/xml/threat_status_widget_info.xml"
+        "merged": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-debug-76:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-main-78:/mipmap-anydpi-v26/ic_launcher.xml"
     },
     {
-        "merged": "com.bp22intel.edgesentinel.app-debug-76:/drawable_ic_launcher_foreground.xml.flat",
-        "source": "com.bp22intel.edgesentinel.app-main-78:/drawable/ic_launcher_foreground.xml"
+        "merged": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-debug-76:/xml_threat_status_widget_info.xml.flat",
+        "source": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-main-78:/xml/threat_status_widget_info.xml"
     },
     {
-        "merged": "com.bp22intel.edgesentinel.app-debug-76:/layout_widget_threat_status.xml.flat",
-        "source": "com.bp22intel.edgesentinel.app-main-78:/layout/widget_threat_status.xml"
+        "merged": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-debug-76:/xml_backup_rules.xml.flat",
+        "source": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-main-78:/xml/backup_rules.xml"
     },
     {
-        "merged": "com.bp22intel.edgesentinel.app-debug-76:/xml_backup_rules.xml.flat",
-        "source": "com.bp22intel.edgesentinel.app-main-78:/xml/backup_rules.xml"
+        "merged": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-debug-76:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-main-78:/mipmap-anydpi-v26/ic_launcher_round.xml"
     },
     {
-        "merged": "com.bp22intel.edgesentinel.app-debug-76:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
-        "source": "com.bp22intel.edgesentinel.app-main-78:/mipmap-anydpi-v26/ic_launcher_round.xml"
+        "merged": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-debug-76:/drawable_ic_launcher_background.xml.flat",
+        "source": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-main-78:/drawable/ic_launcher_background.xml"
     },
     {
-        "merged": "com.bp22intel.edgesentinel.app-debug-76:/drawable_ic_launcher_background.xml.flat",
-        "source": "com.bp22intel.edgesentinel.app-main-78:/drawable/ic_launcher_background.xml"
+        "merged": "com.bp22intel.edgesentinel.app-debug-76:/xml_file_provider_paths.xml.flat",
+        "source": "com.bp22intel.edgesentinel.app-main-78:/xml/file_provider_paths.xml"
+    },
+    {
+        "merged": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-debug-76:/layout_widget_threat_status.xml.flat",
+        "source": "/home/billperkins/.gradle/daemon/8.7/com.bp22intel.edgesentinel.app-main-78:/layout/widget_threat_status.xml"
     }
 ]

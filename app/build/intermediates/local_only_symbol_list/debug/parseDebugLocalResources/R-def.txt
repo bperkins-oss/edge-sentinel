@@ -16,4 +16,5 @@ style Theme.EdgeSentinel
 style Theme.EdgeSentinel.Splash
 xml backup_rules
 xml data_extraction_rules
+xml file_provider_paths
 xml threat_status_widget_info

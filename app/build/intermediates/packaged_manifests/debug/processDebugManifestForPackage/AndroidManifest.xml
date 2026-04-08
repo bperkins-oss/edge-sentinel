@@ -10,8 +10,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.bp22intel.edgesentinel.debug"
-    android:versionCode="49"
-    android:versionName="2.0.49-debug" >
+    android:versionCode="50"
+    android:versionName="2.0.50-debug" >
 
     <uses-sdk
         android:minSdkVersion="26"
@@ -41,6 +41,9 @@
 
     <!-- Notifications for threat alerts -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Battery optimization exemption for continuous monitoring -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Background monitoring service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -120,6 +123,17 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/threat_status_widget_info" />
         </receiver>
+
+        <!-- FileProvider for sharing exported files -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.bp22intel.edgesentinel.debug.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true" >
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_provider_paths" />
+        </provider>
 
         <!-- Disable default WorkManager initialization (we use HiltWorkerFactory) -->
         <provider

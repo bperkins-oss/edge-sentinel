@@ -1837,4 +1837,5 @@ int styleable Navigator_android_id 1
 int styleable Navigator_route 2
 int xml backup_rules 0x7f110000
 int xml data_extraction_rules 0x7f110001
-int xml threat_status_widget_info 0x7f110002
+int xml file_provider_paths 0x7f110002
+int xml threat_status_widget_info 0x7f110003

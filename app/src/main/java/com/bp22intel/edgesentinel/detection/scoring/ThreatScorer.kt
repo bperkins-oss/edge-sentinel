@@ -1,6 +1,6 @@
 /*
  * Edge Sentinel — Multi-Vector Threat Scoring Engine
- * Copyright (C) 2024 BP22 Intel. All Rights Reserved.
+ * Copyright (C) 2024-2026 BP22 Intel. All Rights Reserved.
  * Proprietary and confidential.
  *
  * Clean-room implementation. Scoring model designed from published academic

@@ -1,6 +1,7 @@
 package com.bp22intel.edgesentinel.ui.alerts;
 
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository;
+import com.bp22intel.edgesentinel.export.AlertExporter;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
@@ -25,20 +26,26 @@ import javax.inject.Provider;
 public final class AlertsViewModel_Factory implements Factory<AlertsViewModel> {
   private final Provider<AlertRepository> alertRepositoryProvider;
 
-  public AlertsViewModel_Factory(Provider<AlertRepository> alertRepositoryProvider) {
+  private final Provider<AlertExporter> alertExporterProvider;
+
+  public AlertsViewModel_Factory(Provider<AlertRepository> alertRepositoryProvider,
+      Provider<AlertExporter> alertExporterProvider) {
     this.alertRepositoryProvider = alertRepositoryProvider;
+    this.alertExporterProvider = alertExporterProvider;
   }
 
   @Override
   public AlertsViewModel get() {
-    return newInstance(alertRepositoryProvider.get());
+    return newInstance(alertRepositoryProvider.get(), alertExporterProvider.get());
   }
 
-  public static AlertsViewModel_Factory create(Provider<AlertRepository> alertRepositoryProvider) {
-    return new AlertsViewModel_Factory(alertRepositoryProvider);
+  public static AlertsViewModel_Factory create(Provider<AlertRepository> alertRepositoryProvider,
+      Provider<AlertExporter> alertExporterProvider) {
+    return new AlertsViewModel_Factory(alertRepositoryProvider, alertExporterProvider);
   }
 
-  public static AlertsViewModel newInstance(AlertRepository alertRepository) {
-    return new AlertsViewModel(alertRepository);
+  public static AlertsViewModel newInstance(AlertRepository alertRepository,
+      AlertExporter alertExporter) {
+    return new AlertsViewModel(alertRepository, alertExporter);
   }
 }

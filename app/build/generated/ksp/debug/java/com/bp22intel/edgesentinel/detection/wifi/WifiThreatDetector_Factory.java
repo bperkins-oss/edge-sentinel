@@ -1,10 +1,12 @@
 package com.bp22intel.edgesentinel.detection.wifi;
 
+import com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
 import dagger.internal.ScopeMetadata;
 import javax.annotation.processing.Generated;
+import javax.inject.Provider;
 
 @ScopeMetadata("javax.inject.Singleton")
 @QualifierMetadata
@@ -21,20 +23,23 @@ import javax.annotation.processing.Generated;
     "cast"
 })
 public final class WifiThreatDetector_Factory implements Factory<WifiThreatDetector> {
+  private final Provider<TrustedNetworkDao> trustedNetworkDaoProvider;
+
+  public WifiThreatDetector_Factory(Provider<TrustedNetworkDao> trustedNetworkDaoProvider) {
+    this.trustedNetworkDaoProvider = trustedNetworkDaoProvider;
+  }
+
   @Override
   public WifiThreatDetector get() {
-    return newInstance();
+    return newInstance(trustedNetworkDaoProvider.get());
   }
 
-  public static WifiThreatDetector_Factory create() {
-    return InstanceHolder.INSTANCE;
+  public static WifiThreatDetector_Factory create(
+      Provider<TrustedNetworkDao> trustedNetworkDaoProvider) {
+    return new WifiThreatDetector_Factory(trustedNetworkDaoProvider);
   }
 
-  public static WifiThreatDetector newInstance() {
-    return new WifiThreatDetector();
-  }
-
-  private static final class InstanceHolder {
-    private static final WifiThreatDetector_Factory INSTANCE = new WifiThreatDetector_Factory();
+  public static WifiThreatDetector newInstance(TrustedNetworkDao trustedNetworkDao) {
+    return new WifiThreatDetector(trustedNetworkDao);
   }
 }

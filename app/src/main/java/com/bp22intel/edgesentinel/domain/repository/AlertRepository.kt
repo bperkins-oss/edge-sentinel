@@ -22,4 +22,5 @@ interface AlertRepository {
     suspend fun getAlertById(id: Long): Alert?
     suspend fun acknowledgeAlert(id: Long)
     suspend fun deleteOldAlerts(beforeTimestamp: Long)
+    fun getUnacknowledgedCount(): Flow<Int>
 }

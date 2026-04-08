@@ -17,6 +17,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -44,6 +45,7 @@ class SettingsViewModel @Inject constructor(
         private val KEY_NOTIFICATION_VIBRATION = booleanPreferencesKey("notification_vibration")
         private val KEY_DEMO_MODE = booleanPreferencesKey("demo_mode")
         private val KEY_ADVANCED_MODE = booleanPreferencesKey("advanced_mode")
+        private val KEY_ALERT_RETENTION_DAYS = intPreferencesKey("alert_retention_days")
     }
 
     val isMonitoringEnabled: StateFlow<Boolean> = dataStore.data
@@ -76,6 +78,10 @@ class SettingsViewModel @Inject constructor(
     val isAdvancedMode: StateFlow<Boolean> = dataStore.data
         .map { prefs -> prefs[KEY_ADVANCED_MODE] ?: false }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val alertRetentionDays: StateFlow<Int> = dataStore.data
+        .map { prefs -> prefs[KEY_ALERT_RETENTION_DAYS] ?: 7 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
 
     private val _isRooted = MutableStateFlow(false)
     val isRooted: StateFlow<Boolean> = _isRooted.asStateFlow()
@@ -118,6 +124,12 @@ class SettingsViewModel @Inject constructor(
         if (!_isRooted.value) return
         viewModelScope.launch {
             dataStore.edit { prefs -> prefs[KEY_ADVANCED_MODE] = enabled }
+        }
+    }
+
+    fun setAlertRetentionDays(days: Int) {
+        viewModelScope.launch {
+            dataStore.edit { prefs -> prefs[KEY_ALERT_RETENTION_DAYS] = days }
         }
     }
 

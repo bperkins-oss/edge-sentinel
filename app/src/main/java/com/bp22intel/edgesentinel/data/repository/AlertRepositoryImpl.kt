@@ -46,4 +46,7 @@ class AlertRepositoryImpl @Inject constructor(
 
     override suspend fun deleteOldAlerts(beforeTimestamp: Long) =
         alertDao.deleteBefore(beforeTimestamp)
+
+    override fun getUnacknowledgedCount(): Flow<Int> =
+        alertDao.getUnacknowledgedCount()
 }

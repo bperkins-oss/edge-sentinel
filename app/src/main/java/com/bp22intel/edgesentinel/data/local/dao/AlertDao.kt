@@ -39,4 +39,7 @@ interface AlertDao {
 
     @Query("DELETE FROM alerts WHERE timestamp < :before")
     suspend fun deleteBefore(before: Long)
+
+    @Query("SELECT COUNT(*) FROM alerts WHERE acknowledged = 0")
+    fun getUnacknowledgedCount(): Flow<Int>
 }

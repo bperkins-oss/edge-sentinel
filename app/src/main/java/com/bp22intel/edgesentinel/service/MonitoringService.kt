@@ -14,13 +14,23 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.os.BatteryManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao
 import com.bp22intel.edgesentinel.data.sensor.CellInfoCollector
 import com.bp22intel.edgesentinel.data.sensor.TelephonyMonitor
+import com.bp22intel.edgesentinel.detection.bluetooth.BleAlertManager
+import com.bp22intel.edgesentinel.detection.bluetooth.BleTrackingDetector
 import com.bp22intel.edgesentinel.detection.engine.ThreatDetectionEngine
+import com.bp22intel.edgesentinel.detection.network.CaptivePortalDetector
+import com.bp22intel.edgesentinel.detection.network.DnsIntegrityChecker
+import com.bp22intel.edgesentinel.detection.network.TlsIntegrityChecker
+import com.bp22intel.edgesentinel.detection.network.VpnMonitor
+import com.bp22intel.edgesentinel.detection.wifi.WifiMonitor
+import com.bp22intel.edgesentinel.detection.wifi.WifiThreatDetector
 import com.bp22intel.edgesentinel.domain.model.Alert
 import com.bp22intel.edgesentinel.domain.model.Confidence
 import com.bp22intel.edgesentinel.domain.model.DetectionResult
@@ -30,12 +40,15 @@ import com.bp22intel.edgesentinel.domain.repository.AlertRepository
 import com.bp22intel.edgesentinel.domain.repository.CellRepository
 import com.bp22intel.edgesentinel.domain.repository.ScanRepository
 import com.bp22intel.edgesentinel.notification.NotificationChannels
+import com.bp22intel.edgesentinel.sensor.MotionDetector
+import com.bp22intel.edgesentinel.sensor.MotionState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -51,15 +64,56 @@ class MonitoringService : LifecycleService() {
     @Inject lateinit var alertRepository: AlertRepository
     @Inject lateinit var scanRepository: ScanRepository
     @Inject lateinit var sensorFusionEngine: com.bp22intel.edgesentinel.fusion.SensorFusionEngine
+    @Inject lateinit var motionDetector: MotionDetector
+
+    // WiFi detection
+    @Inject lateinit var wifiMonitor: WifiMonitor
+    @Inject lateinit var wifiThreatDetector: WifiThreatDetector
+    @Inject lateinit var trustedNetworkDao: TrustedNetworkDao
+
+    // BLE detection
+    @Inject lateinit var bleTrackingDetector: BleTrackingDetector
+    @Inject lateinit var bleAlertManager: BleAlertManager
+
+    // Network integrity detection
+    @Inject lateinit var dnsIntegrityChecker: DnsIntegrityChecker
+    @Inject lateinit var tlsIntegrityChecker: TlsIntegrityChecker
+    @Inject lateinit var captivePortalDetector: CaptivePortalDetector
+    @Inject lateinit var vpnMonitor: VpnMonitor
 
     private var scanJob: Job? = null
+    private var wifiJob: Job? = null
+    private var bleJob: Job? = null
+    private var networkJob: Job? = null
     private lateinit var notificationManager: NotificationManager
+
+    /** Timestamp of the most recent alert, used for adaptive interval logic. */
+    private var lastAlertTimestamp = 0L
 
     companion object {
         private const val NOTIFICATION_ID = 1
         private const val ACTION_START = "com.bp22intel.edgesentinel.action.START"
         private const val ACTION_STOP = "com.bp22intel.edgesentinel.action.STOP"
 
+        // --- Adaptive scan intervals -----------------------------------------
+        /** Alert just detected — aggressive scanning for 5 minutes. */
+        private const val ALERT_SCAN_INTERVAL_MS = 15_000L
+        /** Alert cooldown window: stay aggressive for this long after last alert. */
+        private const val ALERT_COOLDOWN_MS = 5 * 60_000L
+
+        /** No alerts for 10 min — environment stable. */
+        private const val STABLE_SCAN_INTERVAL_MS = 120_000L
+        private const val STABLE_THRESHOLD_MS = 10 * 60_000L
+
+        /** No alerts for 30 min — deep idle. */
+        private const val IDLE_SCAN_INTERVAL_MS = 300_000L
+        private const val IDLE_THRESHOLD_MS = 30 * 60_000L
+
+        /** Battery saver override when charge < 20%. */
+        private const val LOW_BATTERY_SCAN_INTERVAL_MS = 600_000L
+        private const val LOW_BATTERY_THRESHOLD_PERCENT = 20
+
+        // Legacy constants kept as fallback references
         private const val ACTIVE_SCAN_INTERVAL_MS = 30_000L
         private const val PASSIVE_SCAN_INTERVAL_MS = 300_000L
 
@@ -120,18 +174,64 @@ class MonitoringService : LifecycleService() {
     private fun startMonitoring() {
         _isRunning.value = true
         telephonyMonitor.start()
+        motionDetector.start()
 
+        // Cellular scan loop
         scanJob = lifecycleScope.launch {
             while (isActive) {
                 performScan()
-                val interval = if (_threatLevel.value == ThreatLevel.CLEAR) {
-                    PASSIVE_SCAN_INTERVAL_MS
-                } else {
-                    ACTIVE_SCAN_INTERVAL_MS
-                }
+                val interval = computeAdaptiveInterval()
                 delay(interval)
             }
         }
+
+        // WiFi detection → fusion
+        startWifiMonitoring()
+
+        // BLE detection → fusion
+        startBleMonitoring()
+
+        // Network integrity → fusion
+        startNetworkMonitoring()
+    }
+
+    /**
+     * Determines the next scan interval based on alert recency, battery level,
+     * and current threat state.
+     *
+     * Priority (highest → lowest):
+     * 1. Low battery (< 20%) → 10-minute scans regardless of other factors
+     * 2. Recent alert (within 5 min) → 15-second aggressive scans
+     * 3. Stable (no alert for 10+ min) → 2-minute scans
+     * 4. Deep idle (no alert for 30+ min) → 5-minute scans
+     * 5. Fallback → legacy active/passive interval based on threat level
+     */
+    private fun computeAdaptiveInterval(): Long {
+        // 1. Battery saver override
+        if (getBatteryPercent() < LOW_BATTERY_THRESHOLD_PERCENT) {
+            return LOW_BATTERY_SCAN_INTERVAL_MS
+        }
+
+        val now = System.currentTimeMillis()
+        val sinceLastAlert = now - lastAlertTimestamp
+
+        return when {
+            // 2. Alert just happened — aggressive scan
+            lastAlertTimestamp > 0 && sinceLastAlert < ALERT_COOLDOWN_MS -> ALERT_SCAN_INTERVAL_MS
+            // 3. Stable environment
+            lastAlertTimestamp > 0 && sinceLastAlert < IDLE_THRESHOLD_MS -> STABLE_SCAN_INTERVAL_MS
+            // 4. Deep idle (30+ min no alerts, or never alerted)
+            lastAlertTimestamp == 0L || sinceLastAlert >= IDLE_THRESHOLD_MS -> IDLE_SCAN_INTERVAL_MS
+            // 5. Fallback (shouldn't normally reach here)
+            else -> if (_threatLevel.value == ThreatLevel.CLEAR) PASSIVE_SCAN_INTERVAL_MS
+                    else ACTIVE_SCAN_INTERVAL_MS
+        }
+    }
+
+    /** Returns current battery level as a percentage (0–100), or 100 if unavailable. */
+    private fun getBatteryPercent(): Int {
+        val batteryManager = getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+        return batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 100
     }
 
     private fun stopMonitoring() {
@@ -139,7 +239,181 @@ class MonitoringService : LifecycleService() {
         _threatLevel.value = ThreatLevel.CLEAR
         scanJob?.cancel()
         scanJob = null
+        wifiJob?.cancel()
+        wifiJob = null
+        bleJob?.cancel()
+        bleJob = null
+        networkJob?.cancel()
+        networkJob = null
         telephonyMonitor.stop()
+        motionDetector.stop()
+        bleTrackingDetector.stopScanning()
+        vpnMonitor.stopMonitoring()
+        lastAlertTimestamp = 0L
+    }
+
+    // ── WiFi → Sensor Fusion ──────────────────────────────────────────────
+
+    private fun startWifiMonitoring() {
+        wifiJob = lifecycleScope.launch {
+            wifiMonitor.scanFlow()
+                .catch { /* WiFi unavailable — ignore */ }
+                .collect { snapshot ->
+                    val history = wifiMonitor.getHistory()
+                    val trustedBssids = trustedNetworkDao.getAllTrustedBssids().toSet()
+                    val results = wifiThreatDetector.analyze(
+                        snapshot, history, emptyList(), trustedBssids
+                    )
+                    val now = System.currentTimeMillis()
+                    val fusionDetections = results.map { result ->
+                        com.bp22intel.edgesentinel.fusion.ActiveDetection(
+                            sensorCategory = com.bp22intel.edgesentinel.domain.model.SensorCategory.WIFI,
+                            detectionType = result.threatType.name,
+                            description = result.summary,
+                            score = result.score.coerceAtMost(1.0),
+                            timestamp = now
+                        )
+                    }
+                    if (fusionDetections.isNotEmpty()) {
+                        sensorFusionEngine.ingestDetections(fusionDetections)
+                    }
+                }
+        }
+    }
+
+    // ── BLE → Sensor Fusion ───────────────────────────────────────────────
+
+    private fun startBleMonitoring() {
+        bleTrackingDetector.startScanning()
+
+        bleJob = lifecycleScope.launch {
+            bleAlertManager.activeAlerts.collect { alerts ->
+                val now = System.currentTimeMillis()
+                val fusionDetections = alerts.map { alert ->
+                    com.bp22intel.edgesentinel.fusion.ActiveDetection(
+                        sensorCategory = com.bp22intel.edgesentinel.domain.model.SensorCategory.BLUETOOTH,
+                        detectionType = alert.type.name,
+                        description = alert.summary,
+                        score = alert.confidence.toDouble().coerceAtMost(1.0),
+                        timestamp = now
+                    )
+                }
+                if (fusionDetections.isNotEmpty()) {
+                    sensorFusionEngine.ingestDetections(fusionDetections)
+                }
+            }
+        }
+    }
+
+    // ── Network Integrity → Sensor Fusion ─────────────────────────────────
+
+    /** Run network integrity checks every 5 minutes. */
+    private val networkCheckIntervalMs = 5 * 60 * 1000L
+
+    private fun startNetworkMonitoring() {
+        vpnMonitor.startMonitoring()
+
+        networkJob = lifecycleScope.launch {
+            while (isActive) {
+                performNetworkIntegrityCheck()
+                delay(networkCheckIntervalMs)
+            }
+        }
+    }
+
+    private suspend fun performNetworkIntegrityCheck() {
+        val now = System.currentTimeMillis()
+        val detections = mutableListOf<com.bp22intel.edgesentinel.fusion.ActiveDetection>()
+
+        try {
+            // DNS integrity
+            val dnsResult = dnsIntegrityChecker.runFullCheck()
+            if (!dnsResult.overallClean) {
+                for (domain in dnsResult.hijackedDomains) {
+                    detections.add(
+                        com.bp22intel.edgesentinel.fusion.ActiveDetection(
+                            sensorCategory = com.bp22intel.edgesentinel.domain.model.SensorCategory.NETWORK,
+                            detectionType = "DNS_HIJACK",
+                            description = "DNS hijack detected for $domain",
+                            score = 0.8,
+                            timestamp = now
+                        )
+                    )
+                }
+                if (dnsResult.nxdomainHijacked) {
+                    detections.add(
+                        com.bp22intel.edgesentinel.fusion.ActiveDetection(
+                            sensorCategory = com.bp22intel.edgesentinel.domain.model.SensorCategory.NETWORK,
+                            detectionType = "DNS_NXDOMAIN_HIJACK",
+                            description = "NXDOMAIN hijack detected — failed lookups redirected",
+                            score = 0.6,
+                            timestamp = now
+                        )
+                    )
+                }
+            }
+
+            // TLS integrity
+            val tlsResult = tlsIntegrityChecker.runFullCheck()
+            if (!tlsResult.overallClean) {
+                for (endpoint in tlsResult.mitmEndpoints) {
+                    detections.add(
+                        com.bp22intel.edgesentinel.fusion.ActiveDetection(
+                            sensorCategory = com.bp22intel.edgesentinel.domain.model.SensorCategory.NETWORK,
+                            detectionType = "TLS_MITM",
+                            description = "TLS MITM interception detected for $endpoint",
+                            score = 0.9,
+                            timestamp = now
+                        )
+                    )
+                }
+            }
+
+            // Captive portal
+            val portalResult = captivePortalDetector.runCheck()
+            if (portalResult.captivePortalDetected && portalResult.jsInjectionDetected) {
+                detections.add(
+                    com.bp22intel.edgesentinel.fusion.ActiveDetection(
+                        sensorCategory = com.bp22intel.edgesentinel.domain.model.SensorCategory.NETWORK,
+                        detectionType = "CAPTIVE_PORTAL_INJECT",
+                        description = "Captive portal with JavaScript injection detected",
+                        score = 0.7,
+                        timestamp = now
+                    )
+                )
+            }
+
+            // VPN drop
+            val vpnStatus = vpnMonitor.vpnStatus.value
+            if (vpnStatus.vpnDropDetected) {
+                detections.add(
+                    com.bp22intel.edgesentinel.fusion.ActiveDetection(
+                        sensorCategory = com.bp22intel.edgesentinel.domain.model.SensorCategory.NETWORK,
+                        detectionType = "VPN_DROP",
+                        description = "VPN connection was silently dropped",
+                        score = 0.7,
+                        timestamp = now
+                    )
+                )
+            }
+            if (vpnStatus.bypassLeakDetected) {
+                detections.add(
+                    com.bp22intel.edgesentinel.fusion.ActiveDetection(
+                        sensorCategory = com.bp22intel.edgesentinel.domain.model.SensorCategory.NETWORK,
+                        detectionType = "VPN_BYPASS_LEAK",
+                        description = "Traffic leaking outside VPN tunnel: ${vpnStatus.leakDetails ?: "unknown"}",
+                        score = 0.75,
+                        timestamp = now
+                    )
+                )
+            }
+        } catch (_: Exception) {
+            // Network checks can fail (no connectivity, etc.) — don't crash
+        }
+
+        if (detections.isNotEmpty()) {
+            sensorFusionEngine.ingestDetections(detections)
+        }
     }
 
     private suspend fun performScan() {
@@ -183,7 +457,7 @@ class MonitoringService : LifecycleService() {
                 }
 
                 if (severity == ThreatLevel.SUSPICIOUS || severity == ThreatLevel.THREAT) {
-                    // Build enriched detailsJson with cell tower context
+                    // Build enriched detailsJson with cell tower context + motion state
                     val detailsJson = org.json.JSONObject().apply {
                         // Copy detection indicators
                         result.details.forEach { (k, v) -> put(k, v) }
@@ -197,6 +471,9 @@ class MonitoringService : LifecycleService() {
                             put("networkType", cell.networkType.name)
                             put("nearbyTowerCount", currentCells.size)
                         }
+                        // Motion state for ThreatAnalyst context
+                        put("isMoving", motionDetector.isMoving)
+                        put("motionState", motionDetector.motionState.value.name)
                     }.toString()
 
                     val alert = Alert(
@@ -211,6 +488,9 @@ class MonitoringService : LifecycleService() {
                     )
                     alertRepository.insertAlert(alert)
                     showAlertNotification(alert)
+
+                    // Track last alert time for adaptive interval logic
+                    lastAlertTimestamp = startTime
 
                     // Feed into sensor fusion engine
                     val sensorCategory = when (result.threatType) {

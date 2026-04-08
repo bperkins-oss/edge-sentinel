@@ -1,6 +1,6 @@
 /*
  * Edge Sentinel — Threat Detection Engine
- * Copyright (C) 2024 BP22 Intel. All Rights Reserved.
+ * Copyright (C) 2024-2026 BP22 Intel. All Rights Reserved.
  * Proprietary and confidential.
  *
  * Clean-room implementation. Detection-to-category mapping designed from
