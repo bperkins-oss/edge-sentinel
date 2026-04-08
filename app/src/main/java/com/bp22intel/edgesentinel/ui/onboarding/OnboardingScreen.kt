@@ -30,6 +30,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -194,69 +196,67 @@ fun OnboardingScreen(
             label = "onboarding_page"
         ) { page ->
             if (pages[page].isPermissionPage) {
-                // Detailed permission explanation page
+                // Detailed permission explanation page — scrollable
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                 ) {
                     Icon(
                         imageVector = pages[page].icon,
                         contentDescription = null,
                         tint = StatusClear,
-                        modifier = Modifier.size(56.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = pages[page].title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
-                        textAlign = TextAlign.Center
+                        modifier = Modifier.size(40.dp)
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
+                        text = pages[page].title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
                         text = pages[page].description,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     permissionItems.forEach { item ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = 6.dp),
                             verticalAlignment = Alignment.Top
                         ) {
                             Icon(
                                 imageVector = item.icon,
                                 contentDescription = null,
                                 tint = StatusClear,
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .padding(top = 2.dp)
+                                modifier = Modifier.size(22.dp)
                             )
                             Column(
-                                modifier = Modifier.padding(start = 12.dp)
+                                modifier = Modifier.padding(start = 10.dp)
                             ) {
                                 Text(
                                     text = item.name,
-                                    style = MaterialTheme.typography.titleSmall,
+                                    style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary
                                 )
-                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = item.reason,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary,
-                                    lineHeight = MaterialTheme.typography.bodySmall.lineHeight
+                                    color = TextSecondary
                                 )
                             }
                         }
