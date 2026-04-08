@@ -17,8 +17,10 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -95,11 +97,20 @@ fun ThreatMapScreen(
     val userLocation by viewModel.userLocation.collectAsState()
     var selectedThreat by remember { mutableStateOf<GeolocatedThreat?>(null) }
     
-    // Auto-zoom based on threat distances, default to 500m
-    val maxDistance = remember(threats) {
-        if (threats.isEmpty()) 500.0
-        else max(500.0, threats.maxOfOrNull { it.accuracyMeters * 2 } ?: 500.0)
+    // Zoom: user-controllable range in meters (what the outer ring represents)
+    // Predefined zoom levels
+    val zoomLevels = remember { listOf(100.0, 250.0, 500.0, 1000.0, 2000.0, 5000.0, 10000.0) }
+    var zoomIndex by remember {
+        mutableStateOf(
+            // Start at auto-fit level based on threats
+            if (threats.isEmpty()) 2 // 500m default
+            else {
+                val farthest = threats.maxOfOrNull { it.accuracyMeters * 2 } ?: 500.0
+                zoomLevels.indexOfFirst { it >= farthest }.coerceAtLeast(0)
+            }
+        )
     }
+    val maxDistance = zoomLevels[zoomIndex]
 
     Scaffold(
         topBar = {
@@ -153,9 +164,44 @@ fun ThreatMapScreen(
                     maxRangeMeters = maxDistance,
                     onThreatClick = { threat ->
                         selectedThreat = threat
-                    }
+                    },
+                    onZoomIn = { if (zoomIndex > 0) zoomIndex-- },
+                    onZoomOut = { if (zoomIndex < zoomLevels.size - 1) zoomIndex++ }
                 )
                 
+                // Zoom controls
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    IconButton(
+                        onClick = { if (zoomIndex > 0) zoomIndex-- },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Surface.copy(alpha = 0.8f), CircleShape)
+                    ) {
+                        Text("+", color = StatusClear, fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium)
+                    }
+                    Text(
+                        text = if (maxDistance >= 1000) "${(maxDistance/1000).toInt()}km" else "${maxDistance.toInt()}m",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = StatusClear,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                    IconButton(
+                        onClick = { if (zoomIndex < zoomLevels.size - 1) zoomIndex++ },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Surface.copy(alpha = 0.8f), CircleShape)
+                    ) {
+                        Text("\u2212", color = StatusClear, fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+
                 // Selected threat popup
                 selectedThreat?.let { threat ->
                     ThreatInfoPopup(
@@ -181,7 +227,9 @@ private fun TacticalRadarCanvas(
     threats: List<GeolocatedThreat>,
     userLocation: Pair<Double, Double>,
     maxRangeMeters: Double,
-    onThreatClick: (GeolocatedThreat) -> Unit
+    onThreatClick: (GeolocatedThreat) -> Unit,
+    onZoomIn: () -> Unit = {},
+    onZoomOut: () -> Unit = {}
 ) {
     // Radar sweep animation
     val infiniteTransition = rememberInfiniteTransition(label = "radar_sweep")
@@ -198,10 +246,12 @@ private fun TacticalRadarCanvas(
     Canvas(
         modifier = Modifier
             .fillMaxSize()
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) { /* Handle general canvas clicks if needed */ }
+            .pointerInput(Unit) {
+                detectTransformGestures { _, _, zoom, _ ->
+                    if (zoom < 0.95f) onZoomOut()
+                    else if (zoom > 1.05f) onZoomIn()
+                }
+            }
     ) {
         val center = size.center
         val radius = min(size.width, size.height) / 2 - 32.dp.toPx()
