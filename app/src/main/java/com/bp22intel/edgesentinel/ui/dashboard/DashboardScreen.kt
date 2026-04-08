@@ -125,33 +125,15 @@ fun DashboardScreen(
     Scaffold(
         containerColor = BackgroundPrimary,
         floatingActionButton = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalAlignment = Alignment.End
+            FloatingActionButton(
+                onClick = { viewModel.forceScan() },
+                containerColor = AccentBlue,
+                contentColor = BackgroundPrimary
             ) {
-                // Threat Map FAB
-                FloatingActionButton(
-                    onClick = { onNavigate("threat_map") },
-                    containerColor = StatusClear,
-                    contentColor = BackgroundPrimary
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Map,
-                        contentDescription = "Threat Map"
-                    )
-                }
-                
-                // Force Scan FAB
-                FloatingActionButton(
-                    onClick = { viewModel.forceScan() },
-                    containerColor = AccentBlue,
-                    contentColor = BackgroundPrimary
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Radar,
-                        contentDescription = "Force Scan"
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Filled.Radar,
+                    contentDescription = "Force Scan"
+                )
             }
         }
     ) { paddingValues ->
@@ -188,11 +170,77 @@ fun DashboardScreen(
                 )
             }
 
-            // Mesh Network indicator
+            // Quick access cards — Threat Map + Mesh
             item {
-                MeshNetworkCard(
-                    onNavigate = { onNavigate("mesh") }
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Threat Map card
+                    Card(
+                        onClick = { onNavigate("threat_map") },
+                        colors = CardDefaults.cardColors(containerColor = Surface),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Map,
+                                contentDescription = null,
+                                tint = StatusClear,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "Threat Map",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = "Tactical radar",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    }
+                    // Mesh Network card
+                    Card(
+                        onClick = { onNavigate("mesh") },
+                        colors = CardDefaults.cardColors(containerColor = Surface),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.People,
+                                contentDescription = null,
+                                tint = Color(0xFF06B6D4),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "Mesh Network",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = "0 peers",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // Trend and active threats summary
