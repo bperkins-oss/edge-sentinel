@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SignalCellular4Bar
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -54,6 +55,7 @@ import com.bp22intel.edgesentinel.ui.cellinfo.CellInfoScreen
 import com.bp22intel.edgesentinel.ui.mesh.MeshScreen
 import com.bp22intel.edgesentinel.ui.onboarding.OnboardingScreen
 import com.bp22intel.edgesentinel.ui.settings.SettingsScreen
+import com.bp22intel.edgesentinel.ui.wifi.WifiScreen
 
 /**
  * Navigation routes for the app.
@@ -64,6 +66,7 @@ object Routes {
     const val ALERTS = "alerts"
     const val ALERT_DETAIL = "alert_detail/{alertId}"
     const val CELL_INFO = "cell_info"
+    const val WIFI = "wifi"
     const val MESH = "mesh"
     const val SETTINGS = "settings"
     const val ABOUT = "about"
@@ -82,6 +85,7 @@ enum class BottomNavTab(
     DASHBOARD(Routes.DASHBOARD, "Dashboard", Icons.Default.Home),
     ALERTS(Routes.ALERTS, "Alerts", Icons.Default.Notifications),
     CELL_INFO(Routes.CELL_INFO, "Cell Info", Icons.Default.SignalCellular4Bar),
+    WIFI(Routes.WIFI, "WiFi", Icons.Default.Wifi),
     MESH(Routes.MESH, "Mesh", Icons.Default.Share),
     SETTINGS(Routes.SETTINGS, "Settings", Icons.Default.Settings)
 }
@@ -173,6 +177,9 @@ fun EdgeSentinelNavHost() {
             }
             composable(Routes.CELL_INFO) {
                 CellInfoScreen()
+            }
+            composable(Routes.WIFI) {
+                WifiScreen()
             }
             composable(Routes.MESH) {
                 MeshScreen()
