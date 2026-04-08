@@ -25,16 +25,21 @@ import com.bp22intel.edgesentinel.data.sensor.CellInfoCollector
 import com.bp22intel.edgesentinel.detection.engine.DemoDataGenerator
 import com.bp22intel.edgesentinel.domain.model.Alert
 import com.bp22intel.edgesentinel.domain.model.CellTower
+import com.bp22intel.edgesentinel.domain.model.FusedThreatAssessment
 import com.bp22intel.edgesentinel.domain.model.ThreatLevel
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository
 import com.bp22intel.edgesentinel.domain.repository.CellRepository
 import com.bp22intel.edgesentinel.domain.repository.ScanRepository
+import com.bp22intel.edgesentinel.fusion.DashboardPosture
+import com.bp22intel.edgesentinel.fusion.OverallThreatDashboard
+import com.bp22intel.edgesentinel.fusion.SensorFusionEngine
 import com.bp22intel.edgesentinel.service.MonitoringService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -45,10 +50,22 @@ class DashboardViewModel @Inject constructor(
     private val cellRepository: CellRepository,
     private val scanRepository: ScanRepository,
     private val demoDataGenerator: DemoDataGenerator,
-    private val cellInfoCollector: CellInfoCollector
+    private val cellInfoCollector: CellInfoCollector,
+    private val sensorFusionEngine: SensorFusionEngine,
+    private val overallThreatDashboard: OverallThreatDashboard
 ) : ViewModel() {
 
     val currentThreatLevel: StateFlow<ThreatLevel> = MonitoringService.threatLevel
+
+    val fusedAssessment: StateFlow<FusedThreatAssessment> = sensorFusionEngine.currentAssessment
+
+    val dashboardPosture: StateFlow<DashboardPosture> = sensorFusionEngine.currentAssessment
+        .map { assessment -> overallThreatDashboard.computePosture(assessment) }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            overallThreatDashboard.computePosture(FusedThreatAssessment.clear())
+        )
 
     private val _currentCell = MutableStateFlow<CellTower?>(null)
     val currentCell: StateFlow<CellTower?> = _currentCell.asStateFlow()

@@ -35,5 +35,17 @@ val TextPrimary = Color(0xFFF0F6FC)
 val TextSecondary = Color(0xFF8B949E)
 val TextTertiary = Color(0xFF484F58)
 
+// Fused threat levels
+val StatusElevated = Color(0xFFF59E0B)
+val StatusDangerous = Color(0xFFEF4444)
+val StatusCritical = Color(0xFFDC2626)
+
+// Sensor category indicators
+val SensorCellular = Color(0xFF58A6FF)
+val SensorWifi = Color(0xFF8B5CF6)
+val SensorBluetooth = Color(0xFF3B82F6)
+val SensorNetwork = Color(0xFF10B981)
+val SensorBaseline = Color(0xFFF59E0B)
+
 // Accent
 val AccentBlue = Color(0xFF58A6FF)
