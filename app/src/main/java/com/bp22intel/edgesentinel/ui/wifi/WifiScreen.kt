@@ -321,6 +321,10 @@ private fun EvilTwinCard(threat: WifiDetectionResult) {
                 threat.summary,
                 style = MaterialTheme.typography.bodySmall
             )
+            com.bp22intel.edgesentinel.ui.components.ExplainableText(
+                text = "Evil Twin SSID BSSID ${threat.threatType.label}",
+                modifier = Modifier.padding(top = 4.dp)
+            )
 
             // Side-by-side AP comparison
             if (threat.involvedAps.size >= 2) {

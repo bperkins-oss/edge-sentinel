@@ -162,6 +162,11 @@ fun AlertCard(
                         maxLines = 2
                     )
 
+                    ExplainableText(
+                        text = "${threatTypeLabel(alert.threatType)} ${alert.summary}",
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+
                     Text(
                         text = formatRelativeTime(alert.timestamp),
                         style = MaterialTheme.typography.labelSmall,

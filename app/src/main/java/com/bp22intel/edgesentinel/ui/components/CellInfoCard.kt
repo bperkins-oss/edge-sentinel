@@ -103,6 +103,10 @@ fun CellInfoCard(
                 CellInfoItem(label = "MNC", value = "${cellTower.mnc}")
                 CellInfoItem(label = "Signal", value = "${cellTower.signalStrength} dBm")
             }
+            ExplainableText(
+                text = "LAC TAC MCC MNC CID",
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }
