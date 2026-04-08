@@ -1,0 +1,145 @@
+/*
+ * Edge Sentinel — Cellular Threat Detection for Android
+ * Copyright (C) 2024 BP22 Intel
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package com.bp22intel.edgesentinel.mesh
+
+import com.bp22intel.edgesentinel.domain.model.Confidence
+import com.bp22intel.edgesentinel.domain.model.ThreatLevel
+import com.bp22intel.edgesentinel.domain.model.ThreatType
+import org.json.JSONObject
+import java.util.UUID
+
+/**
+ * Mesh message protocol for device-to-device alert sharing.
+ * Privacy-first: no identity, IMSI, or location data is transmitted.
+ */
+object MeshProtocol {
+    const val PROTOCOL_VERSION = 1
+    const val SERVICE_UUID = "ed9e-5e71-1ne1-mesh"
+
+    /** Message types exchanged between mesh peers. */
+    enum class MessageType {
+        ALERT,      // Threat alert broadcast
+        HEARTBEAT,  // Peer presence announcement
+        ACK         // Alert acknowledgement
+    }
+}
+
+/** An alert shared over the mesh network. */
+data class MeshAlert(
+    val messageId: String = UUID.randomUUID().toString(),
+    val protocolVersion: Int = MeshProtocol.PROTOCOL_VERSION,
+    val messageType: MeshProtocol.MessageType = MeshProtocol.MessageType.ALERT,
+    val deviceId: String,       // Anonymous UUID — no PII
+    val timestamp: Long,
+    val threatType: ThreatType,
+    val severity: ThreatLevel,
+    val confidence: Confidence,
+    val summary: String,
+    /** Cell snapshot: MCC, MNC, LAC/TAC, CID — identifies the cell, not the user. */
+    val cellMcc: Int? = null,
+    val cellMnc: Int? = null,
+    val cellLacTac: Int? = null,
+    val cellCid: Int? = null,
+    val hopCount: Int = 0
+) {
+    fun toJson(): String {
+        val json = JSONObject()
+        json.put("v", protocolVersion)
+        json.put("mt", messageType.name)
+        json.put("mid", messageId)
+        json.put("did", deviceId)
+        json.put("ts", timestamp)
+        json.put("tt", threatType.name)
+        json.put("sev", severity.name)
+        json.put("conf", confidence.name)
+        json.put("sum", summary)
+        cellMcc?.let { json.put("mcc", it) }
+        cellMnc?.let { json.put("mnc", it) }
+        cellLacTac?.let { json.put("lac", it) }
+        cellCid?.let { json.put("cid", it) }
+        json.put("hop", hopCount)
+        return json.toString()
+    }
+
+    fun toBytes(): ByteArray = toJson().toByteArray(Charsets.UTF_8)
+
+    companion object {
+        fun fromBytes(bytes: ByteArray): MeshAlert? = fromJson(String(bytes, Charsets.UTF_8))
+
+        fun fromJson(raw: String): MeshAlert? {
+            return try {
+                val json = JSONObject(raw)
+                MeshAlert(
+                    protocolVersion = json.optInt("v", MeshProtocol.PROTOCOL_VERSION),
+                    messageType = MeshProtocol.MessageType.valueOf(
+                        json.optString("mt", MeshProtocol.MessageType.ALERT.name)
+                    ),
+                    messageId = json.getString("mid"),
+                    deviceId = json.getString("did"),
+                    timestamp = json.getLong("ts"),
+                    threatType = ThreatType.valueOf(json.getString("tt")),
+                    severity = ThreatLevel.valueOf(json.getString("sev")),
+                    confidence = Confidence.valueOf(json.getString("conf")),
+                    summary = json.getString("sum"),
+                    cellMcc = if (json.has("mcc")) json.getInt("mcc") else null,
+                    cellMnc = if (json.has("mnc")) json.getInt("mnc") else null,
+                    cellLacTac = if (json.has("lac")) json.getInt("lac") else null,
+                    cellCid = if (json.has("cid")) json.getInt("cid") else null,
+                    hopCount = json.optInt("hop", 0)
+                )
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+}
+
+/** Heartbeat message for peer presence. */
+data class MeshHeartbeat(
+    val deviceId: String,
+    val protocolVersion: Int = MeshProtocol.PROTOCOL_VERSION,
+    val timestamp: Long = System.currentTimeMillis(),
+    val alertCount: Int = 0
+) {
+    fun toBytes(): ByteArray {
+        val json = JSONObject()
+        json.put("v", protocolVersion)
+        json.put("mt", MeshProtocol.MessageType.HEARTBEAT.name)
+        json.put("did", deviceId)
+        json.put("ts", timestamp)
+        json.put("ac", alertCount)
+        return json.toString().toByteArray(Charsets.UTF_8)
+    }
+
+    companion object {
+        fun fromBytes(bytes: ByteArray): MeshHeartbeat? {
+            return try {
+                val json = JSONObject(String(bytes, Charsets.UTF_8))
+                MeshHeartbeat(
+                    deviceId = json.getString("did"),
+                    protocolVersion = json.optInt("v", MeshProtocol.PROTOCOL_VERSION),
+                    timestamp = json.getLong("ts"),
+                    alertCount = json.optInt("ac", 0)
+                )
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+}
