@@ -16,10 +16,13 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -46,6 +49,7 @@ import com.bp22intel.edgesentinel.ui.bluetooth.BluetoothScreen
 import com.bp22intel.edgesentinel.ui.cellinfo.CellInfoScreen
 import com.bp22intel.edgesentinel.ui.dashboard.DashboardScreen
 import com.bp22intel.edgesentinel.ui.map.ThreatMapScreen
+import com.bp22intel.edgesentinel.ui.components.PermissionGate
 import com.bp22intel.edgesentinel.ui.mesh.MeshScreen
 import com.bp22intel.edgesentinel.ui.network.NetworkIntegrityScreen
 import com.bp22intel.edgesentinel.ui.onboarding.OnboardingScreen
@@ -239,15 +243,42 @@ fun EdgeSentinelNavHost() {
             }
 
             composable(Routes.WIFI) {
-                WifiScreen(
-                    onBack = { navController.popBackStack() }
-                )
+                val wifiPerms = buildList {
+                    add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        add(android.Manifest.permission.NEARBY_WIFI_DEVICES)
+                    }
+                }
+                PermissionGate(
+                    permissions = wifiPerms,
+                    icon = Icons.Filled.Wifi,
+                    title = "WiFi Permissions Required",
+                    rationale = "Edge Sentinel needs Location and WiFi access to scan for evil twin networks, rogue access points, and deauth attacks."
+                ) {
+                    WifiScreen(
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
 
             composable(Routes.BLUETOOTH) {
-                BluetoothScreen(
-                    onBack = { navController.popBackStack() }
-                )
+                val blePerms = buildList {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        add(android.Manifest.permission.BLUETOOTH_SCAN)
+                        add(android.Manifest.permission.BLUETOOTH_CONNECT)
+                    }
+                    add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                }
+                PermissionGate(
+                    permissions = blePerms,
+                    icon = Icons.Filled.Bluetooth,
+                    title = "Bluetooth Permissions Required",
+                    rationale = "Edge Sentinel needs Bluetooth and Location access to detect BLE trackers like AirTags, SmartTags, and Tile devices following you."
+                ) {
+                    BluetoothScreen(
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
 
             composable(Routes.NETWORK) {
@@ -257,9 +288,24 @@ fun EdgeSentinelNavHost() {
             }
 
             composable(Routes.MESH) {
-                MeshScreen(
-                    onBack = { navController.popBackStack() }
-                )
+                val meshPerms = buildList {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        add(android.Manifest.permission.BLUETOOTH_SCAN)
+                        add(android.Manifest.permission.BLUETOOTH_CONNECT)
+                        add(android.Manifest.permission.BLUETOOTH_ADVERTISE)
+                    }
+                    add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                }
+                PermissionGate(
+                    permissions = meshPerms,
+                    icon = Icons.Filled.People,
+                    title = "Bluetooth Permissions Required",
+                    rationale = "Mesh networking uses Bluetooth LE to discover nearby Edge Sentinel devices and share threat alerts across your team."
+                ) {
+                    MeshScreen(
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
 
             composable(Routes.BASELINE) {
