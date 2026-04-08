@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,12 +45,19 @@ import com.bp22intel.edgesentinel.ui.baseline.BaselineScreen
 import com.bp22intel.edgesentinel.ui.bluetooth.BluetoothScreen
 import com.bp22intel.edgesentinel.ui.cellinfo.CellInfoScreen
 import com.bp22intel.edgesentinel.ui.dashboard.DashboardScreen
+import com.bp22intel.edgesentinel.ui.map.ThreatMapScreen
 import com.bp22intel.edgesentinel.ui.mesh.MeshScreen
 import com.bp22intel.edgesentinel.ui.network.NetworkIntegrityScreen
 import com.bp22intel.edgesentinel.ui.onboarding.OnboardingScreen
+import com.bp22intel.edgesentinel.ui.settings.CalibrationScreen
 import com.bp22intel.edgesentinel.ui.settings.SettingsScreen
+import com.bp22intel.edgesentinel.ui.settings.TowerDatabaseScreen
 import com.bp22intel.edgesentinel.ui.travel.TravelModeScreen
 import com.bp22intel.edgesentinel.ui.wifi.WifiScreen
+import com.bp22intel.edgesentinel.ui.theme.StatusClear
+import com.bp22intel.edgesentinel.ui.theme.Surface
+import com.bp22intel.edgesentinel.ui.theme.TextPrimary
+import com.bp22intel.edgesentinel.ui.theme.TextSecondary
 
 /**
  * Navigation routes for the app.
@@ -59,6 +67,7 @@ object Routes {
     const val DASHBOARD = "dashboard"
     const val ALERTS = "alerts"
     const val ALERT_DETAIL = "alert_detail/{alertId}"
+    const val THREAT_MAP = "threat_map"
     const val CELL_INFO = "cell_info"
     const val WIFI = "wifi"
     const val BLUETOOTH = "bluetooth"
@@ -68,6 +77,8 @@ object Routes {
     const val SETTINGS = "settings"
     const val BASELINE = "baseline"
     const val ABOUT = "about"
+    const val TOWER_DATABASE = "tower_database"
+    const val CALIBRATION = "calibration"
 
     fun alertDetail(alertId: Long): String = "alert_detail/$alertId"
 }
@@ -104,7 +115,10 @@ fun EdgeSentinelNavHost() {
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = Surface,
+                    contentColor = TextPrimary
+                ) {
                     BottomNavTab.entries.forEach { tab ->
                         NavigationBarItem(
                             icon = { Icon(tab.icon, contentDescription = tab.label) },
@@ -120,7 +134,14 @@ fun EdgeSentinelNavHost() {
                                     launchSingleTop = true
                                     restoreState = true
                                 }
-                            }
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = StatusClear,
+                                selectedTextColor = StatusClear,
+                                unselectedIconColor = TextSecondary,
+                                unselectedTextColor = TextSecondary,
+                                indicatorColor = StatusClear.copy(alpha = 0.12f)
+                            )
                         )
                     }
                 }
@@ -186,6 +207,12 @@ fun EdgeSentinelNavHost() {
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onNavigateToTowerDatabase = {
+                        navController.navigate(Routes.TOWER_DATABASE)
+                    },
+                    onNavigateToCalibration = {
+                        navController.navigate(Routes.CALIBRATION)
                     }
                 )
             }
@@ -199,24 +226,40 @@ fun EdgeSentinelNavHost() {
                 AlertDetailScreen(alertId = alertId)
             }
 
+            composable(Routes.THREAT_MAP) {
+                ThreatMapScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
             composable(Routes.CELL_INFO) {
-                CellInfoScreen()
+                CellInfoScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable(Routes.WIFI) {
-                WifiScreen()
+                WifiScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable(Routes.BLUETOOTH) {
-                BluetoothScreen()
+                BluetoothScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable(Routes.NETWORK) {
-                NetworkIntegrityScreen()
+                NetworkIntegrityScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable(Routes.MESH) {
-                MeshScreen()
+                MeshScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable(Routes.BASELINE) {
@@ -227,6 +270,18 @@ fun EdgeSentinelNavHost() {
 
             composable(Routes.ABOUT) {
                 AboutScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Routes.TOWER_DATABASE) {
+                TowerDatabaseScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Routes.CALIBRATION) {
+                CalibrationScreen(
                     onBack = { navController.popBackStack() }
                 )
             }

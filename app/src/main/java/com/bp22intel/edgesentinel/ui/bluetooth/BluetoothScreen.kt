@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothSearching
 import androidx.compose.material.icons.filled.LocationOn
@@ -41,9 +42,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,6 +60,7 @@ import com.bp22intel.edgesentinel.data.local.entity.BleDeviceEntity
 import com.bp22intel.edgesentinel.detection.bluetooth.BleAlertManager
 import com.bp22intel.edgesentinel.ui.components.SectionHeader
 import com.bp22intel.edgesentinel.ui.theme.AccentBlue
+import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
 import com.bp22intel.edgesentinel.ui.theme.StatusClear
 import com.bp22intel.edgesentinel.ui.theme.StatusSuspicious
 import com.bp22intel.edgesentinel.ui.theme.StatusThreat
@@ -69,6 +74,7 @@ import java.util.Locale
 
 @Composable
 fun BluetoothScreen(
+    onBack: () -> Unit = {},
     viewModel: BluetoothViewModel = hiltViewModel()
 ) {
     val isScanning by viewModel.isScanning.collectAsState()
@@ -78,6 +84,22 @@ fun BluetoothScreen(
     val trackers by viewModel.trackers.collectAsState()
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Bluetooth Tracking") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BackgroundPrimary,
+                    titleContentColor = TextPrimary,
+                    navigationIconContentColor = TextPrimary
+                )
+            )
+        },
+        containerColor = BackgroundPrimary,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { viewModel.toggleScanning() },

@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Warning
@@ -44,8 +45,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -59,6 +64,7 @@ import com.bp22intel.edgesentinel.detection.network.NetworkIntegritySnapshot
 import com.bp22intel.edgesentinel.detection.network.VpnStatusResult
 import com.bp22intel.edgesentinel.ui.components.SectionHeader
 import com.bp22intel.edgesentinel.ui.theme.AccentBlue
+import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
 import com.bp22intel.edgesentinel.ui.theme.StatusClear
 import com.bp22intel.edgesentinel.ui.theme.StatusSuspicious
 import com.bp22intel.edgesentinel.ui.theme.StatusThreat
@@ -73,6 +79,7 @@ import java.util.concurrent.TimeUnit
 
 @Composable
 fun NetworkIntegrityScreen(
+    onBack: () -> Unit = {},
     viewModel: NetworkIntegrityViewModel = hiltViewModel()
 ) {
     val vpnStatus by viewModel.vpnStatus.collectAsState()
@@ -80,12 +87,31 @@ fun NetworkIntegrityScreen(
     val history by viewModel.checkHistory.collectAsState()
     val isChecking by viewModel.isChecking.collectAsState()
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Network Integrity") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BackgroundPrimary,
+                    titleContentColor = TextPrimary,
+                    navigationIconContentColor = TextPrimary
+                )
+            )
+        },
+        containerColor = BackgroundPrimary
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Trust Score
         item {
@@ -139,6 +165,7 @@ fun NetworkIntegrityScreen(
                 HistoryRow(entry)
             }
         }
+    }
     }
 }
 

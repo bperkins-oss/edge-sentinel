@@ -81,6 +81,9 @@ class DashboardViewModel @Inject constructor(
     private val _isDemoMode = MutableStateFlow(false)
     val isDemoMode: StateFlow<Boolean> = _isDemoMode.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     init {
         viewModelScope.launch {
             MonitoringService.isRunning.collect { running ->
@@ -124,6 +127,7 @@ class DashboardViewModel @Inject constructor(
 
     fun forceScan() {
         viewModelScope.launch {
+            _isRefreshing.value = true
             try {
                 val cells = cellInfoCollector.getCurrentCellInfo()
                 if (cells.isNotEmpty()) {
@@ -134,6 +138,8 @@ class DashboardViewModel @Inject constructor(
                 }
             } catch (_: Exception) {
                 // Permission may not be granted yet
+            } finally {
+                _isRefreshing.value = false
             }
         }
     }

@@ -37,14 +37,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -66,6 +70,8 @@ import com.bp22intel.edgesentinel.domain.model.ThreatTrend
 import com.bp22intel.edgesentinel.fusion.DashboardPosture
 import com.bp22intel.edgesentinel.ui.components.AlertCard
 import com.bp22intel.edgesentinel.ui.components.CellInfoCard
+import com.bp22intel.edgesentinel.ui.components.CellInfoCardWithVerification
+import com.bp22intel.edgesentinel.detection.tower.TowerVerifier
 import com.bp22intel.edgesentinel.ui.components.MonitoringStatusBar
 import com.bp22intel.edgesentinel.ui.components.SectionHeader
 import com.bp22intel.edgesentinel.ui.components.ThreatIndicator
@@ -76,6 +82,12 @@ import com.bp22intel.edgesentinel.ui.theme.SensorBluetooth
 import com.bp22intel.edgesentinel.ui.theme.SensorCellular
 import com.bp22intel.edgesentinel.ui.theme.SensorNetwork
 import com.bp22intel.edgesentinel.ui.theme.SensorWifi
+import androidx.compose.material.icons.filled.CellTower
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.bp22intel.edgesentinel.ui.components.EmptyStateCard
 import com.bp22intel.edgesentinel.ui.theme.StatusClear
 import com.bp22intel.edgesentinel.ui.theme.StatusCritical
 import com.bp22intel.edgesentinel.ui.theme.StatusDangerous
@@ -85,6 +97,7 @@ import com.bp22intel.edgesentinel.ui.theme.SurfaceVariant
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
 import com.bp22intel.edgesentinel.ui.theme.TextSecondary
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
@@ -99,29 +112,60 @@ fun DashboardScreen(
     val monitoringStartTime by viewModel.monitoringStartTime.collectAsState()
     val posture by viewModel.dashboardPosture.collectAsState()
     val fusedAssessment by viewModel.fusedAssessment.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+
+    // Haptic feedback on threat level changes
+    val hapticFeedback = LocalHapticFeedback.current
+    LaunchedEffect(posture.level) {
+        if (posture.level != com.bp22intel.edgesentinel.domain.model.FusedThreatLevel.CLEAR) {
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+    }
 
     Scaffold(
         containerColor = BackgroundPrimary,
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { viewModel.forceScan() },
-                containerColor = AccentBlue,
-                contentColor = BackgroundPrimary
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.End
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Radar,
-                    contentDescription = "Force Scan"
-                )
+                // Threat Map FAB
+                FloatingActionButton(
+                    onClick = { onNavigate("threat_map") },
+                    containerColor = StatusClear,
+                    contentColor = BackgroundPrimary
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Map,
+                        contentDescription = "Threat Map"
+                    )
+                }
+                
+                // Force Scan FAB
+                FloatingActionButton(
+                    onClick = { viewModel.forceScan() },
+                    containerColor = AccentBlue,
+                    contentColor = BackgroundPrimary
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Radar,
+                        contentDescription = "Force Scan"
+                    )
+                }
             }
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { viewModel.forceScan() }
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // Unified fused threat indicator
             item {
                 FusedThreatHeader(posture = posture)
@@ -141,6 +185,13 @@ fun DashboardScreen(
                         }
                         onNavigate(route)
                     }
+                )
+            }
+
+            // Mesh Network indicator
+            item {
+                MeshNetworkCard(
+                    onNavigate = { onNavigate("mesh") }
                 )
             }
 
@@ -164,37 +215,24 @@ fun DashboardScreen(
                 )
             }
 
-            // Cell-specific detail (existing)
+            // Connected tower information
             item {
                 SectionHeader(
-                    title = "Cell Tower Detail",
+                    title = "Connected Tower",
                     actionText = null,
                     onActionClick = {}
                 )
             }
 
             item {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    ThreatIndicator(
-                        threatLevel = threatLevel,
-                        size = 140.dp
-                    )
-                }
-            }
-
-            item {
                 val cell = currentCell
                 if (cell != null) {
-                    CellInfoCard(cellTower = cell)
+                    CellInfoCardWithVerification(cellTower = cell)
                 } else {
-                    Text(
-                        text = "No cell information available",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
-                        modifier = Modifier.fillMaxWidth()
+                    EmptyStateCard(
+                        icon = Icons.Filled.CellTower,
+                        title = "No Cell Data",
+                        subtitle = "Waiting for cell tower information"
                     )
                 }
             }
@@ -211,10 +249,10 @@ fun DashboardScreen(
             // Alert list
             if (recentAlerts.isEmpty()) {
                 item {
-                    Text(
-                        text = "No alerts yet",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                    EmptyStateCard(
+                        icon = Icons.Filled.Shield,
+                        title = "All Clear",
+                        subtitle = "No threats detected. Monitoring is active."
                     )
                 }
             } else {
@@ -230,6 +268,7 @@ fun DashboardScreen(
             item {
                 Spacer(modifier = Modifier.height(72.dp))
             }
+        }
         }
     }
 }
@@ -442,5 +481,62 @@ private fun fusedLevelColor(level: FusedThreatLevel): Color {
         FusedThreatLevel.ELEVATED -> StatusElevated
         FusedThreatLevel.DANGEROUS -> StatusDangerous
         FusedThreatLevel.CRITICAL -> StatusCritical
+    }
+}
+
+@Composable
+private fun MeshNetworkCard(onNavigate: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onNavigate() },
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Mesh icon with cyan accent
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF06B6D4).copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.People,
+                    contentDescription = "Mesh Network",
+                    tint = Color(0xFF06B6D4),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Mesh Network",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "Share alerts with nearby devices",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            }
+            
+            // Status indicator - you could enhance this to show real mesh status
+            Text(
+                text = "Tap to configure",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF06B6D4)
+            )
+        }
     }
 }

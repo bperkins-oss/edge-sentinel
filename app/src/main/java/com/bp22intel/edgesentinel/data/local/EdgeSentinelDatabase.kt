@@ -17,11 +17,13 @@ import com.bp22intel.edgesentinel.data.local.dao.AlertDao
 import com.bp22intel.edgesentinel.data.local.dao.BaselineDao
 import com.bp22intel.edgesentinel.data.local.dao.BleDeviceDao
 import com.bp22intel.edgesentinel.data.local.dao.CellDao
+import com.bp22intel.edgesentinel.data.local.dao.KnownTowerDao
 import com.bp22intel.edgesentinel.data.local.dao.ScanDao
 import com.bp22intel.edgesentinel.data.local.entity.AlertEntity
 import com.bp22intel.edgesentinel.data.local.entity.BaselineEntity
 import com.bp22intel.edgesentinel.data.local.entity.BleDeviceEntity
 import com.bp22intel.edgesentinel.data.local.entity.CellTowerEntity
+import com.bp22intel.edgesentinel.data.local.entity.KnownTowerEntity
 import com.bp22intel.edgesentinel.data.local.entity.ScanEntity
 
 @Database(
@@ -30,9 +32,10 @@ import com.bp22intel.edgesentinel.data.local.entity.ScanEntity
         AlertEntity::class,
         ScanEntity::class,
         BleDeviceEntity::class,
-        BaselineEntity::class
+        BaselineEntity::class,
+        KnownTowerEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -42,4 +45,5 @@ abstract class EdgeSentinelDatabase : RoomDatabase() {
     abstract fun scanDao(): ScanDao
     abstract fun bleDeviceDao(): BleDeviceDao
     abstract fun baselineDao(): BaselineDao
+    abstract fun knownTowerDao(): KnownTowerDao
 }

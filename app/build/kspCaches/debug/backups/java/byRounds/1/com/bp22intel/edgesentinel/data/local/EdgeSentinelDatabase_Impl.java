@@ -19,6 +19,8 @@ import com.bp22intel.edgesentinel.data.local.dao.BleDeviceDao;
 import com.bp22intel.edgesentinel.data.local.dao.BleDeviceDao_Impl;
 import com.bp22intel.edgesentinel.data.local.dao.CellDao;
 import com.bp22intel.edgesentinel.data.local.dao.CellDao_Impl;
+import com.bp22intel.edgesentinel.data.local.dao.KnownTowerDao;
+import com.bp22intel.edgesentinel.data.local.dao.KnownTowerDao_Impl;
 import com.bp22intel.edgesentinel.data.local.dao.ScanDao;
 import com.bp22intel.edgesentinel.data.local.dao.ScanDao_Impl;
 import java.lang.Class;
@@ -26,6 +28,7 @@ import java.lang.Override;
 import java.lang.String;
 import java.lang.SuppressWarnings;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -46,10 +49,12 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
 
   private volatile BaselineDao _baselineDao;
 
+  private volatile KnownTowerDao _knownTowerDao;
+
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(2) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(3) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `cells` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `cid` INTEGER NOT NULL, `lac_tac` INTEGER NOT NULL, `mcc` INTEGER NOT NULL, `mnc` INTEGER NOT NULL, `signal_strength` INTEGER NOT NULL, `network_type` TEXT NOT NULL, `latitude` REAL, `longitude` REAL, `first_seen` INTEGER NOT NULL, `last_seen` INTEGER NOT NULL, `times_seen` INTEGER NOT NULL)");
@@ -57,8 +62,10 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
         db.execSQL("CREATE TABLE IF NOT EXISTS `scans` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `cell_count` INTEGER NOT NULL, `threat_level` TEXT NOT NULL, `duration_ms` INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `ble_devices` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `mac_address` TEXT NOT NULL, `advertising_data_hash` TEXT NOT NULL, `manufacturer_id` INTEGER, `device_name` TEXT, `first_seen` INTEGER NOT NULL, `last_seen` INTEGER NOT NULL, `location_clusters` TEXT NOT NULL, `seen_count` INTEGER NOT NULL, `is_tracker_type` INTEGER NOT NULL, `tracker_protocol` TEXT)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `baselines` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `radius` REAL NOT NULL, `label` TEXT, `cell_towers_json` TEXT NOT NULL, `wifi_aps_json` TEXT NOT NULL, `ble_count_min` INTEGER NOT NULL, `ble_count_max` INTEGER NOT NULL, `network_type_dist_json` TEXT NOT NULL, `observation_count` INTEGER NOT NULL, `confidence` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `day_profile_json` TEXT, `night_profile_json` TEXT)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `known_towers` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `mcc` INTEGER NOT NULL, `mnc` INTEGER NOT NULL, `lac` INTEGER NOT NULL, `cid` INTEGER NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `range` INTEGER NOT NULL, `radio` TEXT NOT NULL, `source` TEXT NOT NULL, `updated` INTEGER NOT NULL)");
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_known_towers_mcc_mnc_lac_cid` ON `known_towers` (`mcc`, `mnc`, `lac`, `cid`)");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '844d34f04afa2d12c85139fe09f6fd73')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '67016a3b61121f65ad8b1d343a3c9dd8')");
       }
 
       @Override
@@ -68,6 +75,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
         db.execSQL("DROP TABLE IF EXISTS `scans`");
         db.execSQL("DROP TABLE IF EXISTS `ble_devices`");
         db.execSQL("DROP TABLE IF EXISTS `baselines`");
+        db.execSQL("DROP TABLE IF EXISTS `known_towers`");
         final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
         if (_callbacks != null) {
           for (RoomDatabase.Callback _callback : _callbacks) {
@@ -214,9 +222,31 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
                   + " Expected:\n" + _infoBaselines + "\n"
                   + " Found:\n" + _existingBaselines);
         }
+        final HashMap<String, TableInfo.Column> _columnsKnownTowers = new HashMap<String, TableInfo.Column>(11);
+        _columnsKnownTowers.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsKnownTowers.put("mcc", new TableInfo.Column("mcc", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsKnownTowers.put("mnc", new TableInfo.Column("mnc", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsKnownTowers.put("lac", new TableInfo.Column("lac", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsKnownTowers.put("cid", new TableInfo.Column("cid", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsKnownTowers.put("latitude", new TableInfo.Column("latitude", "REAL", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsKnownTowers.put("longitude", new TableInfo.Column("longitude", "REAL", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsKnownTowers.put("range", new TableInfo.Column("range", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsKnownTowers.put("radio", new TableInfo.Column("radio", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsKnownTowers.put("source", new TableInfo.Column("source", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsKnownTowers.put("updated", new TableInfo.Column("updated", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysKnownTowers = new HashSet<TableInfo.ForeignKey>(0);
+        final HashSet<TableInfo.Index> _indicesKnownTowers = new HashSet<TableInfo.Index>(1);
+        _indicesKnownTowers.add(new TableInfo.Index("index_known_towers_mcc_mnc_lac_cid", true, Arrays.asList("mcc", "mnc", "lac", "cid"), Arrays.asList("ASC", "ASC", "ASC", "ASC")));
+        final TableInfo _infoKnownTowers = new TableInfo("known_towers", _columnsKnownTowers, _foreignKeysKnownTowers, _indicesKnownTowers);
+        final TableInfo _existingKnownTowers = TableInfo.read(db, "known_towers");
+        if (!_infoKnownTowers.equals(_existingKnownTowers)) {
+          return new RoomOpenHelper.ValidationResult(false, "known_towers(com.bp22intel.edgesentinel.data.local.entity.KnownTowerEntity).\n"
+                  + " Expected:\n" + _infoKnownTowers + "\n"
+                  + " Found:\n" + _existingKnownTowers);
+        }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "844d34f04afa2d12c85139fe09f6fd73", "1204de59c403932bb87482d042b6264e");
+    }, "67016a3b61121f65ad8b1d343a3c9dd8", "0f0552578b02c1145d550700bcc1549d");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;
@@ -227,7 +257,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
   protected InvalidationTracker createInvalidationTracker() {
     final HashMap<String, String> _shadowTablesMap = new HashMap<String, String>(0);
     final HashMap<String, Set<String>> _viewTables = new HashMap<String, Set<String>>(0);
-    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "cells","alerts","scans","ble_devices","baselines");
+    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "cells","alerts","scans","ble_devices","baselines","known_towers");
   }
 
   @Override
@@ -241,6 +271,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
       _db.execSQL("DELETE FROM `scans`");
       _db.execSQL("DELETE FROM `ble_devices`");
       _db.execSQL("DELETE FROM `baselines`");
+      _db.execSQL("DELETE FROM `known_towers`");
       super.setTransactionSuccessful();
     } finally {
       super.endTransaction();
@@ -260,6 +291,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
     _typeConvertersMap.put(ScanDao.class, ScanDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(BleDeviceDao.class, BleDeviceDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(BaselineDao.class, BaselineDao_Impl.getRequiredConverters());
+    _typeConvertersMap.put(KnownTowerDao.class, KnownTowerDao_Impl.getRequiredConverters());
     return _typeConvertersMap;
   }
 
@@ -344,6 +376,20 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
           _baselineDao = new BaselineDao_Impl(this);
         }
         return _baselineDao;
+      }
+    }
+  }
+
+  @Override
+  public KnownTowerDao knownTowerDao() {
+    if (_knownTowerDao != null) {
+      return _knownTowerDao;
+    } else {
+      synchronized(this) {
+        if(_knownTowerDao == null) {
+          _knownTowerDao = new KnownTowerDao_Impl(this);
+        }
+        return _knownTowerDao;
       }
     }
   }

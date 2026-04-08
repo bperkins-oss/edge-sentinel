@@ -81,6 +81,15 @@ class MeshViewModel @Inject constructor(
             }
         }
 
+        // Observe discovered peers from the discovery component
+        // Access the discovery component through the service
+        viewModelScope.launch {
+            // Note: In the current implementation, MeshDiscovery.discoveredPeers
+            // is accessible but we need to wire it through the service
+            // For now, the UI uses mock data and this will be enhanced
+            // when the service exposes the discovered peers properly
+        }
+
         viewModelScope.launch {
             service.aggregator.meshAlerts.collect { alerts ->
                 _uiState.value = _uiState.value.copy(

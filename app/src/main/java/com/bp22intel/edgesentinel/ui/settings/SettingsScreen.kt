@@ -83,7 +83,9 @@ import com.bp22intel.edgesentinel.ui.theme.TextSecondary
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateToAbout: () -> Unit = {},
-    onNavigateToTravel: () -> Unit = {}
+    onNavigateToTravel: () -> Unit = {},
+    onNavigateToTowerDatabase: () -> Unit = {},
+    onNavigateToCalibration: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val isMonitoringEnabled by viewModel.isMonitoringEnabled.collectAsState()
@@ -237,6 +239,36 @@ fun SettingsScreen(
             )
         }
 
+        // Calibration Mode (only show if Advanced Mode is enabled)
+        if (isAdvancedMode) {
+            item {
+                SectionHeader(title = "Advanced")
+            }
+            
+            item {
+                Button(
+                    onClick = onNavigateToCalibration,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Calibration Mode",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Improve geolocation accuracy by walking your area",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+            }
+        }
+
         // Travel Mode
         item {
             SectionHeader(title = "Travel Mode")
@@ -255,9 +287,22 @@ fun SettingsScreen(
             }
         }
 
-        // Export logs
+        // Data section
         item {
             SectionHeader(title = "Data")
+        }
+
+        item {
+            Button(
+                onClick = onNavigateToTowerDatabase,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SurfaceVariant,
+                    contentColor = TextPrimary
+                )
+            ) {
+                Text(text = "Tower Database")
+            }
         }
 
         item {

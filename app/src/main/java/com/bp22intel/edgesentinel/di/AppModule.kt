@@ -30,6 +30,7 @@ import com.bp22intel.edgesentinel.data.local.dao.AlertDao
 import com.bp22intel.edgesentinel.data.local.dao.BaselineDao
 import com.bp22intel.edgesentinel.data.local.dao.BleDeviceDao
 import com.bp22intel.edgesentinel.data.local.dao.CellDao
+import com.bp22intel.edgesentinel.data.local.dao.KnownTowerDao
 import com.bp22intel.edgesentinel.data.local.dao.ScanDao
 import com.bp22intel.edgesentinel.data.sensor.CellInfoCollector
 import dagger.Module
@@ -114,6 +115,9 @@ object AppModule {
 
     @Provides
     fun provideBleDeviceDao(db: EdgeSentinelDatabase): BleDeviceDao = db.bleDeviceDao()
+
+    @Provides
+    fun provideKnownTowerDao(db: EdgeSentinelDatabase): KnownTowerDao = db.knownTowerDao()
 
     @Provides
     @Singleton

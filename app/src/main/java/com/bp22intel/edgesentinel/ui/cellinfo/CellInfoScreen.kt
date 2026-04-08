@@ -28,10 +28,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,6 +49,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.bp22intel.edgesentinel.ui.components.CellInfoCard
 import com.bp22intel.edgesentinel.ui.components.SectionHeader
 import com.bp22intel.edgesentinel.ui.theme.AccentBlue
+import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
 import com.bp22intel.edgesentinel.ui.theme.Surface
 import com.bp22intel.edgesentinel.ui.theme.SurfaceVariant
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
@@ -52,6 +60,7 @@ import java.util.Locale
 
 @Composable
 fun CellInfoScreen(
+    onBack: () -> Unit = {},
     viewModel: CellInfoViewModel = hiltViewModel()
 ) {
     val currentCell by viewModel.currentCell.collectAsState()
@@ -61,13 +70,32 @@ fun CellInfoScreen(
     val uniqueLacs = allKnownCells.map { it.lacTac }.distinct().size
     val networkTypesSeen = allKnownCells.map { it.networkType }.distinct()
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Cell Tower Info") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BackgroundPrimary,
+                    titleContentColor = TextPrimary,
+                    navigationIconContentColor = TextPrimary
+                )
+            )
+        },
+        containerColor = BackgroundPrimary
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         // Current serving cell
         item {
             SectionHeader(title = "Current Serving Cell")
@@ -176,6 +204,7 @@ fun CellInfoScreen(
                 }
             }
         }
+    }
     }
 }
 
