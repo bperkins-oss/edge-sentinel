@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/.cxx/Debug/1e5903s4/armeabi-v7a",
+  "command": "/home/billperkins/android-sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=armv7-none-linux-androideabi26 --sysroot=/home/billperkins/android-sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Ddiag_helper_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -Wall -Wextra -Werror -o CMakeFiles/diag-helper.dir/diag-helper.c.o -c /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/cpp/diag-helper.c",
+  "file": "/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/cpp/diag-helper.c"
+}
+]

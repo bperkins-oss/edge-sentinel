@@ -1,0 +1,27 @@
+{
+  "buildFiles": [
+    "/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/cpp/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/home/billperkins/android-sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/.cxx/Debug/1e5903s4/x86_64",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/home/billperkins/android-sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/.cxx/Debug/1e5903s4/x86_64",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "diag-helper::@6890427a1f51a3e7e1df": {
+      "artifactName": "diag-helper",
+      "abi": "x86_64",
+      "output": "/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86_64/libdiag-helper.so",
+      "runtimeFiles": []
+    }
+  }
+}

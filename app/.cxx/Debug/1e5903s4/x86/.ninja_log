@@ -1,0 +1,6 @@
+# ninja log v5
+0	18	1775652739332686769	CMakeFiles/diag-helper.dir/diag-helper.c.o	1f467c4384438727
+18	37	1775652739354975120	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86/libdiag-helper.so	2dbd09d147d865c4
+0	1	0	clean	7ecfdc8219fe1d11
+0	17	1775652844804983644	CMakeFiles/diag-helper.dir/diag-helper.c.o	1f467c4384438727
+17	37	1775652844824115831	/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/x86/libdiag-helper.so	2dbd09d147d865c4

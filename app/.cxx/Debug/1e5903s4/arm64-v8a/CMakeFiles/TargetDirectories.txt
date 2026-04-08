@@ -1,0 +1,3 @@
+/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/.cxx/Debug/1e5903s4/arm64-v8a/CMakeFiles/diag-helper.dir
+/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/.cxx/Debug/1e5903s4/arm64-v8a/CMakeFiles/edit_cache.dir
+/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/.cxx/Debug/1e5903s4/arm64-v8a/CMakeFiles/rebuild_cache.dir

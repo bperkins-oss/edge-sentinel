@@ -5,6 +5,7 @@ import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
 import dagger.internal.ScopeMetadata;
 import javax.annotation.processing.Generated;
+import javax.inject.Provider;
 
 @ScopeMetadata
 @QualifierMetadata
@@ -21,20 +22,23 @@ import javax.annotation.processing.Generated;
     "cast"
 })
 public final class CipherModeDetector_Factory implements Factory<CipherModeDetector> {
+  private final Provider<DiagBasedDetector> diagBasedDetectorProvider;
+
+  public CipherModeDetector_Factory(Provider<DiagBasedDetector> diagBasedDetectorProvider) {
+    this.diagBasedDetectorProvider = diagBasedDetectorProvider;
+  }
+
   @Override
   public CipherModeDetector get() {
-    return newInstance();
+    return newInstance(diagBasedDetectorProvider.get());
   }
 
-  public static CipherModeDetector_Factory create() {
-    return InstanceHolder.INSTANCE;
+  public static CipherModeDetector_Factory create(
+      Provider<DiagBasedDetector> diagBasedDetectorProvider) {
+    return new CipherModeDetector_Factory(diagBasedDetectorProvider);
   }
 
-  public static CipherModeDetector newInstance() {
-    return new CipherModeDetector();
-  }
-
-  private static final class InstanceHolder {
-    private static final CipherModeDetector_Factory INSTANCE = new CipherModeDetector_Factory();
+  public static CipherModeDetector newInstance(DiagBasedDetector diagBasedDetector) {
+    return new CipherModeDetector(diagBasedDetector);
   }
 }

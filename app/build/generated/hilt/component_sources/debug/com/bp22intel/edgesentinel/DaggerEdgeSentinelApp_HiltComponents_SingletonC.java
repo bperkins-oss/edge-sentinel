@@ -25,6 +25,7 @@ import com.bp22intel.edgesentinel.data.sensor.CellInfoCollector;
 import com.bp22intel.edgesentinel.data.sensor.NrMonitor;
 import com.bp22intel.edgesentinel.data.sensor.TelephonyMonitor;
 import com.bp22intel.edgesentinel.detection.detectors.CipherModeDetector;
+import com.bp22intel.edgesentinel.detection.detectors.DiagBasedDetector;
 import com.bp22intel.edgesentinel.detection.detectors.FakeBtsDetector;
 import com.bp22intel.edgesentinel.detection.detectors.NetworkDowngradeDetector;
 import com.bp22intel.edgesentinel.detection.detectors.NrDetector;
@@ -40,6 +41,9 @@ import com.bp22intel.edgesentinel.di.AppModule_ProvideCellInfoCollectorFactory;
 import com.bp22intel.edgesentinel.di.AppModule_ProvideDataStoreFactory;
 import com.bp22intel.edgesentinel.di.AppModule_ProvideDatabaseFactory;
 import com.bp22intel.edgesentinel.di.AppModule_ProvideScanDaoFactory;
+import com.bp22intel.edgesentinel.diag.DiagBridge;
+import com.bp22intel.edgesentinel.diag.DiagMessageParser;
+import com.bp22intel.edgesentinel.diag.RootChecker;
 import com.bp22intel.edgesentinel.mesh.MeshViewModel;
 import com.bp22intel.edgesentinel.mesh.MeshViewModel_HiltModules;
 import com.bp22intel.edgesentinel.service.MonitoringService;
@@ -440,25 +444,25 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertsViewModel";
+      static String com_bp22intel_edgesentinel_mesh_MeshViewModel = "com.bp22intel.edgesentinel.mesh.MeshViewModel";
 
-      static String com_bp22intel_edgesentinel_ui_settings_SettingsViewModel = "com.bp22intel.edgesentinel.ui.settings.SettingsViewModel";
+      static String com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertsViewModel";
 
       static String com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel = "com.bp22intel.edgesentinel.ui.cellinfo.CellInfoViewModel";
 
       static String com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel = "com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel";
 
-      static String com_bp22intel_edgesentinel_mesh_MeshViewModel = "com.bp22intel.edgesentinel.mesh.MeshViewModel";
+      static String com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel = "com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel";
 
       static String com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertDetailViewModel";
 
-      static String com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel = "com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel";
+      static String com_bp22intel_edgesentinel_ui_settings_SettingsViewModel = "com.bp22intel.edgesentinel.ui.settings.SettingsViewModel";
+
+      @KeepFieldType
+      MeshViewModel com_bp22intel_edgesentinel_mesh_MeshViewModel2;
 
       @KeepFieldType
       AlertsViewModel com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel2;
-
-      @KeepFieldType
-      SettingsViewModel com_bp22intel_edgesentinel_ui_settings_SettingsViewModel2;
 
       @KeepFieldType
       CellInfoViewModel com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel2;
@@ -467,13 +471,13 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
       DashboardViewModel com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel2;
 
       @KeepFieldType
-      MeshViewModel com_bp22intel_edgesentinel_mesh_MeshViewModel2;
+      OnboardingViewModel com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel2;
 
       @KeepFieldType
       AlertDetailViewModel com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel2;
 
       @KeepFieldType
-      OnboardingViewModel com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel2;
+      SettingsViewModel com_bp22intel_edgesentinel_ui_settings_SettingsViewModel2;
     }
   }
 
@@ -536,10 +540,6 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
     private static final class LazyClassKeyProvider {
       static String com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel = "com.bp22intel.edgesentinel.ui.cellinfo.CellInfoViewModel";
 
-      static String com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel = "com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel";
-
-      static String com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel = "com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel";
-
       static String com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertsViewModel";
 
       static String com_bp22intel_edgesentinel_ui_alerts_AlertDetailViewModel = "com.bp22intel.edgesentinel.ui.alerts.AlertDetailViewModel";
@@ -548,14 +548,12 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
 
       static String com_bp22intel_edgesentinel_ui_settings_SettingsViewModel = "com.bp22intel.edgesentinel.ui.settings.SettingsViewModel";
 
+      static String com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel = "com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel";
+
+      static String com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel = "com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel";
+
       @KeepFieldType
       CellInfoViewModel com_bp22intel_edgesentinel_ui_cellinfo_CellInfoViewModel2;
-
-      @KeepFieldType
-      DashboardViewModel com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel2;
-
-      @KeepFieldType
-      OnboardingViewModel com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel2;
 
       @KeepFieldType
       AlertsViewModel com_bp22intel_edgesentinel_ui_alerts_AlertsViewModel2;
@@ -568,6 +566,12 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
 
       @KeepFieldType
       SettingsViewModel com_bp22intel_edgesentinel_ui_settings_SettingsViewModel2;
+
+      @KeepFieldType
+      DashboardViewModel com_bp22intel_edgesentinel_ui_dashboard_DashboardViewModel2;
+
+      @KeepFieldType
+      OnboardingViewModel com_bp22intel_edgesentinel_ui_onboarding_OnboardingViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
@@ -713,6 +717,12 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
 
     private Provider<CellInfoCollector> provideCellInfoCollectorProvider;
 
+    private Provider<RootChecker> rootCheckerProvider;
+
+    private Provider<DiagBridge> diagBridgeProvider;
+
+    private Provider<DiagMessageParser> diagMessageParserProvider;
+
     private Provider<NrMonitor> nrMonitorProvider;
 
     private Provider<ThreatScorer> threatScorerProvider;
@@ -737,12 +747,20 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
 
     }
 
+    private DiagBasedDetector diagBasedDetector() {
+      return new DiagBasedDetector(diagBridgeProvider.get(), diagMessageParserProvider.get());
+    }
+
+    private CipherModeDetector cipherModeDetector() {
+      return new CipherModeDetector(diagBasedDetector());
+    }
+
     private NrDetector nrDetector() {
       return new NrDetector(nrMonitorProvider.get());
     }
 
     private Set<ThreatDetector> setOfThreatDetector() {
-      return SetBuilder.<ThreatDetector>newSetBuilder(6).add(new FakeBtsDetector()).add(new NetworkDowngradeDetector()).add(new SilentSmsDetector()).add(new TrackingPatternDetector()).add(new CipherModeDetector()).add(nrDetector()).build();
+      return SetBuilder.<ThreatDetector>newSetBuilder(6).add(new FakeBtsDetector()).add(new NetworkDowngradeDetector()).add(new SilentSmsDetector()).add(new TrackingPatternDetector()).add(cipherModeDetector()).add(nrDetector()).build();
     }
 
     private CellDao cellDao() {
@@ -769,15 +787,18 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
     @SuppressWarnings("unchecked")
     private void initialize(final ApplicationContextModule applicationContextModuleParam) {
       this.provideCellInfoCollectorProvider = DoubleCheck.provider(new SwitchingProvider<CellInfoCollector>(singletonCImpl, 1));
-      this.nrMonitorProvider = DoubleCheck.provider(new SwitchingProvider<NrMonitor>(singletonCImpl, 3));
-      this.threatScorerProvider = DoubleCheck.provider(new SwitchingProvider<ThreatScorer>(singletonCImpl, 4));
+      this.rootCheckerProvider = DoubleCheck.provider(new SwitchingProvider<RootChecker>(singletonCImpl, 4));
+      this.diagBridgeProvider = DoubleCheck.provider(new SwitchingProvider<DiagBridge>(singletonCImpl, 3));
+      this.diagMessageParserProvider = DoubleCheck.provider(new SwitchingProvider<DiagMessageParser>(singletonCImpl, 5));
+      this.nrMonitorProvider = DoubleCheck.provider(new SwitchingProvider<NrMonitor>(singletonCImpl, 6));
+      this.threatScorerProvider = DoubleCheck.provider(new SwitchingProvider<ThreatScorer>(singletonCImpl, 7));
       this.threatDetectionEngineProvider = DoubleCheck.provider(new SwitchingProvider<ThreatDetectionEngine>(singletonCImpl, 2));
-      this.provideDatabaseProvider = DoubleCheck.provider(new SwitchingProvider<EdgeSentinelDatabase>(singletonCImpl, 6));
-      this.cellRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<CellRepositoryImpl>(singletonCImpl, 5));
-      this.alertRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<AlertRepositoryImpl>(singletonCImpl, 7));
-      this.scanRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<ScanRepositoryImpl>(singletonCImpl, 8));
+      this.provideDatabaseProvider = DoubleCheck.provider(new SwitchingProvider<EdgeSentinelDatabase>(singletonCImpl, 9));
+      this.cellRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<CellRepositoryImpl>(singletonCImpl, 8));
+      this.alertRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<AlertRepositoryImpl>(singletonCImpl, 10));
+      this.scanRepositoryImplProvider = DoubleCheck.provider(new SwitchingProvider<ScanRepositoryImpl>(singletonCImpl, 11));
       this.scanWorker_AssistedFactoryProvider = SingleCheck.provider(new SwitchingProvider<ScanWorker_AssistedFactory>(singletonCImpl, 0));
-      this.provideDataStoreProvider = DoubleCheck.provider(new SwitchingProvider<DataStore<Preferences>>(singletonCImpl, 9));
+      this.provideDataStoreProvider = DoubleCheck.provider(new SwitchingProvider<DataStore<Preferences>>(singletonCImpl, 12));
     }
 
     @Override
@@ -833,25 +854,34 @@ public final class DaggerEdgeSentinelApp_HiltComponents_SingletonC {
           case 2: // com.bp22intel.edgesentinel.detection.engine.ThreatDetectionEngine 
           return (T) new ThreatDetectionEngine(singletonCImpl.setOfThreatDetector(), singletonCImpl.threatScorerProvider.get());
 
-          case 3: // com.bp22intel.edgesentinel.data.sensor.NrMonitor 
+          case 3: // com.bp22intel.edgesentinel.diag.DiagBridge 
+          return (T) new DiagBridge(singletonCImpl.rootCheckerProvider.get());
+
+          case 4: // com.bp22intel.edgesentinel.diag.RootChecker 
+          return (T) new RootChecker();
+
+          case 5: // com.bp22intel.edgesentinel.diag.DiagMessageParser 
+          return (T) new DiagMessageParser();
+
+          case 6: // com.bp22intel.edgesentinel.data.sensor.NrMonitor 
           return (T) new NrMonitor(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 4: // com.bp22intel.edgesentinel.detection.scoring.ThreatScorer 
+          case 7: // com.bp22intel.edgesentinel.detection.scoring.ThreatScorer 
           return (T) new ThreatScorer();
 
-          case 5: // com.bp22intel.edgesentinel.data.repository.CellRepositoryImpl 
+          case 8: // com.bp22intel.edgesentinel.data.repository.CellRepositoryImpl 
           return (T) new CellRepositoryImpl(singletonCImpl.cellDao());
 
-          case 6: // com.bp22intel.edgesentinel.data.local.EdgeSentinelDatabase 
+          case 9: // com.bp22intel.edgesentinel.data.local.EdgeSentinelDatabase 
           return (T) AppModule_ProvideDatabaseFactory.provideDatabase(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 7: // com.bp22intel.edgesentinel.data.repository.AlertRepositoryImpl 
+          case 10: // com.bp22intel.edgesentinel.data.repository.AlertRepositoryImpl 
           return (T) new AlertRepositoryImpl(singletonCImpl.alertDao());
 
-          case 8: // com.bp22intel.edgesentinel.data.repository.ScanRepositoryImpl 
+          case 11: // com.bp22intel.edgesentinel.data.repository.ScanRepositoryImpl 
           return (T) new ScanRepositoryImpl(singletonCImpl.scanDao());
 
-          case 9: // androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> 
+          case 12: // androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences> 
           return (T) AppModule_ProvideDataStoreFactory.provideDataStore(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           default: throw new AssertionError(id);

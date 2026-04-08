@@ -23,12 +23,12 @@ import com.bp22intel.edgesentinel.domain.model.CellTower
 import com.bp22intel.edgesentinel.domain.model.Confidence
 import com.bp22intel.edgesentinel.domain.model.DetectionResult
 import com.bp22intel.edgesentinel.domain.model.ThreatType
-import com.bp22intel.edgesentinel.native.DiagBridge
-import com.bp22intel.edgesentinel.native.DiagMessageParser
-import com.bp22intel.edgesentinel.native.DiagMessageParser.Companion.LOG_GSM_RR_SIGNALING
-import com.bp22intel.edgesentinel.native.DiagMessageParser.Companion.LOG_LTE_NAS_EMM_OTA
-import com.bp22intel.edgesentinel.native.DiagMessageParser.Companion.LOG_LTE_RRC_OTA
-import com.bp22intel.edgesentinel.native.DiagMessageParser.Companion.LOG_WCDMA_RRC_SIGNALING
+import com.bp22intel.edgesentinel.diag.DiagBridge
+import com.bp22intel.edgesentinel.diag.DiagMessageParser
+import com.bp22intel.edgesentinel.diag.DiagMessageParser.Companion.LOG_GSM_RR_SIGNALING
+import com.bp22intel.edgesentinel.diag.DiagMessageParser.Companion.LOG_LTE_NAS_EMM_OTA
+import com.bp22intel.edgesentinel.diag.DiagMessageParser.Companion.LOG_LTE_RRC_OTA
+import com.bp22intel.edgesentinel.diag.DiagMessageParser.Companion.LOG_WCDMA_RRC_SIGNALING
 import javax.inject.Inject
 
 /**
