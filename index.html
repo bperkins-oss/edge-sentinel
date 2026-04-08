@@ -1,0 +1,2457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <title>Edge Sentinel — Multi-Layer RF Threat Awareness</title>
+    <meta name="description" content="Five-layer RF threat detection turns every Android device into a multi-sensor early warning system. Cellular, WiFi, Bluetooth, network integrity, and location baselining — fused into a single threat posture. No root. No cloud. Open source.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0D1117;
+            --bg-secondary: #161B22;
+            --bg-tertiary: #1C2128;
+            --bg-card: #21262D;
+            --text-primary: #E6EDF3;
+            --text-secondary: #8B949E;
+            --text-muted: #6E7681;
+            --accent-green: #10B981;
+            --accent-green-dim: rgba(16, 185, 129, 0.15);
+            --accent-yellow: #F59E0B;
+            --accent-yellow-dim: rgba(245, 158, 11, 0.15);
+            --accent-red: #EF4444;
+            --accent-red-dim: rgba(239, 68, 68, 0.15);
+            --accent-blue: #3B82F6;
+            --accent-blue-dim: rgba(59, 130, 246, 0.1);
+            --accent-purple: #8B5CF6;
+            --accent-purple-dim: rgba(139, 92, 246, 0.15);
+            --accent-cyan: #06B6D4;
+            --accent-cyan-dim: rgba(6, 182, 212, 0.15);
+            --border: #30363D;
+            --border-light: rgba(255,255,255,0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .icon-inline {
+            width: 1em;
+            height: 1em;
+            vertical-align: -0.125em;
+            display: inline-block;
+        }
+
+        /* ===== NAV ===== */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 100;
+            padding: 1rem 2rem;
+            background: rgba(13, 17, 23, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+
+        .nav-logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--accent-green);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-logo-icon svg { width: 18px; height: 18px; color: var(--bg-primary); }
+
+        .nav-logo-text {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover { color: var(--text-primary); }
+
+        .nav-cta {
+            background: var(--accent-green) !important;
+            color: var(--bg-primary) !important;
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600 !important;
+            transition: opacity 0.2s, transform 0.2s !important;
+        }
+
+        .nav-cta:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* ===== HERO ===== */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 8rem 2rem 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -30%;
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(ellipse, rgba(16, 185, 129, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -40%;
+            left: -20%;
+            width: 60%;
+            height: 60%;
+            background: radial-gradient(ellipse, rgba(59, 130, 246, 0.04) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            width: 100%;
+        }
+
+        .hero-content h1 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            line-height: 1.08;
+            letter-spacing: -0.03em;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-content h1 .accent { color: var(--accent-green); }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 2rem;
+            max-width: 540px;
+        }
+
+        .hero-ctas {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            padding: 0.875rem 2rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 30px rgba(16, 185, 129, 0.3); }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-primary);
+            padding: 0.875rem 2rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover { border-color: var(--text-secondary); background: var(--bg-secondary); }
+
+        .hero-badges {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 2.5rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .badge-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .badge-icon svg { width: 12px; height: 12px; }
+
+        .badge-green { background: var(--accent-green-dim); color: var(--accent-green); }
+        .badge-blue { background: var(--accent-blue-dim); color: var(--accent-blue); }
+
+        /* ===== PHONE MOCKUP ===== */
+        .phone-container {
+            display: flex;
+            justify-content: center;
+            position: relative;
+        }
+
+        .phone {
+            width: 280px;
+            background: #000;
+            border-radius: 36px;
+            padding: 12px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+            position: relative;
+        }
+
+        .phone-screen {
+            background: var(--bg-primary);
+            border-radius: 26px;
+            overflow: hidden;
+            aspect-ratio: 9/19.5;
+        }
+
+        .phone-notch {
+            width: 100px;
+            height: 24px;
+            background: #000;
+            margin: 0 auto;
+            border-radius: 0 0 16px 16px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .phone-status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 16px 0;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-top: -20px;
+        }
+
+        .phone-content {
+            padding: 12px 14px;
+        }
+
+        .phone-header {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .phone-header h3 {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .phone-header p {
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .threat-ring {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            margin: 6px auto 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .threat-ring.green {
+            background: radial-gradient(circle, var(--accent-green-dim) 40%, transparent 70%);
+            border: 3px solid var(--accent-green);
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+        }
+
+        .threat-ring.yellow {
+            background: radial-gradient(circle, var(--accent-yellow-dim) 40%, transparent 70%);
+            border: 3px solid var(--accent-yellow);
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.2);
+        }
+
+        .threat-ring.red {
+            background: radial-gradient(circle, var(--accent-red-dim) 40%, transparent 70%);
+            border: 3px solid var(--accent-red);
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
+        }
+
+        .threat-ring .level {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+        }
+
+        .threat-ring .sublabel {
+            font-size: 7px;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        .threat-ring.green .level { color: var(--accent-green); }
+        .threat-ring.yellow .level { color: var(--accent-yellow); }
+        .threat-ring.red .level { color: var(--accent-red); }
+
+        .sensor-strip {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin: 8px 0;
+        }
+
+        .sensor-dot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .sensor-dot .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .sensor-dot .dot-label {
+            font-size: 6px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .dot-green { background: var(--accent-green); box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+        .dot-yellow { background: var(--accent-yellow); box-shadow: 0 0 6px rgba(245,158,11,0.5); }
+        .dot-red { background: var(--accent-red); box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+        .dot-muted { background: var(--text-muted); opacity: 0.4; }
+
+        .cell-info-card {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            border: 1px solid var(--border-light);
+        }
+
+        .cell-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 9px;
+            padding: 2px 0;
+        }
+
+        .cell-info-label { color: var(--text-muted); }
+        .cell-info-value { color: var(--text-primary); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 8.5px; }
+
+        .alert-mini {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 7px 9px;
+            margin-bottom: 5px;
+            border-left: 3px solid;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alert-mini.yellow { border-color: var(--accent-yellow); }
+        .alert-mini.red { border-color: var(--accent-red); }
+        .alert-mini.green { border-color: var(--accent-green); }
+        .alert-mini.blue { border-color: var(--accent-blue); }
+        .alert-mini.purple { border-color: var(--accent-purple); }
+        .alert-mini.neutral { border-color: var(--text-muted); }
+
+        .alert-mini-text {
+            font-size: 8.5px;
+            font-weight: 600;
+        }
+
+        .alert-mini-time {
+            font-size: 7.5px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .alert-mini-tag {
+            font-size: 7px;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: 700;
+        }
+
+        .tag-yellow { background: var(--accent-yellow-dim); color: var(--accent-yellow); }
+        .tag-red { background: var(--accent-red-dim); color: var(--accent-red); }
+        .tag-green { background: var(--accent-green-dim); color: var(--accent-green); }
+        .tag-blue { background: var(--accent-blue-dim); color: var(--accent-blue); }
+        .tag-purple { background: var(--accent-purple-dim); color: var(--accent-purple); }
+
+        .monitoring-bar {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 8px;
+            color: var(--accent-green);
+            margin-bottom: 8px;
+        }
+
+        .pulse-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            50% { opacity: 0.8; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); }
+        }
+
+        .section-label {
+            font-size: 8px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 6px;
+        }
+
+        /* ===== TACTICAL AWARENESS SECTION ===== */
+        .tactical-awareness {
+            padding: 6rem 2rem;
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            border-top: 1px solid var(--border-light);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tactical-awareness::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            left: -20%;
+            width: 60%;
+            height: 60%;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+            animation: radarSweep 8s linear infinite;
+        }
+
+        @keyframes radarSweep {
+            0% { transform: rotate(0deg); opacity: 0.3; }
+            50% { opacity: 0.8; }
+            100% { transform: rotate(360deg); opacity: 0.3; }
+        }
+
+        .tactical-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .tactical-content h2 {
+            font-size: 2.8rem;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .tactical-content .accent { color: var(--accent-green); }
+
+        .tactical-subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 2rem;
+            max-width: 520px;
+        }
+
+        .radar-display {
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 30%, transparent 70%);
+            border-radius: 50%;
+            width: 320px;
+            height: 320px;
+            position: relative;
+            border: 2px solid rgba(16, 185, 129, 0.3);
+            margin: 0 auto;
+        }
+
+        .radar-rings {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .radar-ring {
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .radar-ring:nth-child(1) { width: 80px; height: 80px; }
+        .radar-ring:nth-child(2) { width: 160px; height: 160px; }
+        .radar-ring:nth-child(3) { width: 240px; height: 240px; }
+        .radar-ring:nth-child(4) { width: 320px; height: 320px; }
+
+        .radar-sweep {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 160px;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.8) 0%, transparent 100%);
+            transform-origin: left center;
+            animation: sweep 4s linear infinite;
+        }
+
+        @keyframes sweep {
+            0% { transform: translate(0, -50%) rotate(0deg); }
+            100% { transform: translate(0, -50%) rotate(360deg); }
+        }
+
+        .threat-dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: threatPulse 2s ease-in-out infinite;
+        }
+
+        .threat-dot.verified { background: var(--accent-green); top: 30%; left: 60%; }
+        .threat-dot.unknown { background: var(--accent-yellow); top: 70%; left: 35%; }
+        .threat-dot.suspicious { background: var(--accent-red); top: 45%; right: 25%; }
+
+        @keyframes threatPulse {
+            0%, 100% { box-shadow: 0 0 0 0 currentColor; }
+            50% { box-shadow: 0 0 0 6px transparent; }
+        }
+
+        .radar-labels {
+            position: absolute;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .radar-labels .label-n { top: -10px; left: 50%; transform: translateX(-50%); }
+        .radar-labels .label-e { right: -10px; top: 50%; transform: translateY(-50%); }
+        .radar-labels .label-s { bottom: -10px; left: 50%; transform: translateX(-50%); }
+        .radar-labels .label-w { left: -10px; top: 50%; transform: translateY(-50%); }
+
+        /* ===== STAKES SECTION ===== */
+        .stakes {
+            padding: 6rem 2rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-light);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .stakes-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .stakes h2 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .stakes-text {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            max-width: 740px;
+            margin: 0 auto 3rem;
+        }
+
+        .stakes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            text-align: left;
+        }
+
+        .stake-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: border-color 0.2s;
+        }
+
+        .stake-card:hover { border-color: rgba(239, 68, 68, 0.3); }
+
+        .stake-card .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            background: var(--accent-red-dim);
+        }
+
+        .stake-card .card-icon svg { width: 20px; height: 20px; color: var(--accent-red); }
+
+        .stake-card h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stake-card p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* ===== SECTION COMMON ===== */
+        .section-tag {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+        }
+
+        /* ===== DETECTIONS ===== */
+        .detections {
+            padding: 6rem 2rem;
+        }
+
+        .detections-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .detections h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .detections-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+            max-width: 600px;
+        }
+
+        .detection-layer {
+            margin-bottom: 3rem;
+        }
+
+        .detection-layer-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .detection-layer-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .detection-layer-icon svg { width: 18px; height: 18px; }
+
+        .detection-layer-header h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .detection-layer-header .layer-count {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-left: auto;
+        }
+
+        .detection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .detection-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .detection-card:hover {
+            border-color: var(--accent-green);
+            transform: translateY(-2px);
+        }
+
+        .detection-card h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .detection-card p {
+            font-size: 0.87rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        .detection-tag {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-top: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .tag-noroot { background: var(--accent-green-dim); color: var(--accent-green); }
+        .tag-root { background: var(--accent-yellow-dim); color: var(--accent-yellow); }
+        .tag-android10 { background: var(--accent-blue-dim); color: var(--accent-blue); }
+
+        /* ===== FEATURE SECTION ===== */
+        .feature-section {
+            padding: 6rem 2rem;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .feature-section.alt { background: var(--bg-secondary); }
+
+        .feature-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .feature-inner h2 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .feature-inner > p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+            max-width: 640px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .feature-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: border-color 0.2s;
+        }
+
+        .feature-section.alt .feature-card { background: var(--bg-tertiary); }
+
+        .feature-card:hover { border-color: var(--accent-green); }
+
+        .feature-card-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-card-icon svg { width: 18px; height: 18px; }
+
+        .feature-card h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .feature-card p {
+            font-size: 0.87rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        /* ===== USE CASES ===== */
+        .usecases {
+            padding: 6rem 2rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-light);
+        }
+
+        .usecases-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .usecase {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            margin-bottom: 5rem;
+        }
+
+        .usecase:last-child { margin-bottom: 0; }
+
+        .usecase:nth-child(even) { direction: rtl; }
+        .usecase:nth-child(even) > * { direction: ltr; }
+
+        .usecase-content h3 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .usecase-content p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+        }
+
+        .usecase-features {
+            list-style: none;
+        }
+
+        .usecase-features li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .usecase-check {
+            color: var(--accent-green);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .usecase-check svg { width: 16px; height: 16px; }
+
+        /* ===== PLAN (How It Works) ===== */
+        .plan {
+            padding: 6rem 2rem;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .plan-inner {
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .plan h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 3.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .plan-steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            text-align: left;
+        }
+
+        .plan-step {
+            position: relative;
+            padding: 2rem;
+            background: var(--bg-secondary);
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            transition: border-color 0.2s;
+        }
+
+        .plan-step:hover { border-color: var(--accent-green); }
+
+        .plan-step-number {
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--accent-green);
+            opacity: 0.3;
+            line-height: 1;
+            margin-bottom: 0.75rem;
+        }
+
+        .plan-step h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-step p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* ===== POSITIONING ===== */
+        .positioning {
+            padding: 6rem 2rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-light);
+        }
+
+        .positioning-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .positioning h2 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .positioning-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+            max-width: 680px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .positioning-cols {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr auto 1fr;
+            gap: 0;
+            align-items: stretch;
+        }
+
+        .pos-col {
+            padding: 2rem;
+            border-radius: 14px;
+            text-align: left;
+        }
+
+        .pos-col.enterprise { background: var(--bg-primary); border: 1px solid var(--border); }
+        .pos-col.sentinel { background: var(--accent-green-dim); border: 2px solid var(--accent-green); }
+        .pos-col.status-quo { background: var(--accent-red-dim); border: 1px solid rgba(239,68,68,0.3); }
+
+        .pos-col h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .pos-col ul {
+            list-style: none;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .pos-col ul li {
+            padding: 0.3rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .pos-col ul li svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 3px; }
+
+        .pos-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            padding: 0 0.5rem;
+        }
+
+        .pos-arrow svg { width: 20px; height: 20px; }
+
+        .pos-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+        }
+
+        .pos-label.green { color: var(--accent-green); }
+        .pos-label.red { color: var(--accent-red); }
+        .pos-label.muted { color: var(--text-muted); }
+
+        /* ===== TRANSFORMATION ===== */
+        .transformation {
+            padding: 6rem 2rem;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .transformation-inner {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .transformation h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 3rem;
+            letter-spacing: -0.02em;
+        }
+
+        .transformation-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 2rem;
+            align-items: stretch;
+        }
+
+        .transform-col {
+            padding: 2.5rem;
+            border-radius: 14px;
+        }
+
+        .transform-col.before {
+            background: var(--accent-red-dim);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .transform-col.after {
+            background: var(--accent-green-dim);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .transform-label {
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+        }
+
+        .transform-label.red { color: var(--accent-red); }
+        .transform-label.green { color: var(--accent-green); }
+
+        .transform-col h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .transform-col ul {
+            list-style: none;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .transform-col ul li {
+            padding: 0.25rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .transform-col ul li svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 4px; }
+
+        .transform-col.before ul li svg { color: var(--accent-red); }
+        .transform-col.after ul li svg { color: var(--accent-green); }
+
+        .transform-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+        }
+
+        .transform-arrow svg { width: 24px; height: 24px; }
+
+        .transform-identity {
+            text-align: center;
+            margin-top: 2.5rem;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .transform-identity strong {
+            color: var(--accent-green);
+        }
+
+        /* ===== SOCIAL PROOF ===== */
+        .social-proof {
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border-light);
+            background: var(--bg-secondary);
+        }
+
+        .social-proof-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .proof-badges {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            flex-wrap: wrap;
+        }
+
+        .proof-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .proof-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .proof-icon svg { width: 18px; height: 18px; }
+
+        /* ===== CAVEATS ===== */
+        .caveats {
+            padding: 4rem 2rem;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .caveats-inner {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 2.5rem;
+        }
+
+        .caveats h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .caveats h3 svg { width: 20px; height: 20px; color: var(--accent-yellow); }
+
+        .caveats ul {
+            list-style: none;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .caveats ul li {
+            padding: 0.4rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .caveats ul li::before {
+            content: '\2014';
+            position: absolute;
+            left: 0;
+            color: var(--text-muted);
+        }
+
+        /* ===== FINAL CTA ===== */
+        .final-cta {
+            padding: 8rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .final-cta::before {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(ellipse, rgba(16, 185, 129, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .final-cta h2 {
+            font-size: 2.8rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            letter-spacing: -0.03em;
+        }
+
+        .final-cta p {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            margin-bottom: 2.5rem;
+            max-width: 560px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .final-cta .hero-ctas {
+            justify-content: center;
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border-light);
+            text-align: center;
+        }
+
+        .footer-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .footer-brand svg { width: 16px; height: 16px; color: var(--accent-green); }
+
+        .footer-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover { color: var(--text-primary); }
+
+        .footer-copy {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* ===== PHONE MOCKUP VARIANTS ===== */
+        .alert-detail-header {
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .alert-detail-header .alert-type {
+            font-size: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .alert-detail-header .alert-title {
+            font-size: 11px;
+            font-weight: 800;
+            margin-top: 2px;
+        }
+
+        .alert-detail-section {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+        }
+
+        .alert-detail-section h4 {
+            font-size: 8px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .alert-detail-section p {
+            font-size: 9px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .confidence-bar {
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            border-radius: 2px;
+        }
+
+        .confidence-fill.high { width: 85%; background: var(--accent-red); }
+        .confidence-fill.medium { width: 60%; background: var(--accent-yellow); }
+
+        .action-btn-mini {
+            display: block;
+            width: 100%;
+            padding: 6px;
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 6px;
+            font-size: 9px;
+            font-weight: 700;
+            text-align: center;
+            margin-top: 6px;
+        }
+
+        /* Travel mode phone styles */
+        .travel-header {
+            background: var(--accent-yellow-dim);
+            border-radius: 10px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            text-align: center;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .travel-header .travel-mode-label {
+            font-size: 8px;
+            font-weight: 700;
+            color: var(--accent-yellow);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .travel-header .travel-country {
+            font-size: 12px;
+            font-weight: 800;
+            margin-top: 2px;
+        }
+
+        .travel-item {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 7px 9px;
+            margin-bottom: 5px;
+            font-size: 9px;
+        }
+
+        .travel-item h5 {
+            font-size: 8px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 2px;
+        }
+
+        .travel-item p {
+            font-size: 8.5px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .travel-checklist {
+            font-size: 8px;
+            color: var(--text-secondary);
+        }
+
+        .travel-checklist div {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 1px 0;
+        }
+
+        .travel-checklist .check-done { color: var(--accent-green); }
+        .travel-checklist .check-pending { color: var(--text-muted); }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .hero-inner { grid-template-columns: 1fr; text-align: center; }
+            .tactical-inner { grid-template-columns: 1fr; text-align: center; }
+            .hero-subtitle { margin-left: auto; margin-right: auto; }
+            .tactical-subtitle { margin-left: auto; margin-right: auto; }
+            .hero-ctas { justify-content: center; }
+            .hero-badges { justify-content: center; }
+            .phone-container { margin-top: 2rem; }
+            .stakes-grid { grid-template-columns: 1fr; }
+            .detection-grid { grid-template-columns: 1fr; }
+            .usecase { grid-template-columns: 1fr; gap: 2rem; }
+            .usecase:nth-child(even) { direction: ltr; }
+            .plan-steps { grid-template-columns: 1fr; }
+            .positioning-cols { grid-template-columns: 1fr; gap: 1rem; }
+            .pos-arrow { transform: rotate(90deg); padding: 0.5rem; }
+            .hero-content h1 { font-size: 2.5rem; }
+            .tactical-content h2 { font-size: 2.2rem; }
+            .footer-inner { flex-direction: column; gap: 1rem; }
+            .nav-links { display: none; }
+            .transformation-grid { grid-template-columns: 1fr; }
+            .transform-arrow { transform: rotate(90deg); padding: 0.5rem; }
+            .feature-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            .hero-content h1 { font-size: 2rem; }
+            .tactical-content h2 { font-size: 1.8rem; }
+            .hero { padding: 6rem 1rem 3rem; }
+            .tactical-awareness { padding: 6rem 1rem; }
+            .phone { width: 240px !important; }
+            .radar-display { width: 240px !important; height: 240px !important; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<nav>
+    <a href="#" class="nav-logo">
+        <div class="nav-logo-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+        </div>
+        <span class="nav-logo-text">Edge Sentinel</span>
+    </a>
+    <div class="nav-links">
+        <a href="#detections">Detection Layers</a>
+        <a href="#tactical">Tactical Awareness</a>
+        <a href="#usecases">Use Cases</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="https://github.com/bperkins-oss/edge-sentinel" class="nav-cta">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5 0-1.2-.5-2.3-1.3-3.2a4.6 4.6 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.6 4.6 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+            Get Edge Sentinel
+        </a>
+    </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+    <div class="hero-inner">
+        <div class="hero-content">
+            <h1>Your phone is a <span class="accent">radio</span>.<br>Know what it's saying.</h1>
+            <p class="hero-subtitle">
+                You shouldn't have to choose between a $100K TSCM suite and nothing. Five-layer RF threat detection turns every Android device into a multi-sensor early warning system. No root. No cloud. Open source.
+            </p>
+            <div class="hero-ctas">
+                <a href="https://github.com/bperkins-oss/edge-sentinel" class="btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5 0-1.2-.5-2.3-1.3-3.2a4.6 4.6 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.6 4.6 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+                    Get Edge Sentinel
+                </a>
+                <a href="#detections" class="btn-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                    Read the Technical Brief
+                </a>
+            </div>
+            <div class="hero-badges">
+                <span class="badge">
+                    <span class="badge-icon badge-green"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>
+                    5 detection layers
+                </span>
+                <span class="badge">
+                    <span class="badge-icon badge-blue"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>
+                    40M+ verified towers
+                </span>
+                <span class="badge">
+                    <span class="badge-icon badge-green"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>
+                    100% offline
+                </span>
+                <span class="badge">
+                    <span class="badge-icon badge-blue"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>
+                    GPLv3 open source
+                </span>
+            </div>
+        </div>
+
+        <!-- PHONE MOCKUP: Unified Dashboard -->
+        <div class="phone-container">
+            <div class="phone">
+                <div class="phone-screen">
+                    <div class="phone-notch"></div>
+                    <div class="phone-status-bar">
+                        <span>9:41</span>
+                        <span>5G NR &#x25AE;&#x25AE;&#x25AE;</span>
+                    </div>
+                    <div class="phone-content">
+                        <div class="phone-header">
+                            <h3>Edge Sentinel</h3>
+                        </div>
+                        <div class="monitoring-bar">
+                            <span class="pulse-dot"></span>
+                            <span>All sensors active / 4h 23m</span>
+                        </div>
+                        <div class="threat-ring green">
+                            <span class="level">ALL CLEAR</span>
+                            <span class="sublabel">Posture nominal</span>
+                        </div>
+                        <!-- 5-sensor strip -->
+                        <div class="sensor-strip">
+                            <div class="sensor-dot"><div class="dot dot-green"></div><span class="dot-label">Cell</span></div>
+                            <div class="sensor-dot"><div class="dot dot-green"></div><span class="dot-label">WiFi</span></div>
+                            <div class="sensor-dot"><div class="dot dot-green"></div><span class="dot-label">BLE</span></div>
+                            <div class="sensor-dot"><div class="dot dot-green"></div><span class="dot-label">Net</span></div>
+                            <div class="sensor-dot"><div class="dot dot-green"></div><span class="dot-label">Loc</span></div>
+                        </div>
+                        <div class="cell-info-card">
+                            <div class="cell-info-row">
+                                <span class="cell-info-label">Cell</span>
+                                <span class="cell-info-value">CID 24601 / LTE B4 / T-Mobile</span>
+                            </div>
+                            <div class="cell-info-row">
+                                <span class="cell-info-label">WiFi</span>
+                                <span class="cell-info-value">3 APs known / 0 rogue</span>
+                            </div>
+                            <div class="cell-info-row">
+                                <span class="cell-info-label">BLE</span>
+                                <span class="cell-info-value">12 devices / 0 trackers</span>
+                            </div>
+                            <div class="cell-info-row">
+                                <span class="cell-info-label">Network</span>
+                                <span class="cell-info-value">VPN up / DNS clean / TLS OK</span>
+                            </div>
+                            <div class="cell-info-row">
+                                <span class="cell-info-label">Location</span>
+                                <span class="cell-info-value">Office baseline / 96% match</span>
+                            </div>
+                        </div>
+                        <div class="section-label">Recent Activity</div>
+                        <div class="alert-mini neutral" style="border-color: var(--text-muted);">
+                            <span class="alert-mini-text" style="color: var(--text-secondary)">BLE scan: 0 new trackers</span>
+                            <span class="alert-mini-time">09:38</span>
+                        </div>
+                        <div class="alert-mini neutral" style="border-color: var(--text-muted);">
+                            <span class="alert-mini-text" style="color: var(--text-secondary)">WiFi probe privacy: masked</span>
+                            <span class="alert-mini-time">09:35</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== TACTICAL AWARENESS SECTION ===== -->
+<section class="tactical-awareness" id="tactical">
+    <div class="tactical-inner">
+        <div class="tactical-content">
+            <div class="section-tag">NEW: Tactical Awareness</div>
+            <h2>Threat map with <span class="accent">tactical radar</span> display</h2>
+            <p class="tactical-subtitle">
+                Real-time geolocation of RF threats with animated radar sweep. Color-coded by severity with range rings. Tower verification against 40M+ known towers. Advanced propagation models estimate threat positions with field-tuned accuracy.
+            </p>
+        </div>
+        
+        <!-- Tactical Radar Display -->
+        <div class="phone-container">
+            <div class="radar-display">
+                <div class="radar-rings">
+                    <div class="radar-ring"></div>
+                    <div class="radar-ring"></div>
+                    <div class="radar-ring"></div>
+                    <div class="radar-ring"></div>
+                </div>
+                <div class="radar-sweep"></div>
+                <div class="threat-dot verified"></div>
+                <div class="threat-dot unknown"></div>
+                <div class="threat-dot suspicious"></div>
+                <div class="radar-labels">
+                    <span class="label-n">N</span>
+                    <span class="label-e">E</span>
+                    <span class="label-s">S</span>
+                    <span class="label-w">W</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== STAKES ===== -->
+<section class="stakes">
+    <div class="stakes-inner">
+        <h2>Your phone is a radio.<br>Do you know who's listening?</h2>
+        <p class="stakes-text">
+            Adversaries use fake cell towers, rogue WiFi, Bluetooth trackers, network hijacking, and silent pings to locate, track, and intercept personnel through the devices they carry every day. Most teams have zero visibility across any of these layers. The result: accepted risk by default.
+        </p>
+        <div class="stakes-grid">
+            <div class="stake-card">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 8 2 2-2 2 2 2-2 2"/><path d="m22 8-2 2 2 2-2 2 2 2"/><rect width="8" height="14" x="8" y="5" rx="1"/></svg>
+                </div>
+                <h3>Fake Base Stations</h3>
+                <p>IMSI catchers masquerade as legitimate towers. Your phone connects automatically. Identity, location, and comms exposed.</p>
+            </div>
+            <div class="stake-card">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 11 2-2-2-2"/><path d="M11 13h4"/><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/></svg>
+                </div>
+                <h3>Forced Downgrades</h3>
+                <p>Attackers force your phone from 5G/LTE to 2G, stripping encryption and enabling real-time interception of voice and data.</p>
+            </div>
+            <div class="stake-card">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </div>
+                <h3>Silent Tracking</h3>
+                <p>Type-0 SMS pings silently probe your device. Your location is mapped, your presence confirmed. You never know.</p>
+            </div>
+            <div class="stake-card">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="m2 10 3-3 3 3"/><path d="M12 20v.01"/></svg>
+                </div>
+                <h3>Evil Twin WiFi</h3>
+                <p>Rogue access points clone trusted networks. Your device auto-connects. All traffic intercepted through the attacker's gateway.</p>
+            </div>
+            <div class="stake-card">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h11"/><path d="M6.5 17.5h11"/><circle cx="12" cy="12" r="2.5"/><path d="m8.2 8.2 7.6 7.6"/><path d="m8.2 15.8 7.6-7.6"/></svg>
+                </div>
+                <h3>Bluetooth Stalking</h3>
+                <p>AirTags, SmartTags, and BLE trackers planted on vehicles or in bags. Persistent physical tracking with no alert from iOS or Android.</p>
+            </div>
+            <div class="stake-card">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9.5 9.5 5-5"/><path d="m14.5 9.5-5-5"/></svg>
+                </div>
+                <h3>Network Hijacking</h3>
+                <p>VPN silent drops, DNS hijacking, and TLS MITM attacks redirect your traffic through hostile infrastructure. You think you're protected.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== DETECTIONS ===== -->
+<section class="detections" id="detections">
+    <div class="detections-inner">
+        <div class="section-tag">Detection Capabilities</div>
+        <h2>Five layers. One threat posture.</h2>
+        <p class="detections-subtitle">Every sensor feeds a unified fusion engine that turns noise into actionable intelligence.</p>
+
+        <!-- MULTI-LAYER DETECTION -->
+        <div class="detection-layer">
+            <div class="detection-layer-header">
+                <div class="detection-layer-icon" style="background: var(--accent-green-dim);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                </div>
+                <h3>Multi-Layer Detection</h3>
+                <span class="layer-count">23 capabilities across 5 bands</span>
+            </div>
+            <div class="detection-grid">
+                <!-- Cellular -->
+                <div class="detection-card">
+                    <h4>IMSI Catcher / Stingray Detection</h4>
+                    <p>Cell tower anomaly analysis, neighbor monitoring, and behavioral fingerprinting to identify rogue infrastructure.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Silent SMS Detection</h4>
+                    <p>Identifies covert Type-0 SMS pings used for location tracking and presence detection.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Forced Downgrade Alerts</h4>
+                    <p>Detects forced fallback from 5G/LTE to 2G/3G -- a hallmark of active interception attacks.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <!-- WiFi -->
+                <div class="detection-card">
+                    <h4>Evil Twin Detection</h4>
+                    <p>Identifies access points cloning trusted SSIDs with different BSSIDs or anomalous signal characteristics.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Rogue AP Identification</h4>
+                    <p>Detects unknown APs appearing in trusted environments by comparing against learned WiFi baselines.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Deauth Attack Alerts</h4>
+                    <p>Monitors for WiFi deauthentication flood patterns used to force clients onto attacker-controlled networks.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <!-- Bluetooth -->
+                <div class="detection-card">
+                    <h4>AirTag / SmartTag / Tile Detection</h4>
+                    <p>Identifies known tracker protocols (Apple FindMy, Samsung SmartThings, Tile) broadcasting nearby.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Persistent Follower Alerts</h4>
+                    <p>Tracks BLE devices across location changes. Flags any device following you between distinct places.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <!-- Network -->
+                <div class="detection-card">
+                    <h4>VPN/DNS/TLS Integrity Monitoring</h4>
+                    <p>Detects VPN drops, DNS hijacking, and TLS MITM attacks. Multi-resolver comparison and certificate validation.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <!-- 5G NR -->
+                <div class="detection-card">
+                    <h4>5G NR Anomaly Detection</h4>
+                    <p>NSA vs SA mode detection, NR neighbor cell analysis, and gNodeB behavior monitoring on Android 10+.</p>
+                    <span class="detection-tag tag-android10">Android 10+</span>
+                </div>
+                <!-- Baseline -->
+                <div class="detection-card">
+                    <h4>Location-Aware RF Profiling (DBSCAN)</h4>
+                    <p>Auto-learns RF environment at each location. Recognizes "office", "home", "route" from RF signatures alone.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TACTICAL AWARENESS -->
+        <div class="detection-layer">
+            <div class="detection-layer-header">
+                <div class="detection-layer-icon" style="background: var(--accent-cyan-dim);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                </div>
+                <h3>Tactical Awareness</h3>
+                <span class="layer-count">NEW - Visual threat intelligence</span>
+            </div>
+            <div class="detection-grid">
+                <div class="detection-card">
+                    <h4>Threat Map with Radar Display</h4>
+                    <p>Tactical radar showing geolocated threats in real-time, color-coded by severity, with range rings and animated sweep.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Tower Verification (OpenCelliD)</h4>
+                    <p>40M+ verified cell towers database. Verified/unknown/suspicious badges. Instantly identifies rogue infrastructure.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>RSSI Triangulation Geolocation</h4>
+                    <p>Estimates threat source positions using signal strength from multiple observations. Visual threat positioning.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Walk-Calibration Mode</h4>
+                    <p>Field-tuned accuracy through environmental calibration. Improves geolocation precision for your specific area.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Advanced Propagation Models</h4>
+                    <p>Okumura-Hata, COST 231, and Log-distance models for improved signal prediction and threat localization.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SENSOR FUSION -->
+        <div class="detection-layer">
+            <div class="detection-layer-header">
+                <div class="detection-layer-icon" style="background: var(--accent-blue-dim);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+                </div>
+                <h3>Sensor Fusion Engine</h3>
+                <span class="layer-count">Cross-layer correlation</span>
+            </div>
+            <div class="detection-grid">
+                <div class="detection-card">
+                    <h4>Cross-Sensor Threat Correlation</h4>
+                    <p>Cell + WiFi + BLE + network anomalies correlated in real time. Multi-sensor agreement boosts confidence scores.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Unified Threat Narratives</h4>
+                    <p>"A new tower appeared at your office at the same time as a rogue WiFi AP. This combination indicates coordinated interception."</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Fused Threat Posture Scoring</h4>
+                    <p>Single view of all five sensor layers with unified threat posture. Green / yellow / red at a glance.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TRAVEL MODE -->
+        <div class="detection-layer">
+            <div class="detection-layer-header">
+                <div class="detection-layer-icon" style="background: var(--accent-yellow-dim);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-yellow)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                </div>
+                <h3>Travel Mode</h3>
+                <span class="layer-count">12 country threat profiles</span>
+            </div>
+            <div class="detection-grid">
+                <div class="detection-card">
+                    <h4>12 Country Threat Profiles</h4>
+                    <p>Pre-loaded profiles for high-risk countries. Auto-detection on country change via MCC. Heightened sensitivity for 24h.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Pre-Arrival Security Briefings</h4>
+                    <p>Contextual security briefings per country with threat landscape overview and pre/post-departure checklists.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Panic Wipe</h4>
+                    <p>Encrypted data export (AES-256-GCM) before departure. Emergency wipe function for data destruction if compromised.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MESH ALERTING -->
+        <div class="detection-layer">
+            <div class="detection-layer-header">
+                <div class="detection-layer-icon" style="background: var(--accent-purple-dim);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <h3>Mesh Alerting</h3>
+                <span class="layer-count">BLE peer-to-peer sharing</span>
+            </div>
+            <div class="detection-grid">
+                <div class="detection-card">
+                    <h4>BLE Peer Discovery</h4>
+                    <p>Alerts propagate device-to-device via Bluetooth Low Energy. No WiFi or cellular needed. Works in denied environments.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Distributed Threat Correlation</h4>
+                    <p>Every device in the formation shares detections. A threat seen by any one node is visible to all within BLE range.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Team-Wide Alert Propagation</h4>
+                    <p>When multiple devices confirm the same threat independently, confidence jumps. Peer agreement is a powerful signal.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ZERO TRUST ARCHITECTURE -->
+        <div class="detection-layer">
+            <div class="detection-layer-header">
+                <div class="detection-layer-icon" style="background: var(--accent-red-dim);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <h3>Zero Trust Architecture</h3>
+                <span class="layer-count">Trust no one, verify everything</span>
+            </div>
+            <div class="detection-grid">
+                <div class="detection-card">
+                    <h4>Fully Offline / No Cloud</h4>
+                    <p>All processing and sharing happens locally. No data leaves your devices. No accounts, no telemetry, no cloud dependency.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>No Google Play Services</h4>
+                    <p>Pure Android. No Google dependencies. Works on de-Googled phones and in environments where Play Services are restricted.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>Open Source GPLv3</h4>
+                    <p>130+ Kotlin source files. Every line auditable. No trust required -- verify the code yourself. Community-driven development.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+                <div class="detection-card">
+                    <h4>On-Device Processing Only</h4>
+                    <p>All analysis, fusion, and correlation happens on your device. No remote servers, no vendor trust chain, no single point of failure.</p>
+                    <span class="detection-tag tag-noroot">No Root</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== USE CASES ===== -->
+<section class="usecases" id="usecases">
+    <div class="usecases-inner">
+        <div class="section-tag">Operational Use Cases</div>
+
+        <!-- USE CASE 1: Embassy -->
+        <div class="usecase">
+            <div class="usecase-content">
+                <h3>Embassy & Travel Security</h3>
+                <p>Diplomatic personnel operate in foreign carrier environments where host-nation infrastructure can't be trusted. Edge Sentinel provides continuous multi-layer awareness around diplomatic facilities and during travel.</p>
+                <ul class="usecase-features">
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Detect rogue towers and evil twin WiFi near compounds</li>
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Alert on network anomalies during official travel</li>
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Scan for BLE trackers planted on diplomatic vehicles</li>
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>No infrastructure required -- runs on personal devices</li>
+                </ul>
+            </div>
+            <div class="phone-container">
+                <div class="phone" style="width: 240px;">
+                    <div class="phone-screen">
+                        <div class="phone-notch"></div>
+                        <div class="phone-status-bar">
+                            <span>14:22</span>
+                            <span>LTE &#x25AE;&#x25AE;</span>
+                        </div>
+                        <div class="phone-content">
+                            <div class="phone-header"><h3>Edge Sentinel</h3></div>
+                            <div class="monitoring-bar" style="color: var(--accent-yellow);">
+                                <span class="pulse-dot" style="background: var(--accent-yellow);"></span>
+                                <span>Suspicious activity detected</span>
+                            </div>
+                            <div class="threat-ring yellow">
+                                <span class="level">CAUTION</span>
+                                <span class="sublabel">1 active alert</span>
+                            </div>
+                            <div class="sensor-strip">
+                                <div class="sensor-dot"><div class="dot dot-yellow"></div><span class="dot-label">Cell</span></div>
+                                <div class="sensor-dot"><div class="dot dot-green"></div><span class="dot-label">WiFi</span></div>
+                                <div class="sensor-dot"><div class="dot dot-green"></div><span class="dot-label">BLE</span></div>
+                                <div class="sensor-dot"><div class="dot dot-green"></div><span class="dot-label">Net</span></div>
+                                <div class="sensor-dot"><div class="dot dot-green"></div><span class="dot-label">Loc</span></div>
+                            </div>
+                            <div class="section-label">Active Alerts</div>
+                            <div class="alert-mini yellow">
+                                <div>
+                                    <div class="alert-mini-text">Unknown tower detected</div>
+                                    <div class="alert-mini-time" style="margin-top: 2px;">CID 99201 / -52 dBm / No history</div>
+                                </div>
+                                <span class="alert-mini-tag tag-yellow">MED</span>
+                            </div>
+                            <div class="alert-mini neutral" style="border-color: var(--text-muted);">
+                                <div>
+                                    <div class="alert-mini-text" style="color: var(--text-secondary);">LAC change -- expected roaming</div>
+                                    <div class="alert-mini-time" style="margin-top: 2px;">TAC 5012 -> 5014</div>
+                                </div>
+                                <span class="alert-mini-time">13:48</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- USE CASE 2: Convoy -->
+        <div class="usecase">
+            <div class="usecase-content">
+                <h3>Convoy & Movement Security</h3>
+                <p>Multiple devices across a convoy create overlapping multi-sensor awareness along the route. Each vehicle becomes a sensor node with mesh alerting, detecting threats that a single device might miss.</p>
+                <ul class="usecase-features">
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Distributed detection with BLE mesh alerting</li>
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Detect ambush indicators via sudden RF anomalies</li>
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Forced downgrade + evil twin correlation via fusion engine</li>
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Peer confirmation across multiple vehicles</li>
+                </ul>
+            </div>
+            <div class="phone-container">
+                <div class="phone" style="width: 240px;">
+                    <div class="phone-screen">
+                        <div class="phone-notch"></div>
+                        <div class="phone-status-bar">
+                            <span>09:17</span>
+                            <span>3G &#x25AE;</span>
+                        </div>
+                        <div class="phone-content">
+                            <div class="phone-header"><h3>Edge Sentinel</h3></div>
+                            <div class="monitoring-bar" style="color: var(--accent-red);">
+                                <span class="pulse-dot" style="background: var(--accent-red); animation: none;"></span>
+                                <span>THREAT DETECTED</span>
+                            </div>
+                            <div class="threat-ring red">
+                                <span class="level">THREAT</span>
+                                <span class="sublabel">Immediate attention</span>
+                            </div>
+                            <div class="sensor-strip">
+                                <div class="sensor-dot"><div class="dot dot-red"></div><span class="dot-label">Cell</span></div>
+                                <div class="sensor-dot"><div class="dot dot-red"></div><span class="dot-label">WiFi</span></div>
+                                <div class="sensor-dot"><div class="dot dot-green"></div><span class="dot-label">BLE</span></div>
+                                <div class="sensor-dot"><div class="dot dot-yellow"></div><span class="dot-label">Net</span></div>
+                                <div class="sensor-dot"><div class="dot dot-red"></div><span class="dot-label">Loc</span></div>
+                            </div>
+                            <div class="section-label">Critical Alerts</div>
+                            <div class="alert-mini red">
+                                <div>
+                                    <div class="alert-mini-text">Forced network downgrade</div>
+                                    <div class="alert-mini-time" style="margin-top: 2px;">LTE -> 2G / Cipher: A5/1 (weak)</div>
+                                </div>
+                                <span class="alert-mini-tag tag-red">HIGH</span>
+                            </div>
+                            <div class="alert-mini red">
+                                <div>
+                                    <div class="alert-mini-text">Evil twin: "ConvoyNet"</div>
+                                    <div class="alert-mini-time" style="margin-top: 2px;">BSSID mismatch / -28 dBm</div>
+                                </div>
+                                <span class="alert-mini-tag tag-red">HIGH</span>
+                            </div>
+                            <div class="alert-mini yellow">
+                                <div>
+                                    <div class="alert-mini-text">DNS responses altered</div>
+                                    <div class="alert-mini-time" style="margin-top: 2px;">3 domains redirected</div>
+                                </div>
+                                <span class="alert-mini-tag tag-yellow">MED</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- USE CASE 3: CI/Force Protection -->
+        <div class="usecase">
+            <div class="usecase-content">
+                <h3>CI & Force Protection</h3>
+                <p>Deploy as a low-cost multi-sensor tripwire at command posts and forward sites. The fusion engine produces human-readable threat narratives that feed directly into existing TSCM and CI workflows.</p>
+                <ul class="usecase-features">
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Persistent multi-layer monitoring at fixed sites</li>
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Fusion narratives for analysis and reporting</li>
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Training tool for TSCM and CI teams</li>
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Supplements -- never replaces -- TSCM procedures</li>
+                </ul>
+            </div>
+            <div class="phone-container">
+                <div class="phone" style="width: 240px;">
+                    <div class="phone-screen">
+                        <div class="phone-notch"></div>
+                        <div class="phone-status-bar">
+                            <span>22:04</span>
+                            <span>LTE &#x25AE;&#x25AE;&#x25AE;</span>
+                        </div>
+                        <div class="phone-content">
+                            <div class="phone-header">
+                                <h3>Fusion Alert</h3>
+                                <p style="color: var(--accent-red); font-weight: 600;">CRITICAL / 92% confidence</p>
+                            </div>
+                            <div class="alert-detail-header" style="background: var(--accent-red-dim);">
+                                <div class="alert-type" style="color: var(--accent-red);">Multi-Sensor Correlated Threat</div>
+                                <div class="alert-title">Suspected IMSI Catcher + WiFi MITM</div>
+                            </div>
+                            <div class="alert-detail-section">
+                                <h4>Fusion Narrative</h4>
+                                <p>Unknown tower CID 88401 appeared at -38 dBm while a new AP cloned "HQ-Secure" SSID. DNS resolver mismatch detected simultaneously. Three independent sensors confirm coordinated interception setup at this location.</p>
+                            </div>
+                            <div class="alert-detail-section">
+                                <h4>Sensors Triggered</h4>
+                                <p style="font-family: 'JetBrains Mono', monospace;">CELL + WIFI + NET = 92% confidence</p>
+                                <div class="confidence-bar"><div class="confidence-fill high" style="width:92%;"></div></div>
+                            </div>
+                            <div class="alert-detail-section">
+                                <h4>Recommended Action</h4>
+                                <p>Report to security operations. Enable airplane mode. Move to alternate location. Export logs for TSCM analysis.</p>
+                            </div>
+                            <div class="action-btn-mini">Export Fusion Report</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- USE CASE 4: High-Risk Travel -->
+        <div class="usecase">
+            <div class="usecase-content">
+                <h3>High-Risk Travel</h3>
+                <p>Travel mode activates pre-loaded threat profiles for high-risk countries. Auto-detects country change via MCC, heightens sensitivity for the first 24 hours, and provides contextual security briefings with pre/post-departure checklists.</p>
+                <ul class="usecase-features">
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Pre-loaded profiles for 12+ high-risk countries</li>
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Auto-detection on country change via MCC</li>
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Encrypted data export (AES-256-GCM) and panic wipe</li>
+                    <li><span class="usecase-check"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg></span>Contextual security briefings per country</li>
+                </ul>
+            </div>
+            <div class="phone-container">
+                <div class="phone" style="width: 240px;">
+                    <div class="phone-screen">
+                        <div class="phone-notch"></div>
+                        <div class="phone-status-bar">
+                            <span>08:14</span>
+                            <span>LTE &#x25AE;&#x25AE;</span>
+                        </div>
+                        <div class="phone-content">
+                            <div class="phone-header">
+                                <h3>Travel Mode</h3>
+                            </div>
+                            <div class="travel-header">
+                                <div class="travel-mode-label">Active Country Profile</div>
+                                <div class="travel-country">China (MCC 460)</div>
+                            </div>
+                            <div class="monitoring-bar" style="color: var(--accent-yellow);">
+                                <span class="pulse-dot" style="background: var(--accent-yellow);"></span>
+                                <span>Heightened sensitivity / 18h remaining</span>
+                            </div>
+                            <div class="travel-item">
+                                <h5>Threat Profile</h5>
+                                <p>State-level IMSI catchers at transit hubs. Mandatory VPN blocking. WiFi monitoring at hotels. BLE tracker risk HIGH.</p>
+                            </div>
+                            <div class="travel-item">
+                                <h5>Departure Checklist</h5>
+                                <div class="travel-checklist">
+                                    <div><span class="check-done">&#x2713;</span> Encrypted export created</div>
+                                    <div><span class="check-done">&#x2713;</span> Panic wipe configured</div>
+                                    <div><span class="check-done">&#x2713;</span> Travel SIM activated</div>
+                                    <div><span class="check-pending">&#x25CB;</span> Brief security team</div>
+                                </div>
+                            </div>
+                            <div class="travel-item">
+                                <h5>Active Mitigations</h5>
+                                <p>All 5 sensors at max scan rate. WiFi auto-connect disabled. BLE tracker scan every 60s. VPN monitoring continuous.</p>
+                            </div>
+                            <div class="action-btn-mini" style="background: var(--accent-red); margin-top: 8px;">Panic Wipe</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== HOW IT WORKS (Plan) ===== -->
+<section class="plan" id="how-it-works">
+    <div class="plan-inner">
+        <div class="section-tag">How It Works</div>
+        <h2>Three steps to multi-layer awareness.</h2>
+        <div class="plan-steps">
+            <div class="plan-step">
+                <div class="plan-step-number">1</div>
+                <h3>Deploy</h3>
+                <p>Install on any Android 8+ device. No root for core detection. Grant permissions. Monitoring starts automatically. Your team's existing phones become five-sensor nodes.</p>
+            </div>
+            <div class="plan-step">
+                <div class="plan-step-number">2</div>
+                <h3>Monitor</h3>
+                <p>Five detection layers run continuously. Sensor fusion correlates signals. Tower verification checks against 40M+ known towers. Threat map shows positions in real-time with tactical radar display.</p>
+            </div>
+            <div class="plan-step">
+                <div class="plan-step-number">3</div>
+                <h3>Act</h3>
+                <p>Color-coded alerts with geolocation. Export evidence. Share via mesh alerting. Travel mode for high-risk countries with country threat profiles and panic wipe capability.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== POSITIONING ===== -->
+<section class="positioning">
+    <div class="positioning-inner">
+        <h2>Where Edge Sentinel fits.</h2>
+        <p class="positioning-subtitle">You shouldn't have to choose between a $100K TSCM suite and nothing. The gap at the edge -- where your people actually operate -- is unacceptable.</p>
+        <div class="positioning-cols">
+            <div class="pos-col enterprise">
+                <div class="pos-label muted">Enterprise TSCM</div>
+                <h3>Bastille / CRFS / SEA</h3>
+                <ul>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.089z"/></svg> Dedicated hardware & operators</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.089z"/></svg> Fixed-site or specialist-deployed</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.089z"/></svg> $100K+ per installation</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.089z"/></svg> High fidelity, single-layer detection</li>
+                </ul>
+            </div>
+            <div class="pos-arrow">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+            <div class="pos-col sentinel">
+                <div class="pos-label green">Filling the Gap</div>
+                <h3>Edge Sentinel</h3>
+                <ul>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg> Software-only, existing phones</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg> 5 sensor layers, fused intelligence</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg> $0 -- open source GPLv3</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg> Mesh alerting, travel mode, zero cloud</li>
+                </ul>
+            </div>
+            <div class="pos-arrow">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+            <div class="pos-col status-quo">
+                <div class="pos-label red">Status Quo</div>
+                <h3>No Coverage</h3>
+                <ul>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Zero RF threat visibility</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> No awareness at the edge</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Accepted risk by default</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Every phone is a blind spot</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== TRANSFORMATION ===== -->
+<section class="transformation">
+    <div class="transformation-inner">
+        <div class="section-tag">The Transformation</div>
+        <h2>From blind to watching.</h2>
+        <div class="transformation-grid">
+            <div class="transform-col before">
+                <div class="transform-label red">Before Edge Sentinel</div>
+                <h3>Blind across all RF layers</h3>
+                <ul>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Every phone is an unmonitored radio on five bands</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Fake towers, evil twins, BLE trackers -- all invisible</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> VPN drops and DNS hijacks happen silently</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Travel to high-risk countries with zero RF awareness</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Accepted risk by default -- because what else can you do?</li>
+                </ul>
+            </div>
+            <div class="transform-arrow">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+            <div class="transform-col after">
+                <div class="transform-label green">After Edge Sentinel</div>
+                <h3>Complete awareness, fused intelligence</h3>
+                <ul>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg> Cell + WiFi + BLE + network + location -- all monitored</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg> Sensor fusion turns noise into high-confidence intelligence</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg> Mesh alerting shares awareness across your whole team</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg> Travel mode with country profiles and panic wipe</li>
+                    <li><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/></svg> Distributed awareness -- because one tripwire isn't enough</li>
+                </ul>
+            </div>
+        </div>
+        <p class="transform-identity">
+
+            You go from <strong>hoping nothing's wrong</strong> to <strong>knowing what's happening across every RF layer</strong>.<br>
+            From the person who didn't see it coming -- to the one who caught it first.
+        </p>
+    </div>
+</section>
+
+<!-- ===== SOCIAL PROOF ===== -->
+<section class="social-proof">
+    <div class="social-proof-inner">
+        <div class="proof-badges">
+            <div class="proof-badge">
+                <div class="proof-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                </div>
+                <span>5 detection layers with fusion engine</span>
+            </div>
+            <div class="proof-badge">
+                <div class="proof-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <span>40M+ verified cell towers (OpenCelliD)</span>
+            </div>
+            <div class="proof-badge">
+                <div class="proof-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-yellow)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+                </div>
+                <span>12 country threat profiles for travel</span>
+            </div>
+            <div class="proof-badge">
+                <div class="proof-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v20"/><path d="M14 2v20"/><path d="M4 7h16"/><path d="M4 17h16"/></svg>
+                </div>
+                <span>130+ Kotlin source files (GPLv3)</span>
+            </div>
+            <div class="proof-badge">
+                <div class="proof-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M2 12h20"/></svg>
+                </div>
+                <span>100% offline operation, zero cloud</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== TECHNICAL SPECS SECTION ===== -->
+<section class="feature-section">
+    <div class="feature-inner">
+        <div class="section-tag">Technical Specifications</div>
+        <h2>Production-ready architecture</h2>
+        <p>Built on modern Android development practices with enterprise-grade reliability and security.</p>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-card-icon" style="background: var(--accent-green-dim);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+                </div>
+                <h4>Android Requirements</h4>
+                <p>Min SDK 26 (Android 8+) for core detection. Full detection requires SDK 29+ (Android 10). Advanced features need root + Qualcomm DIAG.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-icon" style="background: var(--accent-blue-dim);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="m9 10 2 2 4-4"/><path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.999.398-.999.95"/></svg>
+                </div>
+                <h4>Database & Storage</h4>
+                <p>Room database with migration support. OpenCelliD CSV import (per-country). Local SQLite storage with encrypted exports via AES-256-GCM.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-icon" style="background: var(--accent-yellow-dim);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-yellow)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/><path d="m15.5 3.5-1.5 1.5m0 0L12.5 6.5m3.5 8.5L14.5 16.5m0 0L12.5 17.5m-7-11L7 8m0 0L8.5 6.5M3.5 20.5 5 19m0 0L6.5 17.5"/></svg>
+                </div>
+                <h4>Languages & Architecture</h4>
+                <p>Kotlin primary language. C (NDK) for Qualcomm DIAG integration. MVVM architecture with Hilt dependency injection and Jetpack Compose UI.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-icon" style="background: var(--accent-purple-dim);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2"/><path d="M8 18v2"/><path d="M16 18v2"/><path d="M12 4V2"/></svg>
+                </div>
+                <h4>Propagation Models</h4>
+                <p>Okumura-Hata urban/suburban models. COST 231 for extended coverage. Log-distance path loss calculations for geolocation accuracy.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-icon" style="background: var(--accent-cyan-dim);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <h4>Tower Database Integration</h4>
+                <p>OpenCelliD dataset with per-country CSV imports. 40M+ verified cell towers globally. Real-time verification of detected towers against known infrastructure.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CAVEATS ===== -->
+<section class="caveats">
+    <div class="caveats-inner">
+        <h3>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            Important Caveats
+        </h3>
+        <ul>
+            <li>Edge Sentinel is an early warning tool, not a protection system. It detects threats -- it cannot prevent attacks.</li>
+            <li>It cannot detect passive eavesdropping. If an adversary is listening without transmitting, there is no signal to detect.</li>
+            <li>Detection confidence varies by threat type and sensor availability. Effectiveness against sophisticated state-level systems is limited.</li>
+            <li>This capability supplements -- it does not replace -- TSCM, comms discipline, or established force protection procedures.</li>
+            <li>Advanced cipher and protocol analysis requires a rooted device with Qualcomm chipset. Core features work without root.</li>
+        </ul>
+    </div>
+</section>
+
+<!-- ===== FINAL CTA ===== -->
+<section class="final-cta">
+    <div class="section-tag">Your phone is a radio.</div>
+    <h2>Know what it's saying.</h2>
+    <p>Five sensor layers. Fused intelligence. Open source. Deploys in minutes on devices your people already carry.</p>
+    <div class="hero-ctas">
+        <a href="https://github.com/bperkins-oss/edge-sentinel" class="btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5 0-1.2-.5-2.3-1.3-3.2a4.6 4.6 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.6 4.6 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+            Get Edge Sentinel
+        </a>
+        <a href="#detections" class="btn-secondary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+            Technical Brief (PDF)
+        </a>
+    </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+    <div class="footer-inner">
+        <div class="footer-brand">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+            BP22 Intel
+        </div>
+        <div class="footer-links">
+            <a href="https://github.com/bperkins-oss/edge-sentinel">GitHub</a>
+            <a href="#">Documentation</a>
+            <a href="#">Technical Brief</a>
+            <a href="#">License (GPLv3)</a>
+        </div>
+        <div class="footer-copy">
+            &copy; 2026 BP22 Intel &middot; Open Source &middot; GPLv3
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>
