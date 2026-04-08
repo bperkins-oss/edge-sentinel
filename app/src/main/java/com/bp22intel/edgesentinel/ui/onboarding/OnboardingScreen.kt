@@ -43,8 +43,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GppGood
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -77,7 +80,44 @@ import com.bp22intel.edgesentinel.ui.theme.TextTertiary
 private data class OnboardingPage(
     val icon: ImageVector,
     val title: String,
-    val description: String
+    val description: String,
+    val isPermissionPage: Boolean = false
+)
+
+private data class PermissionItem(
+    val icon: ImageVector,
+    val name: String,
+    val reason: String
+)
+
+private val permissionItems = listOf(
+    PermissionItem(
+        icon = Icons.Default.LocationOn,
+        name = "Location",
+        reason = "Required to identify cell towers near you. Android ties cell tower data " +
+            "to location permissions — without this, Edge Sentinel cannot see which " +
+            "towers your phone is connected to or detect rogue base stations."
+    ),
+    PermissionItem(
+        icon = Icons.Default.PhoneAndroid,
+        name = "Phone State",
+        reason = "Reads your network connection type (LTE, 5G, 3G) and monitors for " +
+            "forced downgrades. This is how Edge Sentinel detects when an attacker " +
+            "forces your phone onto a weaker, interceptable network."
+    ),
+    PermissionItem(
+        icon = Icons.Default.Sms,
+        name = "SMS",
+        reason = "Detects silent SMS (Type-0) messages — invisible pings used by " +
+            "surveillance systems to track your location without your knowledge. " +
+            "Edge Sentinel never reads your personal messages."
+    ),
+    PermissionItem(
+        icon = Icons.Default.Notifications,
+        name = "Notifications",
+        reason = "Sends you real-time alerts when threats are detected. Without this, " +
+            "Edge Sentinel can still monitor but cannot warn you of active threats."
+    )
 )
 
 private val pages = listOf(
@@ -90,10 +130,9 @@ private val pages = listOf(
     ),
     OnboardingPage(
         icon = Icons.Default.Lock,
-        title = "Permissions Required",
-        description = "Edge Sentinel needs access to your location (for cell tower identification), " +
-            "phone state (for network info), SMS (to detect silent SMS attacks), " +
-            "and notifications (for threat alerts). All data stays on your device."
+        title = "Why These Permissions?",
+        description = "Every permission has a specific purpose. No data ever leaves your device.",
+        isPermissionPage = true
     ),
     OnboardingPage(
         icon = Icons.Default.Notifications,
@@ -154,37 +193,109 @@ fun OnboardingScreen(
             modifier = Modifier.weight(0.6f),
             label = "onboarding_page"
         ) { page ->
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Icon(
-                    imageVector = pages[page].icon,
-                    contentDescription = null,
-                    tint = StatusClear,
-                    modifier = Modifier.size(80.dp)
-                )
+            if (pages[page].isPermissionPage) {
+                // Detailed permission explanation page
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = pages[page].icon,
+                        contentDescription = null,
+                        tint = StatusClear,
+                        modifier = Modifier.size(56.dp)
+                    )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = pages[page].title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    textAlign = TextAlign.Center
-                )
+                    Text(
+                        text = pages[page].title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        textAlign = TextAlign.Center
+                    )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = pages[page].description,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+                    Text(
+                        text = pages[page].description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    permissionItems.forEach { item ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = null,
+                                tint = StatusClear,
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .padding(top = 2.dp)
+                            )
+                            Column(
+                                modifier = Modifier.padding(start = 12.dp)
+                            ) {
+                                Text(
+                                    text = item.name,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = item.reason,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
+                                    lineHeight = MaterialTheme.typography.bodySmall.lineHeight
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Standard page
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = pages[page].icon,
+                        contentDescription = null,
+                        tint = StatusClear,
+                        modifier = Modifier.size(80.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Text(
+                        text = pages[page].title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = pages[page].description,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
             }
         }
 
