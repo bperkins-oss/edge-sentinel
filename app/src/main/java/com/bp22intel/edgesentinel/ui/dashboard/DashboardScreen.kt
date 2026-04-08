@@ -37,6 +37,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -157,11 +158,33 @@ fun DashboardScreen(
                 FusedThreatHeader(posture = posture)
             }
 
-            // Sensor category breakdown — 5 mini indicators
+            // Fused Intelligence narrative (the key differentiator)
+            if (fusedAssessment.contributingSignals.isNotEmpty()) {
+                item {
+                    SectionHeader(
+                        title = "Fusion Assessment",
+                        actionText = null,
+                        onActionClick = {}
+                    )
+                }
+                item {
+                    FusedNarrativeCard(narrative = fusedAssessment.narrative)
+                }
+            }
+
+            // Detection Layers — the 5 sensors, clearly laid out
             item {
-                SensorCategoryBreakdown(
+                SectionHeader(
+                    title = "Detection Layers",
+                    actionText = null,
+                    onActionClick = {}
+                )
+            }
+
+            item {
+                DetectionLayerCards(
                     categoryScores = posture.categoryBreakdown,
-                    onCategoryClick = { category ->
+                    onLayerClick = { category ->
                         val route = when (category) {
                             SensorCategory.CELLULAR -> "cell_info"
                             SensorCategory.WIFI -> "wifi"
@@ -174,76 +197,36 @@ fun DashboardScreen(
                 )
             }
 
-            // Quick access cards — Threat Map + Mesh
+            // Tools — Threat Map, Mesh, Force Scan
+            item {
+                SectionHeader(
+                    title = "Tools",
+                    actionText = null,
+                    onActionClick = {}
+                )
+            }
+
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Threat Map card
-                    Card(
-                        onClick = { onNavigate("threat_map") },
-                        colors = CardDefaults.cardColors(containerColor = Surface),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Map,
-                                contentDescription = null,
-                                tint = StatusClear,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Column {
-                                Text(
-                                    text = "Threat Map",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = TextPrimary
-                                )
-                                Text(
-                                    text = "Tactical radar",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary
-                                )
-                            }
-                        }
-                    }
-                    // Mesh Network card
-                    Card(
-                        onClick = { onNavigate("mesh") },
-                        colors = CardDefaults.cardColors(containerColor = Surface),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.People,
-                                contentDescription = null,
-                                tint = Color(0xFF06B6D4),
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Column {
-                                Text(
-                                    text = "Mesh Network",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = TextPrimary
-                                )
-                                Text(
-                                    text = "0 peers",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary
-                                )
-                            }
-                        }
-                    }
+                    ToolCard(
+                        icon = Icons.Filled.Map,
+                        title = "Threat Map",
+                        subtitle = "Tactical radar",
+                        tint = StatusClear,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigate("threat_map") }
+                    )
+                    ToolCard(
+                        icon = Icons.Filled.People,
+                        title = "Mesh Network",
+                        subtitle = "Peer alerts",
+                        tint = Color(0xFF06B6D4),
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigate("mesh") }
+                    )
                 }
             }
 
@@ -268,19 +251,7 @@ fun DashboardScreen(
                 }
             }
 
-            // Trend and active threats summary
-            item {
-                ThreatSummaryBar(posture = posture)
-            }
-
-            // Active fused narrative
-            if (fusedAssessment.contributingSignals.isNotEmpty()) {
-                item {
-                    FusedNarrativeCard(narrative = fusedAssessment.narrative)
-                }
-            }
-
-            // Monitoring status bar
+            // Monitoring status
             item {
                 MonitoringStatusBar(
                     isActive = isMonitoring,
@@ -473,6 +444,135 @@ private fun SensorMiniIndicator(score: SensorCategoryScore, onClick: () -> Unit 
                 fontWeight = FontWeight.Bold,
                 fontSize = 10.sp
             )
+        }
+    }
+}
+
+@Composable
+private fun DetectionLayerCards(
+    categoryScores: List<SensorCategoryScore>,
+    onLayerClick: (SensorCategory) -> Unit = {}
+) {
+    val layerDescriptions = mapOf(
+        SensorCategory.CELLULAR to "IMSI catcher, tower changes, silent SMS",
+        SensorCategory.WIFI to "Evil twin, rogue AP, deauth attacks",
+        SensorCategory.BLUETOOTH to "AirTag, SmartTag, Tile tracking",
+        SensorCategory.NETWORK to "DNS, TLS, VPN integrity",
+        SensorCategory.BASELINE to "RF environment anomaly detection"
+    )
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        categoryScores.forEach { score ->
+            val statusColor = when {
+                score.score > 0.7 -> StatusDangerous
+                score.score > 0.3 -> StatusElevated
+                score.activeThreatCount > 0 -> StatusElevated
+                else -> StatusClear
+            }
+            val statusText = when {
+                score.activeThreatCount > 0 -> "${score.activeThreatCount} alert${if (score.activeThreatCount != 1) "s" else ""}"
+                else -> "Clear"
+            }
+
+            Card(
+                onClick = { onLayerClick(score.category) },
+                colors = CardDefaults.cardColors(containerColor = Surface),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(statusColor.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = score.category.icon,
+                            contentDescription = null,
+                            tint = statusColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = score.category.label,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = layerDescriptions[score.category] ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            maxLines = 1
+                        )
+                    }
+
+                    // Status badge
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(statusColor.copy(alpha = 0.15f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ToolCard(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = RoundedCornerShape(12.dp),
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(24.dp)
+            )
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = TextPrimary
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            }
         }
     }
 }
