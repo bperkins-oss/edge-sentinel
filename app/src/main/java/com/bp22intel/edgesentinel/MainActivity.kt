@@ -28,6 +28,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.bp22intel.edgesentinel.service.MonitoringService
 import com.bp22intel.edgesentinel.ui.navigation.EdgeSentinelNavHost
 import com.bp22intel.edgesentinel.ui.theme.EdgeSentinelTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -47,7 +48,14 @@ class MainActivity : ComponentActivity() {
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { /* App will react to permission state via collectors in ViewModels */ }
+    ) { results ->
+        // Auto-start monitoring once permissions are granted
+        val locationGranted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            results[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (locationGranted) {
+            MonitoringService.start(this)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -56,6 +64,14 @@ class MainActivity : ComponentActivity() {
 
         // Request all required permissions on first launch
         requestMissingPermissions()
+
+        // Auto-start monitoring if permissions already granted
+        val hasLocation = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasLocation && !MonitoringService.isRunning.value) {
+            MonitoringService.start(this)
+        }
 
         setContent {
             EdgeSentinelTheme {
