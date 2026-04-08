@@ -1,6 +1,6 @@
 -- Merging decision tree log ---
 provider#androidx.startup.InitializationProvider
-INJECTED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:96:9-105:20
+INJECTED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:103:9-112:20
 MERGED from [androidx.work:work-runtime:2.10.0] /home/billperkins/.gradle/caches/transforms-4/eca6e305c9cc5b2ecca1de3a52235f02/transformed/work-runtime-2.10.0/AndroidManifest.xml:29:9-37:20
 MERGED from [androidx.work:work-runtime:2.10.0] /home/billperkins/.gradle/caches/transforms-4/eca6e305c9cc5b2ecca1de3a52235f02/transformed/work-runtime-2.10.0/AndroidManifest.xml:29:9-37:20
 MERGED from [androidx.emoji2:emoji2:1.3.0] /home/billperkins/.gradle/caches/transforms-4/6d6fb8bd7a387090c7bf4bf53641f071/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
@@ -12,19 +12,19 @@ MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/billperkins
 MERGED from [androidx.startup:startup-runtime:1.1.1] /home/billperkins/.gradle/caches/transforms-4/2c0a7da94978ab8a72035bf31f9263f9/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
 MERGED from [androidx.startup:startup-runtime:1.1.1] /home/billperkins/.gradle/caches/transforms-4/2c0a7da94978ab8a72035bf31f9263f9/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
 	tools:node
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:100:13-31
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:107:13-31
 	android:authorities
 		INJECTED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:98:13-68
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:105:13-68
 	android:exported
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:99:13-37
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:106:13-37
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:97:13-67
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:104:13-67
 manifest
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:11:1-109:12
-INJECTED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:11:1-109:12
-INJECTED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:11:1-109:12
-INJECTED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:11:1-109:12
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:11:1-116:12
+INJECTED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:11:1-116:12
+INJECTED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:11:1-116:12
+INJECTED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:11:1-116:12
 MERGED from [androidx.glance:glance:1.1.1] /home/billperkins/.gradle/caches/transforms-4/b5cf595ba814c084560ee1d892b74940/transformed/glance-1.1.1/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.glance:glance-material3:1.1.1] /home/billperkins/.gradle/caches/transforms-4/a71c66ebd6d7f3087ff53729b5459a87/transformed/glance-material3-1.1.1/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.glance:glance-appwidget:1.1.1] /home/billperkins/.gradle/caches/transforms-4/1b84944eb9b7b8955cc8b1749195b07f/transformed/glance-appwidget-1.1.1/AndroidManifest.xml:17:1-61:12
@@ -134,89 +134,91 @@ MERGED from [androidx.work:work-runtime:2.10.0] /home/billperkins/.gradle/caches
 MERGED from [androidx.work:work-runtime:2.10.0] /home/billperkins/.gradle/caches/transforms-4/eca6e305c9cc5b2ecca1de3a52235f02/transformed/work-runtime-2.10.0/AndroidManifest.xml:24:5-79
 	android:name
 		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:22:22-76
+uses-permission#android.permission.INTERNET
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:29:5-67
+	android:name
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:29:22-64
 uses-permission#android.permission.RECEIVE_SMS
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:25:5-70
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:32:5-70
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:25:22-67
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:32:22-67
 uses-permission#android.permission.POST_NOTIFICATIONS
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:28:5-77
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:35:5-77
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:28:22-74
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:35:22-74
 uses-permission#android.permission.FOREGROUND_SERVICE
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:31:5-77
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:38:5-77
 MERGED from [androidx.work:work-runtime:2.10.0] /home/billperkins/.gradle/caches/transforms-4/eca6e305c9cc5b2ecca1de3a52235f02/transformed/work-runtime-2.10.0/AndroidManifest.xml:26:5-77
 MERGED from [androidx.work:work-runtime:2.10.0] /home/billperkins/.gradle/caches/transforms-4/eca6e305c9cc5b2ecca1de3a52235f02/transformed/work-runtime-2.10.0/AndroidManifest.xml:26:5-77
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:31:22-74
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:38:22-74
 uses-permission#android.permission.FOREGROUND_SERVICE_SPECIAL_USE
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:32:5-89
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:39:5-89
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:32:22-86
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:39:22-86
 uses-permission#android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:33:5-94
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:40:5-94
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:33:22-91
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:40:22-91
 uses-permission#android.permission.WAKE_LOCK
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:34:5-68
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:41:5-68
 MERGED from [androidx.work:work-runtime:2.10.0] /home/billperkins/.gradle/caches/transforms-4/eca6e305c9cc5b2ecca1de3a52235f02/transformed/work-runtime-2.10.0/AndroidManifest.xml:23:5-68
 MERGED from [androidx.work:work-runtime:2.10.0] /home/billperkins/.gradle/caches/transforms-4/eca6e305c9cc5b2ecca1de3a52235f02/transformed/work-runtime-2.10.0/AndroidManifest.xml:23:5-68
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:34:22-65
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:41:22-65
 uses-permission#android.permission.RECEIVE_BOOT_COMPLETED
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:37:5-81
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:44:5-81
 MERGED from [androidx.work:work-runtime:2.10.0] /home/billperkins/.gradle/caches/transforms-4/eca6e305c9cc5b2ecca1de3a52235f02/transformed/work-runtime-2.10.0/AndroidManifest.xml:25:5-81
 MERGED from [androidx.work:work-runtime:2.10.0] /home/billperkins/.gradle/caches/transforms-4/eca6e305c9cc5b2ecca1de3a52235f02/transformed/work-runtime-2.10.0/AndroidManifest.xml:25:5-81
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:37:22-78
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:44:22-78
 uses-permission#android.permission.BLUETOOTH
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:40:5-95
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:47:5-95
 	android:maxSdkVersion
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:40:66-92
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:47:66-92
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:40:22-65
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:47:22-65
 uses-permission#android.permission.BLUETOOTH_ADMIN
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:41:5-101
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:48:5-101
 	android:maxSdkVersion
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:41:72-98
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:48:72-98
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:41:22-71
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:48:22-71
 uses-permission#android.permission.BLUETOOTH_CONNECT
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:42:5-76
-	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:42:22-73
-uses-permission#android.permission.BLUETOOTH_SCAN
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:43:5-120
-	android:usesPermissionFlags
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:43:71-117
-	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:43:22-70
-uses-permission#android.permission.BLUETOOTH_ADVERTISE
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:44:5-78
-	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:44:22-75
-uses-permission#android.permission.NEARBY_WIFI_DEVICES
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:47:5-125
-	android:usesPermissionFlags
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:47:76-122
-	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:47:22-75
-uses-permission#android.permission.ACCESS_WIFI_STATE
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:48:5-76
-	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:48:22-73
-uses-permission#android.permission.CHANGE_WIFI_STATE
 ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:49:5-76
 	android:name
 		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:49:22-73
-uses-feature#android.hardware.bluetooth_le
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:51:5-91
-	android:required
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:51:64-88
+uses-permission#android.permission.BLUETOOTH_SCAN
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:50:5-73
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:51:19-63
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:50:22-70
+uses-permission#android.permission.BLUETOOTH_ADVERTISE
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:51:5-78
+	android:name
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:51:22-75
+uses-permission#android.permission.NEARBY_WIFI_DEVICES
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:54:5-125
+	android:usesPermissionFlags
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:54:76-122
+	android:name
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:54:22-75
+uses-permission#android.permission.ACCESS_WIFI_STATE
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:55:5-76
+	android:name
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:55:22-73
+uses-permission#android.permission.CHANGE_WIFI_STATE
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:56:5-76
+	android:name
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:56:22-73
+uses-feature#android.hardware.bluetooth_le
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:58:5-91
+	android:required
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:58:64-88
+	android:name
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:58:19-63
 application
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:53:5-107:19
-INJECTED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:53:5-107:19
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:60:5-114:19
+INJECTED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:60:5-114:19
 MERGED from [androidx.glance:glance-appwidget:1.1.1] /home/billperkins/.gradle/caches/transforms-4/1b84944eb9b7b8955cc8b1749195b07f/transformed/glance-appwidget-1.1.1/AndroidManifest.xml:22:5-59:19
 MERGED from [androidx.glance:glance-appwidget:1.1.1] /home/billperkins/.gradle/caches/transforms-4/1b84944eb9b7b8955cc8b1749195b07f/transformed/glance-appwidget-1.1.1/AndroidManifest.xml:22:5-59:19
 MERGED from [androidx.work:work-runtime:2.10.0] /home/billperkins/.gradle/caches/transforms-4/eca6e305c9cc5b2ecca1de3a52235f02/transformed/work-runtime-2.10.0/AndroidManifest.xml:28:5-143:19
@@ -246,84 +248,84 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/billp
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.15.0] /home/billperkins/.gradle/caches/transforms-4/7d1a14343684e83a8ed54c818eb1d47e/transformed/core-1.15.0/AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:61:9-35
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:68:9-35
 	android:label
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:59:9-41
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:66:9-41
 	android:fullBackupContent
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:57:9-54
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:64:9-54
 	android:roundIcon
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:60:9-54
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:67:9-54
 	android:icon
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:58:9-43
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:65:9-43
 	android:allowBackup
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:55:9-35
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:62:9-35
 	android:theme
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:62:9-50
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:69:9-50
 	android:dataExtractionRules
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:56:9-65
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:63:9-65
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:54:9-40
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:61:9-40
 activity#com.bp22intel.edgesentinel.MainActivity
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:64:9-72:20
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:71:9-79:20
 	android:exported
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:66:13-36
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:73:13-36
 	android:theme
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:67:13-61
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:74:13-61
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:65:13-41
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:72:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:68:13-71:29
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:75:13-78:29
 action#android.intent.action.MAIN
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:69:17-69
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:76:17-69
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:69:25-66
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:76:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:70:17-77
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:77:17-77
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:70:27-74
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:77:27-74
 service#com.bp22intel.edgesentinel.service.MonitoringService
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:74:9-77:58
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:81:9-84:58
 	android:exported
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:76:13-37
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:83:13-37
 	android:foregroundServiceType
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:77:13-55
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:84:13-55
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:75:13-54
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:82:13-54
 service#com.bp22intel.edgesentinel.mesh.MeshService
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:79:9-82:63
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:86:9-89:63
 	android:exported
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:81:13-37
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:88:13-37
 	android:foregroundServiceType
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:82:13-60
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:89:13-60
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:80:13-45
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:87:13-45
 receiver#com.bp22intel.edgesentinel.widget.ThreatStatusWidgetReceiver
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:84:9-93:20
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:91:9-100:20
 	android:exported
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:86:13-36
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:93:13-36
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:85:13-62
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:92:13-62
 intent-filter#action:name:android.appwidget.action.APPWIDGET_UPDATE
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:87:13-89:29
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:94:13-96:29
 action#android.appwidget.action.APPWIDGET_UPDATE
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:88:17-84
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:95:17-84
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:88:25-81
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:95:25-81
 meta-data#android.appwidget.provider
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:90:13-92:69
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:97:13-99:69
 	android:resource
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:92:17-66
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:99:17-66
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:91:17-58
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:98:17-58
 meta-data#androidx.work.WorkManagerInitializer
-ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:101:13-104:39
+ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:108:13-111:39
 REJECTED from [androidx.work:work-runtime:2.10.0] /home/billperkins/.gradle/caches/transforms-4/eca6e305c9cc5b2ecca1de3a52235f02/transformed/work-runtime-2.10.0/AndroidManifest.xml:34:13-36:52
 	tools:node
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:104:17-36
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:111:17-36
 	android:value
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:103:17-49
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:110:17-49
 	android:name
-		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:102:17-68
+		ADDED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml:109:17-68
 uses-sdk
 INJECTED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/src/main/AndroidManifest.xml

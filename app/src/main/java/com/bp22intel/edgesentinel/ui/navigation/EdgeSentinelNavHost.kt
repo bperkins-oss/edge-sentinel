@@ -235,3 +235,5 @@ fun EdgeSentinelNavHost() {
         }
     }
 }
+}
+}

@@ -13,6 +13,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
 import androidx.sqlite.db.SupportSQLiteOpenHelper;
 import com.bp22intel.edgesentinel.data.local.dao.AlertDao;
 import com.bp22intel.edgesentinel.data.local.dao.AlertDao_Impl;
+import com.bp22intel.edgesentinel.data.local.dao.BaselineDao;
+import com.bp22intel.edgesentinel.data.local.dao.BaselineDao_Impl;
+import com.bp22intel.edgesentinel.data.local.dao.BleDeviceDao;
+import com.bp22intel.edgesentinel.data.local.dao.BleDeviceDao_Impl;
 import com.bp22intel.edgesentinel.data.local.dao.CellDao;
 import com.bp22intel.edgesentinel.data.local.dao.CellDao_Impl;
 import com.bp22intel.edgesentinel.data.local.dao.ScanDao;
@@ -38,17 +42,23 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
 
   private volatile ScanDao _scanDao;
 
+  private volatile BleDeviceDao _bleDeviceDao;
+
+  private volatile BaselineDao _baselineDao;
+
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(1) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(2) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `cells` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `cid` INTEGER NOT NULL, `lac_tac` INTEGER NOT NULL, `mcc` INTEGER NOT NULL, `mnc` INTEGER NOT NULL, `signal_strength` INTEGER NOT NULL, `network_type` TEXT NOT NULL, `latitude` REAL, `longitude` REAL, `first_seen` INTEGER NOT NULL, `last_seen` INTEGER NOT NULL, `times_seen` INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `alerts` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `threat_type` TEXT NOT NULL, `severity` TEXT NOT NULL, `confidence` TEXT NOT NULL, `summary` TEXT NOT NULL, `details_json` TEXT NOT NULL, `cell_id` INTEGER, `acknowledged` INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `scans` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `cell_count` INTEGER NOT NULL, `threat_level` TEXT NOT NULL, `duration_ms` INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `ble_devices` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `mac_address` TEXT NOT NULL, `advertising_data_hash` TEXT NOT NULL, `manufacturer_id` INTEGER, `device_name` TEXT, `first_seen` INTEGER NOT NULL, `last_seen` INTEGER NOT NULL, `location_clusters` TEXT NOT NULL, `seen_count` INTEGER NOT NULL, `is_tracker_type` INTEGER NOT NULL, `tracker_protocol` TEXT)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `baselines` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `radius` REAL NOT NULL, `label` TEXT, `cell_towers_json` TEXT NOT NULL, `wifi_aps_json` TEXT NOT NULL, `ble_count_min` INTEGER NOT NULL, `ble_count_max` INTEGER NOT NULL, `network_type_dist_json` TEXT NOT NULL, `observation_count` INTEGER NOT NULL, `confidence` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `day_profile_json` TEXT, `night_profile_json` TEXT)");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a9a73fef609faf1015548f211158e97e')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '844d34f04afa2d12c85139fe09f6fd73')");
       }
 
       @Override
@@ -56,6 +66,8 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
         db.execSQL("DROP TABLE IF EXISTS `cells`");
         db.execSQL("DROP TABLE IF EXISTS `alerts`");
         db.execSQL("DROP TABLE IF EXISTS `scans`");
+        db.execSQL("DROP TABLE IF EXISTS `ble_devices`");
+        db.execSQL("DROP TABLE IF EXISTS `baselines`");
         final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
         if (_callbacks != null) {
           for (RoomDatabase.Callback _callback : _callbacks) {
@@ -155,9 +167,56 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
                   + " Expected:\n" + _infoScans + "\n"
                   + " Found:\n" + _existingScans);
         }
+        final HashMap<String, TableInfo.Column> _columnsBleDevices = new HashMap<String, TableInfo.Column>(11);
+        _columnsBleDevices.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBleDevices.put("mac_address", new TableInfo.Column("mac_address", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBleDevices.put("advertising_data_hash", new TableInfo.Column("advertising_data_hash", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBleDevices.put("manufacturer_id", new TableInfo.Column("manufacturer_id", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBleDevices.put("device_name", new TableInfo.Column("device_name", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBleDevices.put("first_seen", new TableInfo.Column("first_seen", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBleDevices.put("last_seen", new TableInfo.Column("last_seen", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBleDevices.put("location_clusters", new TableInfo.Column("location_clusters", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBleDevices.put("seen_count", new TableInfo.Column("seen_count", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBleDevices.put("is_tracker_type", new TableInfo.Column("is_tracker_type", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBleDevices.put("tracker_protocol", new TableInfo.Column("tracker_protocol", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysBleDevices = new HashSet<TableInfo.ForeignKey>(0);
+        final HashSet<TableInfo.Index> _indicesBleDevices = new HashSet<TableInfo.Index>(0);
+        final TableInfo _infoBleDevices = new TableInfo("ble_devices", _columnsBleDevices, _foreignKeysBleDevices, _indicesBleDevices);
+        final TableInfo _existingBleDevices = TableInfo.read(db, "ble_devices");
+        if (!_infoBleDevices.equals(_existingBleDevices)) {
+          return new RoomOpenHelper.ValidationResult(false, "ble_devices(com.bp22intel.edgesentinel.data.local.entity.BleDeviceEntity).\n"
+                  + " Expected:\n" + _infoBleDevices + "\n"
+                  + " Found:\n" + _existingBleDevices);
+        }
+        final HashMap<String, TableInfo.Column> _columnsBaselines = new HashMap<String, TableInfo.Column>(16);
+        _columnsBaselines.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("latitude", new TableInfo.Column("latitude", "REAL", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("longitude", new TableInfo.Column("longitude", "REAL", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("radius", new TableInfo.Column("radius", "REAL", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("label", new TableInfo.Column("label", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("cell_towers_json", new TableInfo.Column("cell_towers_json", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("wifi_aps_json", new TableInfo.Column("wifi_aps_json", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("ble_count_min", new TableInfo.Column("ble_count_min", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("ble_count_max", new TableInfo.Column("ble_count_max", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("network_type_dist_json", new TableInfo.Column("network_type_dist_json", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("observation_count", new TableInfo.Column("observation_count", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("confidence", new TableInfo.Column("confidence", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("created_at", new TableInfo.Column("created_at", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("updated_at", new TableInfo.Column("updated_at", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("day_profile_json", new TableInfo.Column("day_profile_json", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBaselines.put("night_profile_json", new TableInfo.Column("night_profile_json", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysBaselines = new HashSet<TableInfo.ForeignKey>(0);
+        final HashSet<TableInfo.Index> _indicesBaselines = new HashSet<TableInfo.Index>(0);
+        final TableInfo _infoBaselines = new TableInfo("baselines", _columnsBaselines, _foreignKeysBaselines, _indicesBaselines);
+        final TableInfo _existingBaselines = TableInfo.read(db, "baselines");
+        if (!_infoBaselines.equals(_existingBaselines)) {
+          return new RoomOpenHelper.ValidationResult(false, "baselines(com.bp22intel.edgesentinel.data.local.entity.BaselineEntity).\n"
+                  + " Expected:\n" + _infoBaselines + "\n"
+                  + " Found:\n" + _existingBaselines);
+        }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "a9a73fef609faf1015548f211158e97e", "80d68c8d47b143de3908d9c1830f24fc");
+    }, "844d34f04afa2d12c85139fe09f6fd73", "1204de59c403932bb87482d042b6264e");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;
@@ -168,7 +227,7 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
   protected InvalidationTracker createInvalidationTracker() {
     final HashMap<String, String> _shadowTablesMap = new HashMap<String, String>(0);
     final HashMap<String, Set<String>> _viewTables = new HashMap<String, Set<String>>(0);
-    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "cells","alerts","scans");
+    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "cells","alerts","scans","ble_devices","baselines");
   }
 
   @Override
@@ -180,6 +239,8 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
       _db.execSQL("DELETE FROM `cells`");
       _db.execSQL("DELETE FROM `alerts`");
       _db.execSQL("DELETE FROM `scans`");
+      _db.execSQL("DELETE FROM `ble_devices`");
+      _db.execSQL("DELETE FROM `baselines`");
       super.setTransactionSuccessful();
     } finally {
       super.endTransaction();
@@ -197,6 +258,8 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
     _typeConvertersMap.put(CellDao.class, CellDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(AlertDao.class, AlertDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(ScanDao.class, ScanDao_Impl.getRequiredConverters());
+    _typeConvertersMap.put(BleDeviceDao.class, BleDeviceDao_Impl.getRequiredConverters());
+    _typeConvertersMap.put(BaselineDao.class, BaselineDao_Impl.getRequiredConverters());
     return _typeConvertersMap;
   }
 
@@ -253,6 +316,34 @@ public final class EdgeSentinelDatabase_Impl extends EdgeSentinelDatabase {
           _scanDao = new ScanDao_Impl(this);
         }
         return _scanDao;
+      }
+    }
+  }
+
+  @Override
+  public BleDeviceDao bleDeviceDao() {
+    if (_bleDeviceDao != null) {
+      return _bleDeviceDao;
+    } else {
+      synchronized(this) {
+        if(_bleDeviceDao == null) {
+          _bleDeviceDao = new BleDeviceDao_Impl(this);
+        }
+        return _bleDeviceDao;
+      }
+    }
+  }
+
+  @Override
+  public BaselineDao baselineDao() {
+    if (_baselineDao != null) {
+      return _baselineDao;
+    } else {
+      synchronized(this) {
+        if(_baselineDao == null) {
+          _baselineDao = new BaselineDao_Impl(this);
+        }
+        return _baselineDao;
       }
     }
   }

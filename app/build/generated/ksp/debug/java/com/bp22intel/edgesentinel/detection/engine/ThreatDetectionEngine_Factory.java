@@ -1,5 +1,6 @@
 package com.bp22intel.edgesentinel.detection.engine;
 
+import com.bp22intel.edgesentinel.baseline.BaselineManager;
 import com.bp22intel.edgesentinel.detection.detectors.ThreatDetector;
 import com.bp22intel.edgesentinel.detection.scoring.ThreatScorer;
 import dagger.internal.DaggerGenerated;
@@ -29,24 +30,28 @@ public final class ThreatDetectionEngine_Factory implements Factory<ThreatDetect
 
   private final Provider<ThreatScorer> scorerProvider;
 
+  private final Provider<BaselineManager> baselineManagerProvider;
+
   public ThreatDetectionEngine_Factory(Provider<Set<ThreatDetector>> detectorsProvider,
-      Provider<ThreatScorer> scorerProvider) {
+      Provider<ThreatScorer> scorerProvider, Provider<BaselineManager> baselineManagerProvider) {
     this.detectorsProvider = detectorsProvider;
     this.scorerProvider = scorerProvider;
+    this.baselineManagerProvider = baselineManagerProvider;
   }
 
   @Override
   public ThreatDetectionEngine get() {
-    return newInstance(detectorsProvider.get(), scorerProvider.get());
+    return newInstance(detectorsProvider.get(), scorerProvider.get(), baselineManagerProvider.get());
   }
 
   public static ThreatDetectionEngine_Factory create(
-      Provider<Set<ThreatDetector>> detectorsProvider, Provider<ThreatScorer> scorerProvider) {
-    return new ThreatDetectionEngine_Factory(detectorsProvider, scorerProvider);
+      Provider<Set<ThreatDetector>> detectorsProvider, Provider<ThreatScorer> scorerProvider,
+      Provider<BaselineManager> baselineManagerProvider) {
+    return new ThreatDetectionEngine_Factory(detectorsProvider, scorerProvider, baselineManagerProvider);
   }
 
   public static ThreatDetectionEngine newInstance(Set<ThreatDetector> detectors,
-      ThreatScorer scorer) {
-    return new ThreatDetectionEngine(detectors, scorer);
+      ThreatScorer scorer, BaselineManager baselineManager) {
+    return new ThreatDetectionEngine(detectors, scorer, baselineManager);
   }
 }

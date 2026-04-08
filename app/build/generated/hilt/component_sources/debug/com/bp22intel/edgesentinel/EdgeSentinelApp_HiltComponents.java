@@ -9,10 +9,14 @@ import com.bp22intel.edgesentinel.service.MonitoringService_GeneratedInjector;
 import com.bp22intel.edgesentinel.service.ScanWorker_HiltModule;
 import com.bp22intel.edgesentinel.ui.alerts.AlertDetailViewModel_HiltModules;
 import com.bp22intel.edgesentinel.ui.alerts.AlertsViewModel_HiltModules;
+import com.bp22intel.edgesentinel.ui.baseline.BaselineViewModel_HiltModules;
+import com.bp22intel.edgesentinel.ui.bluetooth.BluetoothViewModel_HiltModules;
 import com.bp22intel.edgesentinel.ui.cellinfo.CellInfoViewModel_HiltModules;
 import com.bp22intel.edgesentinel.ui.dashboard.DashboardViewModel_HiltModules;
+import com.bp22intel.edgesentinel.ui.network.NetworkIntegrityViewModel_HiltModules;
 import com.bp22intel.edgesentinel.ui.onboarding.OnboardingViewModel_HiltModules;
 import com.bp22intel.edgesentinel.ui.settings.SettingsViewModel_HiltModules;
+import com.bp22intel.edgesentinel.ui.wifi.WifiViewModel_HiltModules;
 import dagger.Binds;
 import dagger.Component;
 import dagger.Module;
@@ -171,6 +175,8 @@ public final class EdgeSentinelApp_HiltComponents {
       modules = {
           AlertDetailViewModel_HiltModules.KeyModule.class,
           AlertsViewModel_HiltModules.KeyModule.class,
+          BaselineViewModel_HiltModules.KeyModule.class,
+          BluetoothViewModel_HiltModules.KeyModule.class,
           CellInfoViewModel_HiltModules.KeyModule.class,
           DashboardViewModel_HiltModules.KeyModule.class,
           ActivityCBuilderModule.class,
@@ -178,8 +184,10 @@ public final class EdgeSentinelApp_HiltComponents {
           HiltWrapper_ActivityRetainedComponentManager_LifecycleModule.class,
           HiltWrapper_SavedStateHandleModule.class,
           MeshViewModel_HiltModules.KeyModule.class,
+          NetworkIntegrityViewModel_HiltModules.KeyModule.class,
           OnboardingViewModel_HiltModules.KeyModule.class,
-          SettingsViewModel_HiltModules.KeyModule.class
+          SettingsViewModel_HiltModules.KeyModule.class,
+          WifiViewModel_HiltModules.KeyModule.class
       }
   )
   @ActivityRetainedScoped
@@ -217,12 +225,16 @@ public final class EdgeSentinelApp_HiltComponents {
       modules = {
           AlertDetailViewModel_HiltModules.BindsModule.class,
           AlertsViewModel_HiltModules.BindsModule.class,
+          BaselineViewModel_HiltModules.BindsModule.class,
+          BluetoothViewModel_HiltModules.BindsModule.class,
           CellInfoViewModel_HiltModules.BindsModule.class,
           DashboardViewModel_HiltModules.BindsModule.class,
           HiltWrapper_HiltViewModelFactory_ViewModelModule.class,
           MeshViewModel_HiltModules.BindsModule.class,
+          NetworkIntegrityViewModel_HiltModules.BindsModule.class,
           OnboardingViewModel_HiltModules.BindsModule.class,
-          SettingsViewModel_HiltModules.BindsModule.class
+          SettingsViewModel_HiltModules.BindsModule.class,
+          WifiViewModel_HiltModules.BindsModule.class
       }
   )
   @ViewModelScoped

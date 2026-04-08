@@ -28,6 +28,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.bp22intel.edgesentinel.data.local.EdgeSentinelDatabase
 import com.bp22intel.edgesentinel.data.local.dao.AlertDao
 import com.bp22intel.edgesentinel.data.local.dao.BaselineDao
+import com.bp22intel.edgesentinel.data.local.dao.BleDeviceDao
 import com.bp22intel.edgesentinel.data.local.dao.CellDao
 import com.bp22intel.edgesentinel.data.local.dao.ScanDao
 import com.bp22intel.edgesentinel.data.sensor.CellInfoCollector
@@ -92,6 +93,9 @@ object AppModule {
 
     @Provides
     fun provideBaselineDao(db: EdgeSentinelDatabase): BaselineDao = db.baselineDao()
+
+    @Provides
+    fun provideBleDeviceDao(db: EdgeSentinelDatabase): BleDeviceDao = db.bleDeviceDao()
 
     @Provides
     @Singleton

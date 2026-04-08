@@ -1,3 +1,2 @@
 ninja: Entering directory `/home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/.cxx/Debug/1e5903s4/arm64-v8a'
-[1/2] Building C object CMakeFiles/diag-helper.dir/diag-helper.c.o
-[2/2] Linking C shared library /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/build/intermediates/cxx/Debug/1e5903s4/obj/arm64-v8a/libdiag-helper.so
+ninja: no work to do.

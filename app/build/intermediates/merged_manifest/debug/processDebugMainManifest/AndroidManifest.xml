@@ -27,6 +27,15 @@
     <!-- Network state -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!--
+         Internet: ONLY used for DNS/TLS/captive-portal integrity checks.
+         These checks connect to well-known public resolvers (1.1.1.1, 8.8.8.8, 9.9.9.9)
+         and HTTPS endpoints (Google, Cloudflare) to validate DNS responses and TLS
+         certificate chains. NO user data, device identifiers, or telemetry is ever
+         transmitted. See detection/network/ for implementation details.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Silent SMS detection -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
 
@@ -42,7 +51,7 @@
     <!-- Auto-start monitoring on boot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- Mesh networking: BLE discovery and communication -->
+    <!-- BLE: mesh networking and tracker detection (location-associated scanning) -->
     <uses-permission
         android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
@@ -50,12 +59,10 @@
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission
-        android:name="android.permission.BLUETOOTH_SCAN"
-        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
 
-    <!-- Mesh networking: Wi-Fi Direct -->
+    <!-- WiFi threat detection + mesh networking: Wi-Fi Direct -->
     <uses-permission
         android:name="android.permission.NEARBY_WIFI_DEVICES"
         android:usesPermissionFlags="neverForLocation" />

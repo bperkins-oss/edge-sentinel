@@ -199,8 +199,7 @@ fun TravelModeScreen(
                 SectionHeader(title = "Security Advice")
             }
 
-            val advice = remember(profile) { TravelAdvisor.getEntryBriefing(profile) }
-            items(advice) { item ->
+            items(TravelAdvisor.getEntryBriefing(profile)) { item ->
                 AdviceCard(advice = item)
             }
         }
