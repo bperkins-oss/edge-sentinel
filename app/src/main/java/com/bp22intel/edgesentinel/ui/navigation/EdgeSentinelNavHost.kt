@@ -51,6 +51,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bp22intel.edgesentinel.ui.bluetooth.BluetoothScreen
 import com.bp22intel.edgesentinel.ui.about.AboutScreen
+import com.bp22intel.edgesentinel.ui.baseline.BaselineScreen
 import com.bp22intel.edgesentinel.ui.dashboard.DashboardScreen
 import com.bp22intel.edgesentinel.ui.alerts.AlertListScreen
 import com.bp22intel.edgesentinel.ui.alerts.AlertDetailScreen
@@ -75,6 +76,7 @@ object Routes {
     const val MESH = "mesh"
     const val NETWORK = "network"
     const val SETTINGS = "settings"
+    const val BASELINE = "baseline"
     const val ABOUT = "about"
 
     fun alertDetail(alertId: Long): String = "alert_detail/$alertId"
@@ -104,9 +106,10 @@ fun EdgeSentinelNavHost() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    // Hide bottom bar on onboarding, about, and alert detail screens
+    // Hide bottom bar on onboarding, about, baseline, and alert detail screens
     val showBottomBar = currentDestination?.route?.let { route ->
-        route != Routes.ONBOARDING && route != Routes.ABOUT && route != Routes.ALERT_DETAIL
+        route != Routes.ONBOARDING && route != Routes.ABOUT &&
+                route != Routes.ALERT_DETAIL && route != Routes.BASELINE
     } ?: true
 
     Scaffold(
@@ -202,6 +205,11 @@ fun EdgeSentinelNavHost() {
                     onNavigateToAbout = {
                         navController.navigate(Routes.ABOUT)
                     }
+                )
+            }
+            composable(Routes.BASELINE) {
+                BaselineScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable(Routes.ABOUT) {

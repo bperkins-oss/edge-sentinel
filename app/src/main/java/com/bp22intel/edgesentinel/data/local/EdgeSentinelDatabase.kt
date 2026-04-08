@@ -27,6 +27,11 @@ import com.bp22intel.edgesentinel.data.local.dao.CellDao
 import com.bp22intel.edgesentinel.data.local.dao.ScanDao
 import com.bp22intel.edgesentinel.data.local.entity.AlertEntity
 import com.bp22intel.edgesentinel.data.local.entity.BleDeviceEntity
+import com.bp22intel.edgesentinel.data.local.dao.BaselineDao
+import com.bp22intel.edgesentinel.data.local.dao.CellDao
+import com.bp22intel.edgesentinel.data.local.dao.ScanDao
+import com.bp22intel.edgesentinel.data.local.entity.AlertEntity
+import com.bp22intel.edgesentinel.data.local.entity.BaselineEntity
 import com.bp22intel.edgesentinel.data.local.entity.CellTowerEntity
 import com.bp22intel.edgesentinel.data.local.entity.ScanEntity
 
@@ -36,6 +41,7 @@ import com.bp22intel.edgesentinel.data.local.entity.ScanEntity
         AlertEntity::class,
         ScanEntity::class,
         BleDeviceEntity::class
+        BaselineEntity::class
     ],
     version = 2,
     exportSchema = true
@@ -46,4 +52,5 @@ abstract class EdgeSentinelDatabase : RoomDatabase() {
     abstract fun alertDao(): AlertDao
     abstract fun scanDao(): ScanDao
     abstract fun bleDeviceDao(): BleDeviceDao
+    abstract fun baselineDao(): BaselineDao
 }

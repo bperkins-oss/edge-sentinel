@@ -23,8 +23,11 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.bp22intel.edgesentinel.data.local.EdgeSentinelDatabase
 import com.bp22intel.edgesentinel.data.local.dao.AlertDao
+import com.bp22intel.edgesentinel.data.local.dao.BaselineDao
 import com.bp22intel.edgesentinel.data.local.dao.CellDao
 import com.bp22intel.edgesentinel.data.local.dao.ScanDao
 import com.bp22intel.edgesentinel.data.sensor.CellInfoCollector
@@ -36,6 +39,31 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+
+private val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `baselines` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `latitude` REAL NOT NULL,
+                `longitude` REAL NOT NULL,
+                `radius` REAL NOT NULL,
+                `label` TEXT,
+                `cell_towers_json` TEXT NOT NULL,
+                `wifi_aps_json` TEXT NOT NULL,
+                `ble_count_min` INTEGER NOT NULL,
+                `ble_count_max` INTEGER NOT NULL,
+                `network_type_dist_json` TEXT NOT NULL,
+                `observation_count` INTEGER NOT NULL,
+                `confidence` TEXT NOT NULL,
+                `created_at` INTEGER NOT NULL,
+                `updated_at` INTEGER NOT NULL,
+                `day_profile_json` TEXT,
+                `night_profile_json` TEXT
+            )
+        """.trimIndent())
+    }
+}
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -50,7 +78,7 @@ object AppModule {
             context,
             EdgeSentinelDatabase::class.java,
             "edge_sentinel.db"
-        ).build()
+        ).addMigrations(MIGRATION_1_2).build()
     }
 
     @Provides
@@ -61,6 +89,9 @@ object AppModule {
 
     @Provides
     fun provideScanDao(db: EdgeSentinelDatabase): ScanDao = db.scanDao()
+
+    @Provides
+    fun provideBaselineDao(db: EdgeSentinelDatabase): BaselineDao = db.baselineDao()
 
     @Provides
     @Singleton
