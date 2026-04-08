@@ -10,8 +10,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.bp22intel.edgesentinel.debug"
-    android:versionCode="25"
-    android:versionName="2.0.25-debug" >
+    android:versionCode="26"
+    android:versionName="2.0.26-debug" >
 
     <uses-sdk
         android:minSdkVersion="26"
@@ -43,9 +43,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Background monitoring service -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- Foreground service permissions removed — no longer needed -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- Auto-start monitoring on boot -->
@@ -72,6 +70,8 @@
     <uses-feature
         android:name="android.hardware.bluetooth_le"
         android:required="false" />
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <permission
         android:name="com.bp22intel.edgesentinel.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
@@ -107,10 +107,8 @@
             android:name="com.bp22intel.edgesentinel.service.MonitoringService"
             android:exported="false"
             android:foregroundServiceType="specialUse" />
-        <service
-            android:name="com.bp22intel.edgesentinel.mesh.MeshService"
-            android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+
+        <!-- MeshService removed — BLE discovery runs directly from ViewModel now -->
 
         <receiver
             android:name="com.bp22intel.edgesentinel.widget.ThreatStatusWidgetReceiver"

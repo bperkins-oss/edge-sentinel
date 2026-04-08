@@ -49,8 +49,8 @@ class MeshDiscovery(
 ) {
     companion object {
         private const val TAG = "MeshDiscovery"
-        val MESH_SERVICE_UUID: UUID = UUID.fromString("ed9e5e71-1ne1-4d3a-b5c7-mesh00000001")
-        val MESH_CHAR_UUID: UUID = UUID.fromString("ed9e5e71-1ne1-4d3a-b5c7-mesh00000002")
+        val MESH_SERVICE_UUID: UUID = UUID.fromString("ed9e5e71-1ae1-4d3a-b5c7-ae5b00000001")
+        val MESH_CHAR_UUID: UUID = UUID.fromString("ed9e5e71-1ae1-4d3a-b5c7-ae5b00000002")
     }
 
     private val bluetoothManager =

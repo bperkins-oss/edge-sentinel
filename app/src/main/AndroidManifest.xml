@@ -35,9 +35,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Background monitoring service -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- Foreground service permissions removed — no longer needed -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- Auto-start monitoring on boot -->
@@ -83,10 +81,7 @@
             android:exported="false"
             android:foregroundServiceType="specialUse" />
 
-        <service
-            android:name=".mesh.MeshService"
-            android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+        <!-- MeshService removed — BLE discovery runs directly from ViewModel now -->
 
         <receiver
             android:name=".widget.ThreatStatusWidgetReceiver"
