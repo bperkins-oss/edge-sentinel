@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Share
@@ -61,6 +62,7 @@ import com.bp22intel.edgesentinel.ui.network.NetworkIntegrityScreen
 import com.bp22intel.edgesentinel.ui.onboarding.OnboardingScreen
 import com.bp22intel.edgesentinel.ui.settings.SettingsScreen
 import com.bp22intel.edgesentinel.ui.wifi.WifiScreen
+import com.bp22intel.edgesentinel.ui.travel.TravelModeScreen
 
 /**
  * Navigation routes for the app.
@@ -73,6 +75,7 @@ object Routes {
     const val CELL_INFO = "cell_info"
     const val WIFI = "wifi"
     const val BLUETOOTH = "bluetooth"
+    const val TRAVEL = "travel"
     const val MESH = "mesh"
     const val NETWORK = "network"
     const val SETTINGS = "settings"
@@ -95,6 +98,7 @@ enum class BottomNavTab(
     CELL_INFO(Routes.CELL_INFO, "Cell Info", Icons.Default.SignalCellular4Bar),
     WIFI(Routes.WIFI, "WiFi", Icons.Default.Wifi),
     BLUETOOTH(Routes.BLUETOOTH, "BLE", Icons.Default.Bluetooth),
+    TRAVEL(Routes.TRAVEL, "Travel", Icons.Default.Flight),
     MESH(Routes.MESH, "Mesh", Icons.Default.Share),
     NETWORK(Routes.NETWORK, "Network", Icons.Default.Security),
     SETTINGS(Routes.SETTINGS, "Settings", Icons.Default.Settings)
@@ -193,6 +197,8 @@ fun EdgeSentinelNavHost() {
                 WifiScreen()
             composable(Routes.BLUETOOTH) {
                 BluetoothScreen()
+            composable(Routes.TRAVEL) {
+                TravelModeScreen()
             }
             composable(Routes.MESH) {
                 MeshScreen()
@@ -204,6 +210,15 @@ fun EdgeSentinelNavHost() {
                 SettingsScreen(
                     onNavigateToAbout = {
                         navController.navigate(Routes.ABOUT)
+                    },
+                    onNavigateToTravel = {
+                        navController.navigate(Routes.TRAVEL) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 )
             }

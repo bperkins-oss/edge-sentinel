@@ -59,7 +59,8 @@ import com.bp22intel.edgesentinel.ui.theme.TextSecondary
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
-    onNavigateToAbout: () -> Unit = {}
+    onNavigateToAbout: () -> Unit = {},
+    onNavigateToTravel: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val isMonitoringEnabled by viewModel.isMonitoringEnabled.collectAsState()
@@ -202,6 +203,24 @@ fun SettingsScreen(
                 onCheckedChange = { viewModel.setAdvancedMode(it) },
                 enabled = isRooted
             )
+        }
+
+        // Travel Mode
+        item {
+            SectionHeader(title = "Travel Mode")
+        }
+
+        item {
+            Button(
+                onClick = onNavigateToTravel,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SurfaceVariant,
+                    contentColor = TextPrimary
+                )
+            ) {
+                Text(text = "Travel Mode Settings")
+            }
         }
 
         // Export logs
