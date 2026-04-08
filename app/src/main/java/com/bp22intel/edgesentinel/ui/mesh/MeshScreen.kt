@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -210,6 +211,33 @@ fun MeshScreen(
                 onStart = viewModel::startMesh,
                 onStop = viewModel::stopMesh
             ) 
+        }
+
+        // Error message
+        uiState.error?.let { errorMsg ->
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFEF4444).copy(alpha = 0.15f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = errorMsg,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFEF4444),
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = { viewModel.dismissError() }) {
+                            Text("Dismiss", color = Color(0xFFEF4444))
+                        }
+                    }
+                }
+            }
         }
         
         // Nearby Peers Section
