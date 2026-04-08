@@ -121,6 +121,7 @@ fun DashboardScreen(
     val posture by viewModel.dashboardPosture.collectAsState()
     val fusedAssessment by viewModel.fusedAssessment.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val situationBrief by viewModel.situationBrief.collectAsState()
 
     // Haptic feedback on threat level changes
     val hapticFeedback = LocalHapticFeedback.current
@@ -161,13 +162,11 @@ fun DashboardScreen(
                 FusedThreatHeader(posture = posture)
             }
 
-            // AI Situation Analysis — the headline insight
+            // AI Situation Analysis — real ThreatAnalyst output
             item {
                 SituationAnalysisCard(
-                    posture = posture,
-                    alertCount = recentAlerts.size,
-                    fusedNarrative = if (fusedAssessment.contributingSignals.isNotEmpty())
-                        fusedAssessment.narrative else null
+                    brief = situationBrief,
+                    posture = posture
                 )
             }
 
@@ -522,42 +521,21 @@ private fun SensorMiniIndicator(score: SensorCategoryScore, onClick: () -> Unit 
 
 @Composable
 private fun SituationAnalysisCard(
-    posture: DashboardPosture,
-    alertCount: Int,
-    fusedNarrative: String?
+    brief: com.bp22intel.edgesentinel.analysis.SituationBrief,
+    posture: DashboardPosture
 ) {
-    val color = fusedLevelColor(posture.level)
-    val (headline, detail, recommendation) = when {
-        alertCount == 0 && posture.level == FusedThreatLevel.CLEAR -> Triple(
-            "All Clear",
-            "No threats detected across any sensor. Your cellular, WiFi, Bluetooth, and network connections appear normal for this location.",
-            "No action needed. Monitoring continues in the background."
-        )
-        posture.level == FusedThreatLevel.ELEVATED -> Triple(
-            "Elevated Activity Detected",
-            fusedNarrative ?: "Multiple sensors are showing unusual activity. This could indicate surveillance equipment nearby or unusual network behavior worth monitoring.",
-            "Avoid sensitive calls and texts until the situation resolves. Consider moving to a different location."
-        )
-        posture.level == FusedThreatLevel.DANGEROUS -> Triple(
-            "High Threat Detected",
-            fusedNarrative ?: "Significant anomalies detected across multiple sensors. The pattern is consistent with active interception or surveillance equipment in your vicinity.",
-            "Do not make sensitive calls. Move to a different location. If this persists, the threat is likely following you."
-        )
-        posture.level == FusedThreatLevel.CRITICAL -> Triple(
-            "Critical — Active Threat",
-            fusedNarrative ?: "Multiple strong indicators of active surveillance or interception. Your communications may be compromised.",
-            "Stop all sensitive communications immediately. Power off your device if possible. Move to a secure location."
-        )
-        alertCount > 0 -> Triple(
-            "$alertCount Alert${if (alertCount != 1) "s" else ""} Active",
-            fusedNarrative ?: "Potential threats have been detected. Review the alerts below for details.",
-            "Review each alert and follow the recommended actions."
-        )
-        else -> Triple(
-            "Monitoring Active",
-            "Edge Sentinel is scanning all five detection layers. No significant activity detected.",
-            "No action needed."
-        )
+    val color = when (brief.overallRisk) {
+        com.bp22intel.edgesentinel.analysis.RiskLevel.CRITICAL -> StatusDangerous
+        com.bp22intel.edgesentinel.analysis.RiskLevel.HIGH -> StatusElevated
+        com.bp22intel.edgesentinel.analysis.RiskLevel.MEDIUM -> StatusElevated
+        com.bp22intel.edgesentinel.analysis.RiskLevel.LOW -> StatusClear
+    }
+
+    val headline = when (brief.overallRisk) {
+        com.bp22intel.edgesentinel.analysis.RiskLevel.CRITICAL -> "Critical Threat"
+        com.bp22intel.edgesentinel.analysis.RiskLevel.HIGH -> "High Concern"
+        com.bp22intel.edgesentinel.analysis.RiskLevel.MEDIUM -> "Elevated Activity"
+        com.bp22intel.edgesentinel.analysis.RiskLevel.LOW -> if (brief.allClear) "All Clear" else "Monitoring"
     }
 
     Card(
@@ -573,6 +551,7 @@ private fun SituationAnalysisCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -601,37 +580,76 @@ private fun SituationAnalysisCard(
                 }
             }
 
+            // Main situation summary from ThreatAnalyst
             Text(
-                text = detail,
+                text = brief.summary,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
-                lineHeight = MaterialTheme.typography.bodySmall.lineHeight
+                color = TextPrimary,
+                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
             )
 
-            // Recommendation
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = Surface
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(10.dp),
-                    verticalAlignment = Alignment.Top
+            // Top concerns — each one is a specific finding
+            if (brief.topConcerns.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                brief.topConcerns.forEachIndexed { index, concern ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            text = "\u2022",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (index == 0) color else TextSecondary,
+                            modifier = Modifier.padding(end = 6.dp, top = 1.dp)
+                        )
+                        Text(
+                            text = concern,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (index == 0) TextPrimary else TextSecondary,
+                            lineHeight = MaterialTheme.typography.bodySmall.lineHeight
+                        )
+                    }
+                }
+            }
+
+            // Recommendations
+            if (brief.recommendations.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = Surface
+                    ),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Shield,
-                        contentDescription = null,
-                        tint = AccentBlue,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = recommendation,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "RECOMMENDED ACTIONS",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = AccentBlue,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                        brief.recommendations.forEach { rec ->
+                            Row(verticalAlignment = Alignment.Top) {
+                                Icon(
+                                    imageVector = Icons.Filled.Shield,
+                                    contentDescription = null,
+                                    tint = AccentBlue,
+                                    modifier = Modifier.size(14.dp).padding(top = 2.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = rec,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

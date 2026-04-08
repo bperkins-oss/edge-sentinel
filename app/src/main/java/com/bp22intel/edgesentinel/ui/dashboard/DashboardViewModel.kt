@@ -52,7 +52,8 @@ class DashboardViewModel @Inject constructor(
     private val demoDataGenerator: DemoDataGenerator,
     private val cellInfoCollector: CellInfoCollector,
     private val sensorFusionEngine: SensorFusionEngine,
-    private val overallThreatDashboard: OverallThreatDashboard
+    private val overallThreatDashboard: OverallThreatDashboard,
+    private val threatAnalyst: com.bp22intel.edgesentinel.analysis.ThreatAnalyst
 ) : ViewModel() {
 
     val currentThreatLevel: StateFlow<ThreatLevel> = MonitoringService.threatLevel
@@ -83,6 +84,26 @@ class DashboardViewModel @Inject constructor(
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    /** AI situation brief — real analysis from ThreatAnalyst engine */
+    val situationBrief: StateFlow<com.bp22intel.edgesentinel.analysis.SituationBrief> =
+        kotlinx.coroutines.flow.combine(recentAlerts, _currentCell) { alerts, cell ->
+            threatAnalyst.analyzeSituation(
+                alerts = alerts,
+                cellInfo = cell,
+                isMoving = false // TODO: wire to motion sensor
+            )
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            com.bp22intel.edgesentinel.analysis.SituationBrief(
+                summary = "Initializing analysis...",
+                overallRisk = com.bp22intel.edgesentinel.analysis.RiskLevel.LOW,
+                topConcerns = emptyList(),
+                recommendations = emptyList(),
+                allClear = true
+            )
+        )
 
     init {
         viewModelScope.launch {

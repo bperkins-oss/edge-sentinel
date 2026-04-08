@@ -1,5 +1,6 @@
 package com.bp22intel.edgesentinel.ui.dashboard;
 
+import com.bp22intel.edgesentinel.analysis.ThreatAnalyst;
 import com.bp22intel.edgesentinel.data.sensor.CellInfoCollector;
 import com.bp22intel.edgesentinel.detection.engine.DemoDataGenerator;
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository;
@@ -43,13 +44,16 @@ public final class DashboardViewModel_Factory implements Factory<DashboardViewMo
 
   private final Provider<OverallThreatDashboard> overallThreatDashboardProvider;
 
+  private final Provider<ThreatAnalyst> threatAnalystProvider;
+
   public DashboardViewModel_Factory(Provider<AlertRepository> alertRepositoryProvider,
       Provider<CellRepository> cellRepositoryProvider,
       Provider<ScanRepository> scanRepositoryProvider,
       Provider<DemoDataGenerator> demoDataGeneratorProvider,
       Provider<CellInfoCollector> cellInfoCollectorProvider,
       Provider<SensorFusionEngine> sensorFusionEngineProvider,
-      Provider<OverallThreatDashboard> overallThreatDashboardProvider) {
+      Provider<OverallThreatDashboard> overallThreatDashboardProvider,
+      Provider<ThreatAnalyst> threatAnalystProvider) {
     this.alertRepositoryProvider = alertRepositoryProvider;
     this.cellRepositoryProvider = cellRepositoryProvider;
     this.scanRepositoryProvider = scanRepositoryProvider;
@@ -57,11 +61,12 @@ public final class DashboardViewModel_Factory implements Factory<DashboardViewMo
     this.cellInfoCollectorProvider = cellInfoCollectorProvider;
     this.sensorFusionEngineProvider = sensorFusionEngineProvider;
     this.overallThreatDashboardProvider = overallThreatDashboardProvider;
+    this.threatAnalystProvider = threatAnalystProvider;
   }
 
   @Override
   public DashboardViewModel get() {
-    return newInstance(alertRepositoryProvider.get(), cellRepositoryProvider.get(), scanRepositoryProvider.get(), demoDataGeneratorProvider.get(), cellInfoCollectorProvider.get(), sensorFusionEngineProvider.get(), overallThreatDashboardProvider.get());
+    return newInstance(alertRepositoryProvider.get(), cellRepositoryProvider.get(), scanRepositoryProvider.get(), demoDataGeneratorProvider.get(), cellInfoCollectorProvider.get(), sensorFusionEngineProvider.get(), overallThreatDashboardProvider.get(), threatAnalystProvider.get());
   }
 
   public static DashboardViewModel_Factory create(Provider<AlertRepository> alertRepositoryProvider,
@@ -70,14 +75,16 @@ public final class DashboardViewModel_Factory implements Factory<DashboardViewMo
       Provider<DemoDataGenerator> demoDataGeneratorProvider,
       Provider<CellInfoCollector> cellInfoCollectorProvider,
       Provider<SensorFusionEngine> sensorFusionEngineProvider,
-      Provider<OverallThreatDashboard> overallThreatDashboardProvider) {
-    return new DashboardViewModel_Factory(alertRepositoryProvider, cellRepositoryProvider, scanRepositoryProvider, demoDataGeneratorProvider, cellInfoCollectorProvider, sensorFusionEngineProvider, overallThreatDashboardProvider);
+      Provider<OverallThreatDashboard> overallThreatDashboardProvider,
+      Provider<ThreatAnalyst> threatAnalystProvider) {
+    return new DashboardViewModel_Factory(alertRepositoryProvider, cellRepositoryProvider, scanRepositoryProvider, demoDataGeneratorProvider, cellInfoCollectorProvider, sensorFusionEngineProvider, overallThreatDashboardProvider, threatAnalystProvider);
   }
 
   public static DashboardViewModel newInstance(AlertRepository alertRepository,
       CellRepository cellRepository, ScanRepository scanRepository,
       DemoDataGenerator demoDataGenerator, CellInfoCollector cellInfoCollector,
-      SensorFusionEngine sensorFusionEngine, OverallThreatDashboard overallThreatDashboard) {
-    return new DashboardViewModel(alertRepository, cellRepository, scanRepository, demoDataGenerator, cellInfoCollector, sensorFusionEngine, overallThreatDashboard);
+      SensorFusionEngine sensorFusionEngine, OverallThreatDashboard overallThreatDashboard,
+      ThreatAnalyst threatAnalyst) {
+    return new DashboardViewModel(alertRepository, cellRepository, scanRepository, demoDataGenerator, cellInfoCollector, sensorFusionEngine, overallThreatDashboard, threatAnalyst);
   }
 }
