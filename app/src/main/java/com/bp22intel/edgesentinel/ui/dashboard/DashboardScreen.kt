@@ -18,6 +18,7 @@
 
 package com.bp22intel.edgesentinel.ui.dashboard
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.NavigateNext
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -223,36 +225,107 @@ fun DashboardScreen(
                 )
             }
 
-            // Tools — Threat Map, Mesh, Force Scan
+            // Threat Map — full-width prominent card
             item {
-                SectionHeader(
-                    title = "Tools",
-                    actionText = null,
-                    onActionClick = {}
-                )
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigate("threat_map") },
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF0A1628)
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, AccentBlue.copy(alpha = 0.3f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    AccentBlue.copy(alpha = 0.15f),
+                                    RoundedCornerShape(12.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Radar,
+                                contentDescription = null,
+                                tint = AccentBlue,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "THREAT RADAR",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentBlue,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = "Tactical map of detected threats around you",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Filled.NavigateNext,
+                            contentDescription = "Open",
+                            tint = TextSecondary
+                        )
+                    }
+                }
             }
 
+            // Mesh Network
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigate("mesh") },
+                    colors = CardDefaults.cardColors(
+                        containerColor = Surface
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    ToolCard(
-                        icon = Icons.Filled.Map,
-                        title = "Threat Map",
-                        subtitle = "Tactical radar",
-                        tint = StatusClear,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onNavigate("threat_map") }
-                    )
-                    ToolCard(
-                        icon = Icons.Filled.People,
-                        title = "Mesh Network",
-                        subtitle = "Peer alerts",
-                        tint = Color(0xFF06B6D4),
-                        modifier = Modifier.weight(1f),
-                        onClick = { onNavigate("mesh") }
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.People,
+                            contentDescription = null,
+                            tint = Color(0xFF06B6D4),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Mesh Network",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Peer-to-peer BLE alerts",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Filled.NavigateNext,
+                            contentDescription = "Open",
+                            tint = TextSecondary
+                        )
+                    }
                 }
             }
 
@@ -500,28 +573,33 @@ private fun SituationAnalysisCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Icon(
                     imageVector = Icons.Filled.Shield,
                     contentDescription = null,
                     tint = color,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Situation Analysis",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = color,
-                    fontWeight = FontWeight.Bold
-                )
+                Column {
+                    Text(
+                        text = "AI THREAT ANALYSIS",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = color,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                    Text(
+                        text = headline,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                }
             }
-
-            Text(
-                text = headline,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
 
             Text(
                 text = detail,
