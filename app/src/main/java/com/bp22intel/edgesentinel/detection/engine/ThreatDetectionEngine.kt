@@ -18,11 +18,14 @@
 
 package com.bp22intel.edgesentinel.detection.engine
 
+import com.bp22intel.edgesentinel.baseline.BaselineManager
 import com.bp22intel.edgesentinel.detection.detectors.ThreatDetector
 import com.bp22intel.edgesentinel.detection.scoring.ThreatScorer
 import com.bp22intel.edgesentinel.domain.model.CellTower
+import com.bp22intel.edgesentinel.domain.model.Confidence
 import com.bp22intel.edgesentinel.domain.model.DetectionResult
 import com.bp22intel.edgesentinel.domain.model.DetectionSensitivity
+import com.bp22intel.edgesentinel.domain.model.ThreatType
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -39,7 +42,8 @@ import javax.inject.Singleton
 @Singleton
 class ThreatDetectionEngine @Inject constructor(
     private val detectors: Set<@JvmSuppressWildcards ThreatDetector>,
-    private val scorer: ThreatScorer
+    private val scorer: ThreatScorer,
+    private val baselineManager: BaselineManager
 ) {
 
     /**
@@ -48,15 +52,19 @@ class ThreatDetectionEngine @Inject constructor(
      * @param cells Currently visible cell towers.
      * @param history Previously observed cell towers for baseline comparison.
      * @param sensitivity Detection sensitivity level that adjusts scoring thresholds.
+     * @param latitude Current GPS latitude (optional, enables baseline comparison).
+     * @param longitude Current GPS longitude (optional, enables baseline comparison).
      * @return List of [DetectionResult] sorted by score descending (highest threat first).
      */
     suspend fun runScan(
         cells: List<CellTower>,
         history: List<CellTower>,
-        sensitivity: DetectionSensitivity = DetectionSensitivity.MEDIUM
+        sensitivity: DetectionSensitivity = DetectionSensitivity.MEDIUM,
+        latitude: Double? = null,
+        longitude: Double? = null
     ): List<DetectionResult> = coroutineScope {
         // Run all detectors in parallel
-        val results = detectors.map { detector ->
+        val detectorResults = detectors.map { detector ->
             async {
                 try {
                     detector.analyze(cells, history)
@@ -65,7 +73,39 @@ class ThreatDetectionEngine @Inject constructor(
                     null
                 }
             }
-        }.awaitAll().filterNotNull()
+        }
+
+        // Run baseline comparison in parallel with detectors
+        val baselineResult = if (latitude != null && longitude != null) {
+            async {
+                try {
+                    baselineManager.processObservation(latitude, longitude, cells)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+        } else null
+
+        val results = detectorResults.awaitAll().filterNotNull().toMutableList()
+        val anomaly = baselineResult?.await()
+
+        // Convert baseline anomaly into a DetectionResult if score is significant
+        if (anomaly != null && !anomaly.isNewLocation && anomaly.compositeScore > 0.3) {
+            val baselineDetection = DetectionResult(
+                threatType = ThreatType.SIGNAL_ANOMALY,
+                score = anomaly.compositeScore * 5.0,
+                confidence = when {
+                    anomaly.confidence.minObservations >= 20 -> Confidence.HIGH
+                    anomaly.confidence.minObservations >= 10 -> Confidence.MEDIUM
+                    else -> Confidence.LOW
+                },
+                summary = "RF environment deviates from learned baseline (%.0f%% anomaly)".format(
+                    anomaly.compositeScore * 100
+                ),
+                details = anomaly.details
+            )
+            results.add(baselineDetection)
+        }
 
         if (results.isEmpty()) return@coroutineScope emptyList()
 
@@ -74,6 +114,12 @@ class ThreatDetectionEngine @Inject constructor(
         for (result in results) {
             // Map detection results to SnoopSnitch-style coefficients
             mapToCoefficients(result, indicators)
+        }
+
+        // Feed baseline anomaly directly into the f1 fingerprint coefficient
+        if (anomaly != null && !anomaly.isNewLocation) {
+            val baselineF1 = anomaly.compositeScore * 2.0
+            indicators["f1"] = maxOf(indicators["f1"] ?: 0.0, baselineF1)
         }
 
         // Compute composite score (used for overall threat level assessment)

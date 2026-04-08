@@ -22,9 +22,11 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.bp22intel.edgesentinel.data.local.dao.AlertDao
+import com.bp22intel.edgesentinel.data.local.dao.BaselineDao
 import com.bp22intel.edgesentinel.data.local.dao.CellDao
 import com.bp22intel.edgesentinel.data.local.dao.ScanDao
 import com.bp22intel.edgesentinel.data.local.entity.AlertEntity
+import com.bp22intel.edgesentinel.data.local.entity.BaselineEntity
 import com.bp22intel.edgesentinel.data.local.entity.CellTowerEntity
 import com.bp22intel.edgesentinel.data.local.entity.ScanEntity
 
@@ -32,9 +34,10 @@ import com.bp22intel.edgesentinel.data.local.entity.ScanEntity
     entities = [
         CellTowerEntity::class,
         AlertEntity::class,
-        ScanEntity::class
+        ScanEntity::class,
+        BaselineEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -42,4 +45,5 @@ abstract class EdgeSentinelDatabase : RoomDatabase() {
     abstract fun cellDao(): CellDao
     abstract fun alertDao(): AlertDao
     abstract fun scanDao(): ScanDao
+    abstract fun baselineDao(): BaselineDao
 }
