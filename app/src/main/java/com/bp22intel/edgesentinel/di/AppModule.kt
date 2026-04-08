@@ -63,6 +63,22 @@ private val MIGRATION_1_2 = object : Migration(1, 2) {
                 `night_profile_json` TEXT
             )
         """.trimIndent())
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `ble_devices` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `mac_address` TEXT NOT NULL,
+                `advertising_data_hash` TEXT NOT NULL,
+                `manufacturer_id` INTEGER,
+                `device_name` TEXT,
+                `first_seen` INTEGER NOT NULL,
+                `last_seen` INTEGER NOT NULL,
+                `location_clusters` TEXT NOT NULL,
+                `seen_count` INTEGER NOT NULL,
+                `is_tracker_type` INTEGER NOT NULL,
+                `tracker_protocol` TEXT
+            )
+        """.trimIndent())
     }
 }
 
@@ -79,7 +95,9 @@ object AppModule {
             context,
             EdgeSentinelDatabase::class.java,
             "edge_sentinel.db"
-        ).addMigrations(MIGRATION_1_2).build()
+        ).addMigrations(MIGRATION_1_2)
+         .fallbackToDestructiveMigration()
+         .build()
     }
 
     @Provides
