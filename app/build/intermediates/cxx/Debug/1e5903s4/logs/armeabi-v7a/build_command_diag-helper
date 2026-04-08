@@ -1,4 +1,0 @@
-/home/billperkins/android-sdk/cmake/3.22.1/bin/ninja \
-  -C \
-  /home/billperkins/.openclaw/workspace/projects/edge-sentinel/edge-sentinel-app/app/.cxx/Debug/1e5903s4/armeabi-v7a \
-  diag-helper
