@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SignalCellular4Bar
 import androidx.compose.material.icons.filled.Wifi
@@ -48,6 +49,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.bp22intel.edgesentinel.ui.bluetooth.BluetoothScreen
 import com.bp22intel.edgesentinel.ui.about.AboutScreen
 import com.bp22intel.edgesentinel.ui.dashboard.DashboardScreen
 import com.bp22intel.edgesentinel.ui.alerts.AlertListScreen
@@ -69,6 +71,7 @@ object Routes {
     const val ALERT_DETAIL = "alert_detail/{alertId}"
     const val CELL_INFO = "cell_info"
     const val WIFI = "wifi"
+    const val BLUETOOTH = "bluetooth"
     const val MESH = "mesh"
     const val NETWORK = "network"
     const val SETTINGS = "settings"
@@ -89,6 +92,7 @@ enum class BottomNavTab(
     ALERTS(Routes.ALERTS, "Alerts", Icons.Default.Notifications),
     CELL_INFO(Routes.CELL_INFO, "Cell Info", Icons.Default.SignalCellular4Bar),
     WIFI(Routes.WIFI, "WiFi", Icons.Default.Wifi),
+    BLUETOOTH(Routes.BLUETOOTH, "BLE", Icons.Default.Bluetooth),
     MESH(Routes.MESH, "Mesh", Icons.Default.Share),
     NETWORK(Routes.NETWORK, "Network", Icons.Default.Security),
     SETTINGS(Routes.SETTINGS, "Settings", Icons.Default.Settings)
@@ -184,6 +188,8 @@ fun EdgeSentinelNavHost() {
             }
             composable(Routes.WIFI) {
                 WifiScreen()
+            composable(Routes.BLUETOOTH) {
+                BluetoothScreen()
             }
             composable(Routes.MESH) {
                 MeshScreen()
