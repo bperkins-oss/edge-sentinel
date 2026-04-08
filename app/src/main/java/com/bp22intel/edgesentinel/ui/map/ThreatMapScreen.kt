@@ -25,6 +25,8 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -247,11 +249,29 @@ private fun DrawScope.drawRadarGrid(center: Offset, radius: Float, maxRangeMeter
             style = Stroke(width = 1.dp.toPx())
         )
         
-        // Note: Range labels would be drawn using drawIntoCanvas with nativeCanvas
-        // For now, we'll skip text labels to avoid compilation issues
-        // In a real implementation, you would use drawIntoCanvas { canvas ->
-        //   canvas.nativeCanvas.drawText(...) 
-        // }
+        // Draw distance label on each ring
+        val label = when {
+            range >= 1000.0 -> "${(range / 1000).toInt()}km"
+            else -> "${range.toInt()}m"
+        }
+        drawIntoCanvas { canvas ->
+            val paint = android.graphics.Paint().apply {
+                color = android.graphics.Color.argb(180, 88, 166, 92) // StatusClear with alpha
+                textSize = 10.dp.toPx()
+                isAntiAlias = true
+                typeface = android.graphics.Typeface.create(
+                    android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD
+                )
+            }
+            // Position label just above the ring on the right side
+            val textWidth = paint.measureText(label)
+            canvas.nativeCanvas.drawText(
+                label,
+                center.x + 4.dp.toPx(),
+                center.y - circleRadius - 3.dp.toPx(),
+                paint
+            )
+        }
     }
     
     // Cross hairs
