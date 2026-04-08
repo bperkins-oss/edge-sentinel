@@ -101,27 +101,36 @@ class MeshService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        meshDeviceId = getOrCreateDeviceId()
-        aggregator = MeshAlertAggregator(meshDeviceId)
+        try {
+            meshDeviceId = getOrCreateDeviceId()
+            aggregator = MeshAlertAggregator(meshDeviceId)
 
-        discovery = MeshDiscovery(
-            context = this,
-            deviceId = meshDeviceId,
-            onPeerDiscovered = { peerId, rssi ->
-                Log.d(TAG, "Peer discovered: ${peerId.take(8)}... RSSI: $rssi")
-                updateState()
-            },
-            onMessageReceived = { _, data ->
-                handleIncomingMessage(data)
-            }
-        )
+            discovery = MeshDiscovery(
+                context = this,
+                deviceId = meshDeviceId,
+                onPeerDiscovered = { peerId, rssi ->
+                    Log.d(TAG, "Peer discovered: ${peerId.take(8)}... RSSI: $rssi")
+                    updateState()
+                },
+                onMessageReceived = { _, data ->
+                    handleIncomingMessage(data)
+                }
+            )
 
-        createNotificationChannel()
+            createNotificationChannel()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize MeshService: ${e.message}", e)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, buildNotification())
-        startMesh()
+        try {
+            startForeground(NOTIFICATION_ID, buildNotification())
+            startMesh()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start foreground mesh service: ${e.message}", e)
+            stopSelf()
+        }
         return START_STICKY
     }
 
