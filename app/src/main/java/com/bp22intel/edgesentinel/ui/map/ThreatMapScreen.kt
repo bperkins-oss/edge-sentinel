@@ -371,19 +371,49 @@ private fun DrawScope.drawThreats(
             )
             
             // Threat dot - size based on accuracy (larger = less precise)
-            val dotSize = (8 + (threat.accuracyMeters / 100).coerceIn(0.0, 8.0)).dp.toPx()
+            val dotSize = (10 + (threat.accuracyMeters / 100).coerceIn(0.0, 8.0)).dp.toPx()
+            
+            // Outer glow ring
+            drawCircle(
+                color = threatColor.copy(alpha = 0.4f),
+                radius = dotSize * 1.5f,
+                center = threatCenter
+            )
+            
+            // Solid dot
             drawCircle(
                 color = threatColor,
                 radius = dotSize,
                 center = threatCenter
             )
             
-            // Category indicator
-            drawCircle(
-                color = Color.Black,
-                radius = dotSize * 0.5f,
-                center = threatCenter
-            )
+            // Category symbol in the dot
+            val symbol = when (threat.category) {
+                SensorCategory.CELLULAR -> "C"
+                SensorCategory.WIFI -> "W"
+                SensorCategory.BLUETOOTH -> "B"
+                SensorCategory.NETWORK -> "N"
+                SensorCategory.BASELINE -> "R"
+            }
+            drawIntoCanvas { canvas ->
+                val textPaint = android.graphics.Paint().apply {
+                    color = android.graphics.Color.BLACK
+                    textSize = dotSize * 1.1f
+                    isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    typeface = android.graphics.Typeface.create(
+                        android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD
+                    )
+                }
+                val textBounds = android.graphics.Rect()
+                textPaint.getTextBounds(symbol, 0, symbol.length, textBounds)
+                canvas.nativeCanvas.drawText(
+                    symbol,
+                    threatCenter.x,
+                    threatCenter.y + textBounds.height() / 2f,
+                    textPaint
+                )
+            }
         }
     }
 }
@@ -416,48 +446,97 @@ private fun ThreatInfoPopup(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val threatColor = when (threat.threatLevel) {
+        ThreatLevel.CLEAR -> StatusClear
+        ThreatLevel.SUSPICIOUS -> StatusSuspicious
+        ThreatLevel.THREAT -> StatusDangerous
+    }
+
     Card(
         modifier = modifier
-            .width(200.dp)
+            .width(260.dp)
             .clickable { onDismiss() },
         colors = CardDefaults.cardColors(containerColor = Surface),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp)
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = threat.category.icon,
+                    contentDescription = null,
+                    tint = threatColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = threat.category.label + " Threat",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = threat.threatLevel.label.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = threatColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
             Text(
                 text = threat.label,
-                style = MaterialTheme.typography.titleSmall,
-                color = TextPrimary,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            Text(
-                text = threat.category.label,
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
+                color = TextSecondary,
+                maxLines = 3
             )
-            
-            Text(
-                text = "±${threat.accuracyMeters.toInt()}m",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
-            )
-            
-            threat.signalStrengthDbm?.let { rssi ->
-                Text(
-                    text = "${rssi}dBm",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Column {
+                    Text("Distance", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                    Text(
+                        text = if (threat.accuracyMeters >= 1000) "${"%,.1f".format(threat.accuracyMeters / 1000)}km"
+                               else "${threat.accuracyMeters.toInt()}m",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                threat.signalStrengthDbm?.let { rssi ->
+                    Column {
+                        Text("Signal", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                        Text(
+                            text = "$rssi dBm",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+                threat.bearing?.let { deg ->
+                    Column {
+                        Text("Bearing", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                        Text(
+                            text = "${deg.toInt()}°",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
-            
+
             Text(
                 text = formatTimestamp(threat.timestamp),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelSmall,
                 color = TextSecondary
             )
         }
