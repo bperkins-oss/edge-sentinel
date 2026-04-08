@@ -234,9 +234,11 @@ private fun TacticalRadarCanvas(
 private fun DrawScope.drawRadarGrid(center: Offset, radius: Float, maxRangeMeters: Double) {
     val gridColor = StatusClear.copy(alpha = 0.3f)
     
-    // Concentric circles with labels
-    val ranges = listOf(50.0, 100.0, 250.0, 500.0, 1000.0)
-    val visibleRanges = ranges.filter { it <= maxRangeMeters }
+    // Dynamic concentric circles — always 4 rings evenly spaced to the edge
+    val ringCount = 4
+    val visibleRanges = (1..ringCount).map { i ->
+        (maxRangeMeters * i / ringCount)
+    }
     
     visibleRanges.forEach { range ->
         val circleRadius = (range / maxRangeMeters).toFloat() * radius
@@ -251,9 +253,11 @@ private fun DrawScope.drawRadarGrid(center: Offset, radius: Float, maxRangeMeter
         
         // Draw distance label on each ring
         val label = when {
-            range >= 1000.0 -> "${(range / 1000).toInt()}km"
+            range >= 10000.0 -> "${"%.1f".format(range / 1000)}km"
+            range >= 1000.0 -> "${"%.1f".format(range / 1000)}km"
+            range >= 100.0 -> "${range.toInt()}m"
             else -> "${range.toInt()}m"
-        }
+        }.replace(".0km", "km") // clean up "1.0km" → "1km"
         drawIntoCanvas { canvas ->
             val paint = android.graphics.Paint().apply {
                 color = android.graphics.Color.argb(180, 88, 166, 92) // StatusClear with alpha
