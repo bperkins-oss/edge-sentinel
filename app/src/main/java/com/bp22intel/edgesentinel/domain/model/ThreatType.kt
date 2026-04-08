@@ -24,5 +24,6 @@ enum class ThreatType {
     SILENT_SMS,
     TRACKING_PATTERN,
     CIPHER_ANOMALY,
-    SIGNAL_ANOMALY
+    SIGNAL_ANOMALY,
+    NR_ANOMALY
 }
