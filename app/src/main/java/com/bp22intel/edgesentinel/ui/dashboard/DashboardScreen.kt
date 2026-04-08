@@ -19,6 +19,7 @@
 package com.bp22intel.edgesentinel.ui.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -128,7 +129,19 @@ fun DashboardScreen(
 
             // Sensor category breakdown — 5 mini indicators
             item {
-                SensorCategoryBreakdown(categoryScores = posture.categoryBreakdown)
+                SensorCategoryBreakdown(
+                    categoryScores = posture.categoryBreakdown,
+                    onCategoryClick = { category ->
+                        val route = when (category) {
+                            SensorCategory.CELLULAR -> "cell_info"
+                            SensorCategory.WIFI -> "wifi"
+                            SensorCategory.BLUETOOTH -> "bluetooth"
+                            SensorCategory.NETWORK -> "network"
+                            SensorCategory.BASELINE -> "baseline"
+                        }
+                        onNavigate(route)
+                    }
+                )
             }
 
             // Trend and active threats summary
@@ -273,7 +286,10 @@ private fun FusedThreatHeader(posture: DashboardPosture) {
 }
 
 @Composable
-private fun SensorCategoryBreakdown(categoryScores: List<SensorCategoryScore>) {
+private fun SensorCategoryBreakdown(
+    categoryScores: List<SensorCategoryScore>,
+    onCategoryClick: (SensorCategory) -> Unit = {}
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Surface),
@@ -286,14 +302,17 @@ private fun SensorCategoryBreakdown(categoryScores: List<SensorCategoryScore>) {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             categoryScores.forEach { score ->
-                SensorMiniIndicator(score = score)
+                SensorMiniIndicator(
+                    score = score,
+                    onClick = { onCategoryClick(score.category) }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun SensorMiniIndicator(score: SensorCategoryScore) {
+private fun SensorMiniIndicator(score: SensorCategoryScore, onClick: () -> Unit = {}) {
     val categoryColor = when (score.category) {
         SensorCategory.CELLULAR -> SensorCellular
         SensorCategory.WIFI -> SensorWifi
@@ -310,7 +329,8 @@ private fun SensorMiniIndicator(score: SensorCategoryScore) {
     }
 
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
