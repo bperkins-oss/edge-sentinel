@@ -102,7 +102,8 @@ enum class MapViewMode { RADAR, MAP }
 @Composable
 fun ThreatMapScreen(
     viewModel: ThreatMapViewModel = hiltViewModel(),
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onNavigateToSweep: () -> Unit = {}
 ) {
     val threats by viewModel.geolocatedThreats.collectAsState()
     val userLocation by viewModel.userLocation.collectAsState()
@@ -166,6 +167,20 @@ fun ThreatMapScreen(
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(end = 8.dp)
                         )
+                        // Sweep mode button
+                        IconButton(
+                            onClick = onNavigateToSweep,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(Color.Transparent, CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Radar,
+                                contentDescription = "Sweep Mode",
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                         IconButton(
                             onClick = { viewMode = MapViewMode.RADAR },
                             modifier = Modifier

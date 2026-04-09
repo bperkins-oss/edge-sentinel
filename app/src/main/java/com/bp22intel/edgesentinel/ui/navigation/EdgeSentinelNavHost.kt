@@ -57,6 +57,7 @@ import com.bp22intel.edgesentinel.ui.onboarding.OnboardingScreen
 import com.bp22intel.edgesentinel.ui.settings.CalibrationScreen
 import com.bp22intel.edgesentinel.ui.settings.SettingsScreen
 import com.bp22intel.edgesentinel.ui.settings.TowerDatabaseScreen
+import com.bp22intel.edgesentinel.ui.sweep.SweepModeScreen
 import com.bp22intel.edgesentinel.ui.travel.TravelModeScreen
 import com.bp22intel.edgesentinel.ui.wifi.WifiScreen
 import com.bp22intel.edgesentinel.ui.theme.StatusClear
@@ -84,6 +85,7 @@ object Routes {
     const val ABOUT = "about"
     const val TOWER_DATABASE = "tower_database"
     const val CALIBRATION = "calibration"
+    const val SWEEP_MODE = "sweep_mode"
 
     fun alertDetail(alertId: Long): String = "alert_detail/$alertId"
 }
@@ -114,7 +116,8 @@ fun EdgeSentinelNavHost() {
     val showBottomBar = currentDestination?.route?.let { route ->
         route != Routes.ONBOARDING &&
         route != Routes.ABOUT &&
-        route != Routes.ALERT_DETAIL
+        route != Routes.ALERT_DETAIL &&
+        route != Routes.SWEEP_MODE
     } ?: true
 
     Scaffold(
@@ -241,7 +244,12 @@ fun EdgeSentinelNavHost() {
                     rationale = "The Threat Radar needs your location to plot detected threats on the tactical map relative to your position."
                 ) {
                     ThreatMapScreen(
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onNavigateToSweep = {
+                            navController.navigate(Routes.SWEEP_MODE) {
+                                launchSingleTop = true
+                            }
+                        }
                     )
                 }
             }
@@ -313,7 +321,12 @@ fun EdgeSentinelNavHost() {
                     rationale = "Mesh networking uses Bluetooth LE to discover nearby Edge Sentinel devices and share threat alerts across your team."
                 ) {
                     MeshScreen(
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onNavigateToSweep = {
+                            navController.navigate(Routes.SWEEP_MODE) {
+                                launchSingleTop = true
+                            }
+                        }
                     )
                 }
             }
@@ -340,6 +353,27 @@ fun EdgeSentinelNavHost() {
                 CalibrationScreen(
                     onBack = { navController.popBackStack() }
                 )
+            }
+
+            composable(Routes.SWEEP_MODE) {
+                val meshPerms = buildList {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        add(android.Manifest.permission.BLUETOOTH_SCAN)
+                        add(android.Manifest.permission.BLUETOOTH_CONNECT)
+                        add(android.Manifest.permission.BLUETOOTH_ADVERTISE)
+                    }
+                    add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                }
+                PermissionGate(
+                    permissions = meshPerms,
+                    icon = Icons.Filled.Map,
+                    title = "Permissions Required",
+                    rationale = "Sweep Mode needs Bluetooth and Location to coordinate with nearby Edge Sentinel devices and triangulate suspicious towers."
+                ) {
+                    SweepModeScreen(
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }

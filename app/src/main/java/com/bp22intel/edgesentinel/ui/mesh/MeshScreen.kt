@@ -39,6 +39,8 @@ import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.TextButton
@@ -60,6 +62,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bp22intel.edgesentinel.domain.model.Confidence
 import com.bp22intel.edgesentinel.domain.model.SensorCategory
@@ -138,6 +141,7 @@ data class MeshStats(
 @Composable
 fun MeshScreen(
     onBack: () -> Unit = {},
+    onNavigateToSweep: () -> Unit = {},
     viewModel: MeshViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -254,6 +258,34 @@ fun MeshScreen(
                             Text("Dismiss", color = Color(0xFFEF4444))
                         }
                     }
+                }
+            }
+        }
+
+        // ── Sweep Mode Button ────────────────────────────────────────
+        if (uiState.isActive && coopEnabled) {
+            item {
+                Button(
+                    onClick = onNavigateToSweep,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = StatusClear
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.GpsFixed,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "START SWEEP",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
                 }
             }
         }
