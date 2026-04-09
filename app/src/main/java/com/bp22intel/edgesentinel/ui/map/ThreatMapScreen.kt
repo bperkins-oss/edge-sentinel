@@ -728,6 +728,30 @@ internal fun ThreatInfoPopup(
                 }
             }
 
+            // Observation count and confidence indicator
+            if (threat.observationCount > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "📍",
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                    val obsText = if (threat.contributingDevices > 1) {
+                        "${threat.observationCount} observations from ${threat.contributingDevices} devices"
+                    } else {
+                        "${threat.observationCount} observations"
+                    }
+                    Text(
+                        text = obsText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
             // Cooperative localization indicator
             if (threat.isCooperativelyLocated) {
                 Row(

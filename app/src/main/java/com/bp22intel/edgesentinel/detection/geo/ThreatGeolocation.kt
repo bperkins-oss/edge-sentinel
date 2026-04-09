@@ -175,7 +175,9 @@ data class GeoReading(
     val userLng: Double,
     val rssi: Int,
     val timestamp: Long,
-    val estimatedDistanceM: Double
+    val estimatedDistanceM: Double,
+    /** LTE Timing Advance value, if available for this reading. */
+    val timingAdvance: Int? = null
 )
 
 /** Geolocation technique used, for provenance/debugging. */
@@ -220,7 +222,11 @@ data class GeolocatedThreat(
     /** Whether this threat was cooperatively located by multiple devices. */
     val isCooperativelyLocated: Boolean = false,
     /** Number of devices that contributed to cooperative localization. */
-    val cooperativeDeviceCount: Int = 0
+    val cooperativeDeviceCount: Int = 0,
+    /** Total number of observations that contributed to this geolocation. */
+    val observationCount: Int = 0,
+    /** Number of distinct devices (including self) that contributed observations. */
+    val contributingDevices: Int = 1
 )
 
 /**
@@ -486,7 +492,10 @@ class ThreatGeolocation @Inject constructor(
         // ── 5 & 6. Time-series triangulation + gradient bearing ──────
         if (signalStrength != null) {
             val distanceM = estimateDistance(signalStrength, category, details)
-            recordReading(threatId, userLat, userLng, signalStrength, distanceM)
+            // FIX 3: Record TA alongside RSSI in reading history
+            val alertCidForTa = details.optInt("cid", 0)
+            val taForReading = timingAdvanceData.find { it.cid == alertCidForTa }?.timingAdvance
+            recordReading(threatId, userLat, userLng, signalStrength, distanceM, taForReading)
 
             timeSeriesTriangulate(threatId, category)?.let { estimates += it }
             gradientBearing(threatId, userLat, userLng, distanceM)?.let { estimates += it }
@@ -556,6 +565,21 @@ class ThreatGeolocation @Inject constructor(
             }
         } else 0
 
+        // Compute total observation count and contributing device count
+        val selfReadings = readingHistory[threatId]?.size ?: 0
+        val alertCidForCount = details.optInt("cid", 0)
+        val peerObsCount = synchronized(meshObservations) {
+            meshObservations.count { it.cellCid == alertCidForCount }
+        }
+        val totalObsCount = selfReadings + peerObsCount
+        val peerDevices = if (alertCidForCount != 0) {
+            synchronized(meshObservations) {
+                meshObservations.filter { it.cellCid == alertCidForCount }
+                    .map { "${it.peerLat}:${it.peerLng}" }.distinct().size
+            }
+        } else 0
+        val totalDevices = 1 + peerDevices // 1 = self
+
         return GeolocatedThreat(
             id = threatId,
             latitude = fused.latitude,
@@ -568,7 +592,9 @@ class ThreatGeolocation @Inject constructor(
             signalStrengthDbm = signalStrength,
             bearing = fused.bearingDeg?.toFloat(),
             isCooperativelyLocated = coopEstimate != null,
-            cooperativeDeviceCount = coopDeviceCount
+            cooperativeDeviceCount = coopDeviceCount,
+            observationCount = totalObsCount,
+            contributingDevices = totalDevices
         )
     }
 
@@ -721,13 +747,20 @@ class ThreatGeolocation @Inject constructor(
 
         val result = NonlinearLeastSquares.solve(positions, distances) ?: return null
 
-        // Accuracy improves with TA observations
+        // Dynamic accuracy based on anchor count and TA availability
         val taCount = anchors.count { it.fromTA }
-        val accuracy = when {
-            taCount >= 3 -> ACC_TRILATERATION_NLS * 0.5  // 3+ TA readings — excellent
-            taCount >= 1 -> ACC_TRILATERATION_NLS * 0.7  // mixed TA + RSSI
-            else -> ACC_TRILATERATION_NLS                 // RSSI only
+        val rssiCount = anchors.size - taCount
+        // TA error: ±39m per reading; RSSI error: ~35m per reading
+        // Combined: 1/sqrt(sum(1/σ_i^2))
+        val taContrib = if (taCount > 0) taCount.toDouble() / (39.0 * 39.0) else 0.0
+        val rssiContrib = if (rssiCount > 0) rssiCount.toDouble() / (35.0 * 35.0) else 0.0
+        val nlsGdop = when {
+            anchors.size <= 3 -> 2.5
+            anchors.size <= 6 -> 1.8
+            anchors.size <= 10 -> 1.3
+            else -> 1.0
         }
+        val accuracy = (nlsGdop / sqrt(taContrib + rssiContrib)).coerceAtLeast(3.0)
 
         val bearing = GeoMath.bearing(userLat, userLng, result.latitude, result.longitude)
         return PositionEstimate(
@@ -820,8 +853,10 @@ class ThreatGeolocation @Inject constructor(
         val (estLat, estLng) = particleFilter.getEstimate() ?: return null
         val bearing = GeoMath.bearing(userLat, userLng, estLat, estLng)
 
+        // FIX 2: Let particle filter report its actual computed std dev.
+        // The std dev IS the accuracy — only floor at physical measurement limit.
         return PositionEstimate(
-            estLat, estLng, accuracy.coerceAtLeast(ACC_PARTICLE_FILTER),
+            estLat, estLng, accuracy.coerceAtLeast(3.0),
             bearing, GeoTechnique.PARTICLE_FILTER, WEIGHT_PARTICLE_FILTER
         )
     }
@@ -962,9 +997,20 @@ class ThreatGeolocation @Inject constructor(
 
         val result = NonlinearLeastSquares.solve(positions, distances) ?: return null
 
+        // FIX 5: Cooperative accuracy based on total observations from independent peers.
+        // Each peer is an independent observer → N peers × M readings = total observations.
+        val totalObservations = relevantObs.size.toDouble()
+        val coopGdop = when {
+            relevantObs.size <= 3 -> 2.5
+            relevantObs.size <= 6 -> 1.8
+            relevantObs.size <= 12 -> 1.3
+            else -> 1.0
+        }
+        val coopAccuracy = (coopGdop * 35.0 / sqrt(totalObservations)).coerceAtLeast(3.0)
+
         return PositionEstimate(
             result.latitude, result.longitude,
-            ACC_COOPERATIVE_MESH.coerceAtLeast(result.residualM),
+            coopAccuracy.coerceAtLeast(result.residualM),
             null,
             GeoTechnique.COOPERATIVE_MESH,
             WEIGHT_COOPERATIVE_MESH
@@ -1089,7 +1135,34 @@ class ThreatGeolocation @Inject constructor(
             spatiallyDistinct.last().userLat, spatiallyDistinct.last().userLng,
             estLat, estLng
         )
-        val accuracy = if (spatiallyDistinct.size >= 3) ACC_TIMESERIES_3PLUS else ACC_TIMESERIES_2
+
+        // FIX 1: Dynamic accuracy based on observation count and geometry.
+        // Trilateration accuracy = GDOP × σ_range / √N
+        val N = spatiallyDistinct.size
+        val individualErr = 35.0 // meters, combined RSSI+TA at typical urban distance
+        val gdop = when {
+            N <= 2 -> 5.0
+            N <= 4 -> 2.5
+            N <= 8 -> 1.8
+            N <= 15 -> 1.3
+            else -> 1.0
+        }
+        val dynamicAccuracy = (gdop * individualErr / sqrt(N.toDouble())).coerceAtLeast(3.0)
+
+        // FIX 3: If we have TA readings in history, incorporate their superior accuracy.
+        val taReadings = spatiallyDistinct.filter { it.timingAdvance != null }
+        val accuracy = if (taReadings.isNotEmpty()) {
+            // TA individual error is ±39m. With N_ta readings: ±39/√N_ta
+            val taAccuracy = 39.0 / sqrt(taReadings.size.toDouble())
+            // Fuse TA accuracy with RSSI-based dynamic accuracy
+            val fusedTaRssi = 1.0 / sqrt(
+                1.0 / (taAccuracy * taAccuracy) + 1.0 / (dynamicAccuracy * dynamicAccuracy)
+            )
+            fusedTaRssi.coerceAtLeast(3.0)
+        } else {
+            dynamicAccuracy
+        }
+
         return PositionEstimate(estLat, estLng, accuracy, bearingDeg,
             GeoTechnique.TIME_SERIES_TRIANGULATION, WEIGHT_DEFAULT)
     }
@@ -1172,13 +1245,14 @@ class ThreatGeolocation @Inject constructor(
         val fusedLat = sumLat / sumW
         val fusedLng = sumLng / sumW
 
-        // Combined accuracy: inverse of total weight
-        val fusedAcc = 1.0 / sumW
+        // FIX 4: Fused accuracy from actual estimate uncertainties.
+        // accuracy = 1 / sqrt(sum(1/acc_i^2)) — combining measurement uncertainties
+        val fusedAcc = 1.0 / sqrt(estimates.sumOf { 1.0 / (it.accuracyM * it.accuracyM) })
 
         return PositionEstimate(
             latitude = fusedLat,
             longitude = fusedLng,
-            accuracyM = fusedAcc.coerceAtLeast(5.0), // floor at 5m (improved from 10m)
+            accuracyM = fusedAcc.coerceAtLeast(3.0), // physical measurement floor
             bearingDeg = bestBearing,
             technique = GeoTechnique.CONFIDENCE_FUSION,
             confidenceWeight = 1.0
@@ -1222,16 +1296,17 @@ class ThreatGeolocation @Inject constructor(
         }
     }
 
-    /** Record a new reading for time-series techniques. */
+    /** Record a new reading for time-series techniques, including TA when available. */
     private fun recordReading(
         threatId: String,
         userLat: Double,
         userLng: Double,
         rssi: Int,
-        distM: Double
+        distM: Double,
+        timingAdvance: Int? = null
     ) {
         val list = readingHistory.getOrPut(threatId) { mutableListOf() }
-        list += GeoReading(userLat, userLng, rssi, System.currentTimeMillis(), distM)
+        list += GeoReading(userLat, userLng, rssi, System.currentTimeMillis(), distM, timingAdvance)
         if (list.size > 60) list.removeAt(0)
     }
 
