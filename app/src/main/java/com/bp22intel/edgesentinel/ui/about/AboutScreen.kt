@@ -163,55 +163,13 @@ fun AboutScreen(
                             color = TextPrimary
                         )
                         Text(
-                            text = "Edge Sentinel is free software licensed under the " +
-                                "Proprietary software. All rights reserved. " +
-                                "modify, and distribute this software under the terms of the license.",
+                            text = "Copyright \u00A9 2024-2026 BP22 Intel. All Rights Reserved.\n" +
+                                "Proprietary and confidential. Unauthorized copying, modification, " +
+                                "distribution, or use of this software, in whole or in part, is " +
+                                "strictly prohibited without prior written permission from BP22 Intel.",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
-                        TextButton(onClick = {
-                            val intent = Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse("https://www.gnu.org/licenses/gpl-3.0.html")
-                            )
-                            context.startActivity(intent)
-                        }) {
-                            Text(text = "View Full License Text", color = AccentBlue)
-                        }
-                    }
-                }
-            }
-
-            // Source Code
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Surface),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "Source Code",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        TextButton(onClick = {
-                            val intent = Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse("https://github.com/bp22intel/edge-sentinel")
-                            )
-                            context.startActivity(intent)
-                        }) {
-                            Text(
-                                text = "github.com/bp22intel/edge-sentinel",
-                                color = AccentBlue
-                            )
-                        }
                     }
                 }
             }
@@ -235,21 +193,19 @@ fun AboutScreen(
                             color = TextPrimary
                         )
                         Text(
-                            text = "Edge Sentinel incorporates detection techniques inspired by " +
-                                "Edge Sentinel detection research is informed by peer-reviewed security publications " +
-                                "Detection research informed by peer-reviewed security publications.",
+                            text = "Edge Sentinel detection research is informed by " +
+                                "peer-reviewed security publications:",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
-                        TextButton(onClick = {
-                            val intent = Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse("https://bp22intel.com/edge-sentinel")
-                            )
-                            context.startActivity(intent)
-                        }) {
-                            Text(text = "Research: SRLabs, NDSS, IEEE S&P", color = AccentBlue)
-                        }
+                        Text(
+                            text = "\u2022 SRLabs — IMSI catcher detection research\n" +
+                                "\u2022 NDSS 2025 — Cellular protocol security\n" +
+                                "\u2022 ACSAC 2014 — Base station anomaly detection\n" +
+                                "\u2022 IEEE S&P — Network downgrade attack analysis",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
                     }
                 }
             }
@@ -294,7 +250,7 @@ fun AboutScreen(
             // Copyright footer
             item {
                 Text(
-                    text = "Copyright \u00A9 2024 BP22 Intel\nAll Rights Reserved. Proprietary and Confidential.",
+                    text = "Copyright \u00A9 2024-2026 BP22 Intel\nAll Rights Reserved. Proprietary and Confidential.",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextTertiary,
                     textAlign = TextAlign.Center,

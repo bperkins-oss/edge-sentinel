@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -141,43 +142,41 @@ class DashboardViewModel @Inject constructor(
             }
         }
 
-        // Hydrate fusion engine from existing alerts on startup
-        // This ensures fusion reflects historical alerts, not just new ones
+        // Hydrate fusion engine from existing alerts on startup (one-shot).
+        // This ensures fusion reflects historical alerts, not just new ones.
         viewModelScope.launch {
             try {
-                alertRepository.getRecentAlerts(50).collect { alerts ->
-                    if (alerts.isNotEmpty()) {
-                        val detections = alerts.map { alert ->
-                            val category = when (alert.threatType) {
-                                com.bp22intel.edgesentinel.domain.model.ThreatType.FAKE_BTS,
-                                com.bp22intel.edgesentinel.domain.model.ThreatType.NETWORK_DOWNGRADE,
-                                com.bp22intel.edgesentinel.domain.model.ThreatType.SILENT_SMS,
-                                com.bp22intel.edgesentinel.domain.model.ThreatType.CIPHER_ANOMALY,
-                                com.bp22intel.edgesentinel.domain.model.ThreatType.SIGNAL_ANOMALY,
-                                com.bp22intel.edgesentinel.domain.model.ThreatType.NR_ANOMALY,
-                                com.bp22intel.edgesentinel.domain.model.ThreatType.REGISTRATION_FAILURE,
-                                com.bp22intel.edgesentinel.domain.model.ThreatType.TEMPORAL_ANOMALY,
-                                com.bp22intel.edgesentinel.domain.model.ThreatType.KNOWN_TOWER_ANOMALY,
-                                com.bp22intel.edgesentinel.domain.model.ThreatType.COMPOUND_PATTERN ->
-                                    com.bp22intel.edgesentinel.domain.model.SensorCategory.CELLULAR
-                                com.bp22intel.edgesentinel.domain.model.ThreatType.TRACKING_PATTERN ->
-                                    com.bp22intel.edgesentinel.domain.model.SensorCategory.BLUETOOTH
-                            }
-                            com.bp22intel.edgesentinel.fusion.ActiveDetection(
-                                sensorCategory = category,
-                                detectionType = alert.threatType.name,
-                                description = alert.summary,
-                                score = when (alert.severity) {
-                                    com.bp22intel.edgesentinel.domain.model.ThreatLevel.THREAT -> 0.9
-                                    com.bp22intel.edgesentinel.domain.model.ThreatLevel.SUSPICIOUS -> 0.5
-                                    com.bp22intel.edgesentinel.domain.model.ThreatLevel.CLEAR -> 0.1
-                                },
-                                timestamp = alert.timestamp
-                            )
+                val alerts = alertRepository.getRecentAlerts(50).first()
+                if (alerts.isNotEmpty()) {
+                    val detections = alerts.map { alert ->
+                        val category = when (alert.threatType) {
+                            com.bp22intel.edgesentinel.domain.model.ThreatType.FAKE_BTS,
+                            com.bp22intel.edgesentinel.domain.model.ThreatType.NETWORK_DOWNGRADE,
+                            com.bp22intel.edgesentinel.domain.model.ThreatType.SILENT_SMS,
+                            com.bp22intel.edgesentinel.domain.model.ThreatType.CIPHER_ANOMALY,
+                            com.bp22intel.edgesentinel.domain.model.ThreatType.SIGNAL_ANOMALY,
+                            com.bp22intel.edgesentinel.domain.model.ThreatType.NR_ANOMALY,
+                            com.bp22intel.edgesentinel.domain.model.ThreatType.REGISTRATION_FAILURE,
+                            com.bp22intel.edgesentinel.domain.model.ThreatType.TEMPORAL_ANOMALY,
+                            com.bp22intel.edgesentinel.domain.model.ThreatType.KNOWN_TOWER_ANOMALY,
+                            com.bp22intel.edgesentinel.domain.model.ThreatType.COMPOUND_PATTERN ->
+                                com.bp22intel.edgesentinel.domain.model.SensorCategory.CELLULAR
+                            com.bp22intel.edgesentinel.domain.model.ThreatType.TRACKING_PATTERN ->
+                                com.bp22intel.edgesentinel.domain.model.SensorCategory.BLUETOOTH
                         }
-                        sensorFusionEngine.ingestDetections(detections)
+                        com.bp22intel.edgesentinel.fusion.ActiveDetection(
+                            sensorCategory = category,
+                            detectionType = alert.threatType.name,
+                            description = alert.summary,
+                            score = when (alert.severity) {
+                                com.bp22intel.edgesentinel.domain.model.ThreatLevel.THREAT -> 0.9
+                                com.bp22intel.edgesentinel.domain.model.ThreatLevel.SUSPICIOUS -> 0.5
+                                com.bp22intel.edgesentinel.domain.model.ThreatLevel.CLEAR -> 0.1
+                            },
+                            timestamp = alert.timestamp
+                        )
                     }
-                    return@collect // Only hydrate once
+                    sensorFusionEngine.ingestDetections(detections)
                 }
             } catch (_: Exception) { /* non-critical */ }
         }

@@ -52,7 +52,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -86,11 +85,13 @@ import com.bp22intel.edgesentinel.ui.theme.TextTertiary
 @Composable
 fun TravelModeScreen(
     travelState: TravelModeState = TravelModeState(),
+    checkedItems: Set<String> = emptySet(),
     onActivate: () -> Unit = {},
     onDeactivate: () -> Unit = {},
     onExportData: (passphrase: String) -> Unit = {},
     onWipeTravelData: () -> Unit = {},
-    onPanicWipe: () -> Unit = {}
+    onPanicWipe: () -> Unit = {},
+    onChecklistItemToggle: (String, Boolean) -> Unit = { _, _ -> }
 ) {
     var showPanicConfirm by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
@@ -204,7 +205,9 @@ fun TravelModeScreen(
         item {
             ChecklistSection(
                 items = TravelAdvisor.getPreDepartureChecklist(),
-                category = ChecklistCategory.PRE_DEPARTURE
+                category = ChecklistCategory.PRE_DEPARTURE,
+                checkedItems = checkedItems,
+                onItemToggle = onChecklistItemToggle
             )
         }
 
@@ -216,7 +219,9 @@ fun TravelModeScreen(
         item {
             ChecklistSection(
                 items = TravelAdvisor.getPostDepartureChecklist(),
-                category = ChecklistCategory.POST_DEPARTURE
+                category = ChecklistCategory.POST_DEPARTURE,
+                checkedItems = checkedItems,
+                onItemToggle = onChecklistItemToggle
             )
         }
 
@@ -531,10 +536,10 @@ private fun AdviceCard(advice: SecurityAdvice) {
 @Composable
 private fun ChecklistSection(
     items: List<ChecklistItem>,
-    category: ChecklistCategory
+    category: ChecklistCategory,
+    checkedItems: Set<String> = emptySet(),
+    onItemToggle: (String, Boolean) -> Unit = { _, _ -> }
 ) {
-    val checkedStates = remember { mutableStateListOf(*BooleanArray(items.size) { false }.toTypedArray()) }
-
     Card(
         colors = CardDefaults.cardColors(containerColor = Surface),
         shape = MaterialTheme.shapes.medium
@@ -544,7 +549,8 @@ private fun ChecklistSection(
                 .fillMaxWidth()
                 .padding(12.dp)
         ) {
-            items.forEachIndexed { index, item ->
+            items.forEach { item ->
+                val isChecked = item.id in checkedItems
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -552,8 +558,8 @@ private fun ChecklistSection(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Checkbox(
-                        checked = checkedStates[index],
-                        onCheckedChange = { checkedStates[index] = it },
+                        checked = isChecked,
+                        onCheckedChange = { onItemToggle(item.id, it) },
                         colors = CheckboxDefaults.colors(
                             checkedColor = AccentBlue,
                             uncheckedColor = TextSecondary,
@@ -563,7 +569,7 @@ private fun ChecklistSection(
                     Text(
                         text = item.text,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (checkedStates[index]) TextSecondary else TextPrimary
+                        color = if (isChecked) TextSecondary else TextPrimary
                     )
                 }
             }

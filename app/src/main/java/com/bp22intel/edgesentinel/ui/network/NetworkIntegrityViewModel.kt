@@ -13,12 +13,17 @@ package com.bp22intel.edgesentinel.ui.network
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bp22intel.edgesentinel.detection.network.CaptivePortalDetector
+import com.bp22intel.edgesentinel.detection.network.CaptivePortalResult
 import com.bp22intel.edgesentinel.detection.network.DnsIntegrityChecker
+import com.bp22intel.edgesentinel.detection.network.DnsIntegrityResult
 import com.bp22intel.edgesentinel.detection.network.NetworkIntegritySnapshot
 import com.bp22intel.edgesentinel.detection.network.TlsIntegrityChecker
+import com.bp22intel.edgesentinel.detection.network.TlsIntegrityResult
 import com.bp22intel.edgesentinel.detection.network.VpnMonitor
+import com.bp22intel.edgesentinel.detection.network.VpnStatusResult
 import com.bp22intel.edgesentinel.domain.model.NetworkThreatType
 import android.content.Context
+import android.content.SharedPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
@@ -26,6 +31,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import javax.inject.Inject
 
 @HiltViewModel
@@ -40,9 +47,14 @@ class NetworkIntegrityViewModel @Inject constructor(
     companion object {
         private const val PREFS_NAME = "trusted_mitm_services"
         private const val KEY_TRUSTED = "trusted_endpoints"
+        private const val HISTORY_PREFS_NAME = "network_integrity_history"
+        private const val KEY_HISTORY = "check_history_json"
+        private const val MAX_HISTORY_ENTRIES = 50
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val historyPrefs: SharedPreferences =
+        context.getSharedPreferences(HISTORY_PREFS_NAME, Context.MODE_PRIVATE)
 
     val vpnStatus = vpnMonitor.vpnStatus
 
@@ -61,6 +73,7 @@ class NetworkIntegrityViewModel @Inject constructor(
     init {
         vpnMonitor.startMonitoring()
         _trustedMitmServices.value = prefs.getStringSet(KEY_TRUSTED, emptySet()) ?: emptySet()
+        _checkHistory.value = loadHistory()
     }
 
     fun trustMitmService(endpoint: String) {
@@ -123,10 +136,137 @@ class NetworkIntegrityViewModel @Inject constructor(
                 )
 
                 _snapshot.value = snapshot
-                _checkHistory.value = (listOf(snapshot) + _checkHistory.value).take(50)
+                val updated = (listOf(snapshot) + _checkHistory.value).take(MAX_HISTORY_ENTRIES)
+                _checkHistory.value = updated
+                saveHistory(updated)
             } finally {
                 _isChecking.value = false
             }
+        }
+    }
+
+    private fun saveHistory(history: List<NetworkIntegritySnapshot>) {
+        try {
+            val jsonArray = JSONArray()
+            for (snap in history) {
+                val obj = JSONObject().apply {
+                    put("timestamp", snap.timestamp)
+                    put("trustScore", snap.trustScore)
+                    put("threats", JSONArray(snap.threats.map { it.name }))
+                    // VPN status
+                    snap.vpnStatus?.let { vpn ->
+                        put("vpn", JSONObject().apply {
+                            put("isVpnActive", vpn.isVpnActive)
+                            put("vpnDropDetected", vpn.vpnDropDetected)
+                            put("bypassLeakDetected", vpn.bypassLeakDetected)
+                        })
+                    }
+                    // DNS integrity
+                    snap.dnsIntegrity?.let { dns ->
+                        put("dns", JSONObject().apply {
+                            put("overallClean", dns.overallClean)
+                            put("hijackedDomains", JSONArray(dns.hijackedDomains))
+                            put("nxdomainHijacked", dns.nxdomainHijacked)
+                        })
+                    }
+                    // TLS integrity
+                    snap.tlsIntegrity?.let { tls ->
+                        put("tls", JSONObject().apply {
+                            put("overallClean", tls.overallClean)
+                            put("mitmEndpoints", JSONArray(tls.mitmEndpoints))
+                        })
+                    }
+                    // Captive portal
+                    snap.captivePortal?.let { portal ->
+                        put("portal", JSONObject().apply {
+                            put("captivePortalDetected", portal.captivePortalDetected)
+                            put("jsInjectionDetected", portal.jsInjectionDetected)
+                        })
+                    }
+                }
+                jsonArray.put(obj)
+            }
+            historyPrefs.edit().putString(KEY_HISTORY, jsonArray.toString()).apply()
+        } catch (_: Exception) {
+            // Serialization failure — don't crash
+        }
+    }
+
+    private fun loadHistory(): List<NetworkIntegritySnapshot> {
+        return try {
+            val json = historyPrefs.getString(KEY_HISTORY, null) ?: return emptyList()
+            val jsonArray = JSONArray(json)
+            val result = mutableListOf<NetworkIntegritySnapshot>()
+            for (i in 0 until jsonArray.length().coerceAtMost(MAX_HISTORY_ENTRIES)) {
+                val obj = jsonArray.getJSONObject(i)
+                val threats = buildList {
+                    val arr = obj.optJSONArray("threats")
+                    if (arr != null) {
+                        for (j in 0 until arr.length()) {
+                            try {
+                                add(NetworkThreatType.valueOf(arr.getString(j)))
+                            } catch (_: Exception) { /* skip unknown threats */ }
+                        }
+                    }
+                }
+                val vpnStatus = obj.optJSONObject("vpn")?.let { vpn ->
+                    VpnStatusResult(
+                        timestamp = obj.optLong("timestamp", 0L),
+                        isVpnActive = vpn.optBoolean("isVpnActive", false),
+                        wasVpnActive = false,
+                        vpnDropDetected = vpn.optBoolean("vpnDropDetected", false),
+                        bypassLeakDetected = vpn.optBoolean("bypassLeakDetected", false)
+                    )
+                }
+                val dnsIntegrity = obj.optJSONObject("dns")?.let { dns ->
+                    DnsIntegrityResult(
+                        timestamp = obj.optLong("timestamp", 0L),
+                        domainResults = emptyList(),
+                        overallClean = dns.optBoolean("overallClean", true),
+                        hijackedDomains = buildList {
+                            val arr = dns.optJSONArray("hijackedDomains")
+                            if (arr != null) {
+                                for (j in 0 until arr.length()) add(arr.getString(j))
+                            }
+                        },
+                        nxdomainHijacked = dns.optBoolean("nxdomainHijacked", false)
+                    )
+                }
+                val tlsIntegrity = obj.optJSONObject("tls")?.let { tls ->
+                    TlsIntegrityResult(
+                        timestamp = obj.optLong("timestamp", 0L),
+                        endpointResults = emptyList(),
+                        overallClean = tls.optBoolean("overallClean", true),
+                        mitmEndpoints = buildList {
+                            val arr = tls.optJSONArray("mitmEndpoints")
+                            if (arr != null) {
+                                for (j in 0 until arr.length()) add(arr.getString(j))
+                            }
+                        }
+                    )
+                }
+                val captivePortal = obj.optJSONObject("portal")?.let { portal ->
+                    CaptivePortalResult(
+                        timestamp = obj.optLong("timestamp", 0L),
+                        captivePortalDetected = portal.optBoolean("captivePortalDetected", false),
+                        jsInjectionDetected = portal.optBoolean("jsInjectionDetected", false)
+                    )
+                }
+                result.add(
+                    NetworkIntegritySnapshot(
+                        timestamp = obj.optLong("timestamp", 0L),
+                        vpnStatus = vpnStatus,
+                        dnsIntegrity = dnsIntegrity,
+                        tlsIntegrity = tlsIntegrity,
+                        captivePortal = captivePortal,
+                        trustScore = obj.optInt("trustScore", 100),
+                        threats = threats
+                    )
+                )
+            }
+            result
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 

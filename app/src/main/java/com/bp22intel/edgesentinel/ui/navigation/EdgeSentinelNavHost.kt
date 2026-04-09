@@ -59,11 +59,14 @@ import com.bp22intel.edgesentinel.ui.settings.SettingsScreen
 import com.bp22intel.edgesentinel.ui.settings.TowerDatabaseScreen
 import com.bp22intel.edgesentinel.ui.sweep.SweepModeScreen
 import com.bp22intel.edgesentinel.ui.travel.TravelModeScreen
+import com.bp22intel.edgesentinel.ui.travel.TravelModeViewModel
 import com.bp22intel.edgesentinel.ui.wifi.WifiScreen
 import com.bp22intel.edgesentinel.ui.theme.StatusClear
 import com.bp22intel.edgesentinel.ui.theme.Surface
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
 import com.bp22intel.edgesentinel.ui.theme.TextSecondary
+import androidx.compose.runtime.collectAsState
+import androidx.hilt.navigation.compose.hiltViewModel
 
 /**
  * Navigation routes for the app.
@@ -199,7 +202,19 @@ fun EdgeSentinelNavHost() {
             }
 
             composable(Routes.TRAVEL) {
-                TravelModeScreen()
+                val viewModel: TravelModeViewModel = hiltViewModel()
+                val travelState by viewModel.travelState.collectAsState()
+                val checkedItems by viewModel.checkedItems.collectAsState()
+                TravelModeScreen(
+                    travelState = travelState,
+                    checkedItems = checkedItems,
+                    onActivate = viewModel::activate,
+                    onDeactivate = viewModel::deactivate,
+                    onExportData = viewModel::exportData,
+                    onWipeTravelData = viewModel::wipeTravelData,
+                    onPanicWipe = viewModel::panicWipe,
+                    onChecklistItemToggle = viewModel::toggleChecklistItem
+                )
             }
 
             composable(Routes.SETTINGS) {
@@ -231,7 +246,10 @@ fun EdgeSentinelNavHost() {
                 arguments = listOf(navArgument("alertId") { type = NavType.LongType })
             ) { backStackEntry ->
                 val alertId = backStackEntry.arguments?.getLong("alertId") ?: 0L
-                AlertDetailScreen(alertId = alertId)
+                AlertDetailScreen(
+                    alertId = alertId,
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable(Routes.THREAT_MAP) {

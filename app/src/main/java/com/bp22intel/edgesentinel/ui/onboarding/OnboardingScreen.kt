@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryFull
@@ -52,6 +53,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -74,6 +77,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.bp22intel.edgesentinel.ui.theme.AccentBlue
 import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
 import com.bp22intel.edgesentinel.ui.theme.StatusClear
+import com.bp22intel.edgesentinel.ui.theme.StatusSuspicious
 import com.bp22intel.edgesentinel.ui.theme.Surface
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
 import com.bp22intel.edgesentinel.ui.theme.TextSecondary
@@ -182,9 +186,31 @@ fun OnboardingScreen(
     val context = LocalContext.current
     var batteryOptExempt by remember { mutableStateOf(isBatteryOptimizationExempt(context)) }
 
+    // Track permission denial state
+    var deniedCritical by remember { mutableStateOf<List<String>>(emptyList()) }
+    var deniedNiceToHave by remember { mutableStateOf<List<String>>(emptyList()) }
+    var permissionsRequested by remember { mutableStateOf(false) }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { /* results handled by system */ }
+    ) { results ->
+        permissionsRequested = true
+        val criticalPermissions = listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.READ_PHONE_STATE
+        )
+        val niceToHavePermissions = buildList {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        deniedCritical = criticalPermissions.filter { results[it] != true }
+        deniedNiceToHave = niceToHavePermissions.filter { results[it] != true }
+
+        // Always advance — but warning card will show on next page if permissions denied
+        currentPage++
+    }
 
     Column(
         modifier = Modifier
@@ -277,7 +303,9 @@ fun OnboardingScreen(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                 ) {
                     Icon(
                         imageVector = pages[page].icon,
@@ -305,6 +333,15 @@ fun OnboardingScreen(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
+
+                    // Show permission warning card after the permissions page
+                    if (permissionsRequested && page == 2 && (deniedCritical.isNotEmpty() || deniedNiceToHave.isNotEmpty())) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        PermissionWarningCard(
+                            deniedCritical = deniedCritical,
+                            deniedNiceToHave = deniedNiceToHave
+                        )
+                    }
                 }
             }
         }
@@ -363,7 +400,7 @@ fun OnboardingScreen(
                         permissions.add(Manifest.permission.POST_NOTIFICATIONS)
                     }
                     permissionLauncher.launch(permissions.toTypedArray())
-                    currentPage++
+                    // Don't advance here — the launcher callback handles it
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
@@ -415,4 +452,106 @@ private fun requestBatteryOptimizationExemption(context: Context) {
         data = Uri.parse("package:${context.packageName}")
     }
     context.startActivity(intent)
+}
+
+private fun permissionLabel(permission: String): String = when (permission) {
+    Manifest.permission.ACCESS_FINE_LOCATION -> "Location"
+    Manifest.permission.READ_PHONE_STATE -> "Phone State"
+    Manifest.permission.POST_NOTIFICATIONS -> "Notifications"
+    Manifest.permission.RECEIVE_SMS -> "SMS"
+    else -> permission.substringAfterLast('.')
+}
+
+private fun permissionImpact(permission: String): String = when (permission) {
+    Manifest.permission.ACCESS_FINE_LOCATION ->
+        "Cannot detect cell towers or rogue base stations"
+    Manifest.permission.READ_PHONE_STATE ->
+        "Cannot detect network downgrades or connection type changes"
+    Manifest.permission.POST_NOTIFICATIONS ->
+        "Will monitor silently — no real-time threat alerts"
+    else -> "Reduced detection capability"
+}
+
+@Composable
+private fun PermissionWarningCard(
+    deniedCritical: List<String>,
+    deniedNiceToHave: List<String>
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (deniedCritical.isNotEmpty())
+                StatusSuspicious.copy(alpha = 0.15f)
+            else
+                AccentBlue.copy(alpha = 0.10f)
+        ),
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Shield,
+                    contentDescription = null,
+                    tint = if (deniedCritical.isNotEmpty()) StatusSuspicious else AccentBlue,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (deniedCritical.isNotEmpty())
+                        "Limited Protection"
+                    else
+                        "Some Features Limited",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (deniedCritical.isNotEmpty()) StatusSuspicious else AccentBlue
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (deniedCritical.isNotEmpty()) {
+                Text(
+                    text = "Critical permissions were denied. Core detection will not work:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextPrimary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                deniedCritical.forEach { perm ->
+                    Text(
+                        text = "• ${permissionLabel(perm)}: ${permissionImpact(perm)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "You can grant these later in Settings → App Permissions.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextTertiary
+                )
+            }
+
+            if (deniedNiceToHave.isNotEmpty()) {
+                if (deniedCritical.isNotEmpty()) Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Optional permissions not granted:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                deniedNiceToHave.forEach { perm ->
+                    Text(
+                        text = "• ${permissionLabel(perm)}: ${permissionImpact(perm)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextTertiary,
+                        modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                    )
+                }
+            }
+        }
+    }
 }

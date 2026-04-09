@@ -98,9 +98,10 @@ class AlertsViewModel @Inject constructor(
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                // Simulate refresh delay - in a real app, this might trigger
-                // a fresh scan or reload from backend
-                delay(1000)
+                // Brief delay so the pull-to-refresh indicator is visible.
+                // The alert list is a Room Flow and auto-updates; this just
+                // gives tactile feedback that the refresh was acknowledged.
+                delay(500)
             } finally {
                 _isRefreshing.value = false
             }
@@ -112,7 +113,6 @@ class AlertsViewModel @Inject constructor(
             ThreatType.FAKE_BTS,
             ThreatType.NETWORK_DOWNGRADE,
             ThreatType.SILENT_SMS,
-            ThreatType.TRACKING_PATTERN,
             ThreatType.CIPHER_ANOMALY,
             ThreatType.SIGNAL_ANOMALY,
             ThreatType.NR_ANOMALY,
@@ -120,6 +120,8 @@ class AlertsViewModel @Inject constructor(
             ThreatType.TEMPORAL_ANOMALY,
             ThreatType.KNOWN_TOWER_ANOMALY,
             ThreatType.COMPOUND_PATTERN -> SensorCategory.CELLULAR
+
+            ThreatType.TRACKING_PATTERN -> SensorCategory.BLUETOOTH
         }
     }
 }
