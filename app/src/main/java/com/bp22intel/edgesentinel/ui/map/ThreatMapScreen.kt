@@ -24,6 +24,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -42,6 +45,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material3.Card
@@ -79,6 +83,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bp22intel.edgesentinel.detection.geo.GeolocatedThreat
+import com.bp22intel.edgesentinel.detection.geo.HeatMapPoint
 import com.bp22intel.edgesentinel.domain.model.SensorCategory
 import com.bp22intel.edgesentinel.domain.model.ThreatLevel
 import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
@@ -107,8 +112,10 @@ fun ThreatMapScreen(
 ) {
     val threats by viewModel.geolocatedThreats.collectAsState()
     val userLocation by viewModel.userLocation.collectAsState()
+    val heatMapPoints by viewModel.heatMapPoints.collectAsState()
     var selectedThreat by remember { mutableStateOf<GeolocatedThreat?>(null) }
     var viewMode by remember { mutableStateOf(MapViewMode.RADAR) }
+    var heatMapEnabled by remember { mutableStateOf(false) }
 
     // Network connectivity check for map mode
     val context = LocalContext.current
@@ -167,6 +174,24 @@ fun ThreatMapScreen(
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(end = 8.dp)
                         )
+                        // Heat map toggle
+                        IconButton(
+                            onClick = { heatMapEnabled = !heatMapEnabled },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(
+                                    if (heatMapEnabled) Color(0xFF3B82F6).copy(alpha = 0.2f)
+                                    else Color.Transparent,
+                                    CircleShape
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Layers,
+                                contentDescription = "Heat Map",
+                                tint = if (heatMapEnabled) Color(0xFF3B82F6) else TextSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                         // Sweep mode button
                         IconButton(
                             onClick = onNavigateToSweep,
@@ -242,6 +267,7 @@ fun ThreatMapScreen(
                             threats = threats,
                             userLocation = userLocation,
                             maxRangeMeters = maxDistance,
+                            heatMapPoints = if (heatMapEnabled) heatMapPoints else emptyList(),
                             onThreatClick = { threat ->
                                 selectedThreat = threat
                             },
@@ -290,6 +316,18 @@ fun ThreatMapScreen(
                                 modifier = Modifier.align(Alignment.TopEnd)
                             )
                         }
+
+                        // Heat map legend (radar mode)
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = heatMapEnabled && heatMapPoints.isNotEmpty(),
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(start = 4.dp, bottom = 4.dp)
+                        ) {
+                            HeatMapLegend()
+                        }
                     }
 
                     MapViewMode.MAP -> {
@@ -300,8 +338,22 @@ fun ThreatMapScreen(
                                 selectedThreat = threat
                             },
                             isNetworkAvailable = isNetworkAvailable,
+                            heatMapPoints = heatMapPoints,
+                            heatMapEnabled = heatMapEnabled,
                             modifier = Modifier.fillMaxSize()
                         )
+
+                        // Heat map legend (map mode)
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = heatMapEnabled && heatMapPoints.isNotEmpty(),
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(start = 4.dp, bottom = 24.dp)
+                        ) {
+                            HeatMapLegend()
+                        }
                     }
                 }
             }
@@ -321,6 +373,7 @@ private fun TacticalRadarCanvas(
     threats: List<GeolocatedThreat>,
     userLocation: Pair<Double, Double>,
     maxRangeMeters: Double,
+    heatMapPoints: List<HeatMapPoint> = emptyList(),
     onThreatClick: (GeolocatedThreat) -> Unit,
     onZoomIn: () -> Unit = {},
     onZoomOut: () -> Unit = {}
@@ -355,6 +408,11 @@ private fun TacticalRadarCanvas(
         
         // Draw compass bearings
         drawCompassBearings(center, radius)
+        
+        // Draw heat map points (behind everything else)
+        if (heatMapPoints.isNotEmpty()) {
+            drawHeatMapOnRadar(heatMapPoints, center, radius, maxRangeMeters, userLocation)
+        }
         
         // Draw user position (pulsing center dot)
         drawUserPosition(center)
@@ -746,6 +804,48 @@ private fun LegendItem(
             text = label,
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary
+        )
+    }
+}
+
+/**
+ * Draw heat map points on the radar canvas at their relative positions.
+ * Points beyond maxRangeMeters are clipped to the edge.
+ */
+private fun DrawScope.drawHeatMapOnRadar(
+    points: List<HeatMapPoint>,
+    center: Offset,
+    radius: Float,
+    maxRangeMeters: Double,
+    userLocation: Pair<Double, Double>
+) {
+    for (point in points) {
+        val distance = calculateDistance(userLocation, Pair(point.lat, point.lng))
+        if (distance > maxRangeMeters * 1.1) continue // slight margin then skip
+
+        val normalizedDistance = (distance / maxRangeMeters).toFloat().coerceAtMost(1f)
+        val bearing = calculateBearing(userLocation, Pair(point.lat, point.lng))
+        val radians = Math.toRadians(bearing)
+
+        val px = center.x + normalizedDistance * radius * sin(radians).toFloat()
+        val py = center.y - normalizedDistance * radius * cos(radians).toFloat()
+
+        // Color and size based on RSSI
+        val (color, dotRadius) = when {
+            point.rssi > -60 -> if (point.isPeer)
+                Pair(Color(0x9906B6D4), 5.dp.toPx()) else Pair(Color(0x99FF1744), 5.dp.toPx())
+            point.rssi > -80 -> if (point.isPeer)
+                Pair(Color(0x883B82F6), 4.dp.toPx()) else Pair(Color(0x88FF9100), 4.dp.toPx())
+            point.rssi > -100 -> if (point.isPeer)
+                Pair(Color(0x776366F1), 3.dp.toPx()) else Pair(Color(0x7710B981), 3.dp.toPx())
+            else -> if (point.isPeer)
+                Pair(Color(0x558B5CF6), 2.5f.dp.toPx()) else Pair(Color(0x553B82F6), 2.5f.dp.toPx())
+        }
+
+        drawCircle(
+            color = color,
+            radius = dotRadius,
+            center = Offset(px, py)
         )
     }
 }

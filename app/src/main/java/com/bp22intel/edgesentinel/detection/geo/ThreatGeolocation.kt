@@ -18,6 +18,9 @@ import com.bp22intel.edgesentinel.data.local.dao.KnownTowerDao
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.bp22intel.edgesentinel.data.local.entity.KnownTowerEntity
 import com.bp22intel.edgesentinel.data.sensor.CellInfoCollector
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import com.bp22intel.edgesentinel.domain.model.Alert
 import com.bp22intel.edgesentinel.domain.model.CellTower
 import com.bp22intel.edgesentinel.domain.model.SensorCategory
@@ -259,6 +262,7 @@ class ThreatGeolocation @Inject constructor(
     // ── Constants ────────────────────────────────────────────────────────
     companion object {
         private const val READING_MAX_AGE_MS = 10 * 60 * 1000L          // 10 min
+        private const val HEAT_MAP_MAX_AGE_MS = 30 * 60 * 1000L         // 30 min window
         private const val MIN_MOVEMENT_M = 50.0                          // for triangulation
         private const val TOWER_CACHE_TTL_MS = 5 * 60 * 1000L           // 5 min
         private const val NEIGHBOR_SEARCH_RADIUS_DEG = 0.15             // ~16 km box
@@ -320,6 +324,9 @@ class ThreatGeolocation @Inject constructor(
     /** Per-device Kalman filters for WiFi RSSI smoothing (keyed by threat ID). */
     private val wifiKalmanFilters = mutableMapOf<String, RssiKalmanFilter>()
 
+    /** Heat map data — keyed by cell ID, pruned to 30-minute window. */
+    private val _heatMapPoints = MutableStateFlow<Map<Long, List<HeatMapPoint>>>(emptyMap())
+
     /** Mesh peer observations for cooperative geolocation. */
     private val meshObservations = mutableListOf<MeshPeerObservation>()
     private val meshObservationMaxAge = 2 * 60 * 1000L // 2 minutes
@@ -327,6 +334,23 @@ class ThreatGeolocation @Inject constructor(
     /** Last known user position for particle filter delta tracking. */
     private var lastUserLat = 0.0
     private var lastUserLng = 0.0
+
+    /**
+     * Observable heat map points keyed by cell ID.
+     * Each list contains signal readings within the last 30 minutes.
+     */
+    val heatMapPoints: StateFlow<Map<Long, List<HeatMapPoint>>> = _heatMapPoints.asStateFlow()
+
+    /**
+     * Add a heat map point from a mesh peer observation.
+     */
+    fun addPeerHeatMapPoint(point: HeatMapPoint) {
+        val mutable = _heatMapPoints.value.toMutableMap()
+        val list = (mutable[point.cellId] ?: emptyList()).toMutableList()
+        list.add(point)
+        mutable[point.cellId] = list
+        _heatMapPoints.value = mutable
+    }
 
     // ── Public API ───────────────────────────────────────────────────────
 
@@ -360,6 +384,7 @@ class ThreatGeolocation @Inject constructor(
 
         pruneReadingHistory()
         pruneMeshObservations()
+        pruneHeatMapPoints()
 
         return alerts.mapNotNull { alert ->
             try {
@@ -397,6 +422,28 @@ class ThreatGeolocation @Inject constructor(
         val category = determineSensorCategory(alert)
         val signalStrength = extractSignalStrength(details)
         val threatId = alert.id.toString()
+
+        // Record heat map point for any cellular alert with signal strength
+        if (category == SensorCategory.CELLULAR && signalStrength != null) {
+            val alertCid = details.optInt("cid", 0).toLong()
+            if (alertCid != 0L) {
+                val point = HeatMapPoint(
+                    lat = userLat,
+                    lng = userLng,
+                    rssi = signalStrength,
+                    cellId = alertCid,
+                    timestamp = System.currentTimeMillis(),
+                    isPeer = false
+                )
+                val mutable = _heatMapPoints.value.toMutableMap()
+                val list = (mutable[alertCid] ?: emptyList()).toMutableList()
+                list.add(point)
+                // Cap per-cell at 500 points for memory
+                if (list.size > 500) list.removeAt(0)
+                mutable[alertCid] = list
+                _heatMapPoints.value = mutable
+            }
+        }
 
         // Collect estimates from every applicable technique.
         val estimates = mutableListOf<PositionEstimate>()
@@ -1205,6 +1252,21 @@ class ThreatGeolocation @Inject constructor(
         }
         wifiKalmanFilters.keys.removeAll { id ->
             readingHistory[id]?.lastOrNull()?.timestamp?.let { it < kalmanCutoff } ?: true
+        }
+    }
+
+    /** Prune heat map points older than 30 minutes. */
+    private fun pruneHeatMapPoints() {
+        val cutoff = System.currentTimeMillis() - HEAT_MAP_MAX_AGE_MS
+        val current = _heatMapPoints.value
+        var changed = false
+        val pruned = current.mapValues { (_, points) ->
+            val filtered = points.filter { it.timestamp >= cutoff }
+            if (filtered.size != points.size) changed = true
+            filtered
+        }.filter { it.value.isNotEmpty() }
+        if (changed) {
+            _heatMapPoints.value = pruned
         }
     }
 

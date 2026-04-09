@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.bp22intel.edgesentinel.detection.geo.GeolocatedThreat
+import com.bp22intel.edgesentinel.detection.geo.HeatMapPoint
 import com.bp22intel.edgesentinel.domain.model.SensorCategory
 import com.bp22intel.edgesentinel.domain.model.ThreatLevel
 import com.bp22intel.edgesentinel.ui.theme.StatusDangerous
@@ -135,7 +136,9 @@ fun ThreatMapView(
     userLocation: Pair<Double, Double>,
     onThreatClick: (GeolocatedThreat) -> Unit,
     modifier: Modifier = Modifier,
-    isNetworkAvailable: Boolean = true
+    isNetworkAvailable: Boolean = true,
+    heatMapPoints: List<HeatMapPoint> = emptyList(),
+    heatMapEnabled: Boolean = false
 ) {
     val context = LocalContext.current
     var selectedThreat by remember { mutableStateOf<GeolocatedThreat?>(null) }
@@ -162,9 +165,27 @@ fun ThreatMapView(
         }
     }
 
+    // Heat map overlay (persistent, updated separately)
+    val heatMapOverlay = remember { HeatMapOverlay() }
+
+    // Update heat map overlay when data or toggle changes
+    LaunchedEffect(heatMapPoints, heatMapEnabled) {
+        if (heatMapEnabled) {
+            heatMapOverlay.setPoints(heatMapPoints)
+        } else {
+            heatMapOverlay.setPoints(emptyList())
+        }
+        mapView.invalidate()
+    }
+
     // Update markers when threats or user location change
-    LaunchedEffect(threats, userLocation) {
+    LaunchedEffect(threats, userLocation, heatMapEnabled) {
         mapView.overlays.clear()
+
+        // Add heat map overlay first (renders behind markers)
+        if (heatMapEnabled) {
+            mapView.overlays.add(heatMapOverlay)
+        }
 
         // User location marker (blue dot)
         val userMarker = Marker(mapView).apply {

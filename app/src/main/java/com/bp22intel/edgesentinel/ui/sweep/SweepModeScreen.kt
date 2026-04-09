@@ -23,6 +23,8 @@ import android.os.VibratorManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -44,6 +46,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -58,6 +61,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -93,7 +97,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bp22intel.edgesentinel.detection.geo.HeatMapPoint
 import com.bp22intel.edgesentinel.mesh.MeshViewModel
+import com.bp22intel.edgesentinel.ui.map.HeatMapLegend
+import com.bp22intel.edgesentinel.ui.map.HeatMapOverlay
 import com.bp22intel.edgesentinel.ui.theme.AccentBlue
 import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
 import com.bp22intel.edgesentinel.ui.theme.StatusClear
@@ -143,9 +150,12 @@ fun SweepModeScreen(
     val meshState by meshViewModel.uiState.collectAsState()
     val coopEnabled by meshViewModel.isCooperativeEnabled.collectAsState()
 
+    val heatMapPoints by sweepViewModel.heatMapPoints.collectAsState()
+
     val context = LocalContext.current
     var panelExpanded by remember { mutableStateOf(false) }
     var showMarkDialog by remember { mutableStateOf(false) }
+    var heatMapEnabled by remember { mutableStateOf(false) }
 
     // Bind mesh data into sweep VM
     LaunchedEffect(Unit) {
@@ -190,6 +200,8 @@ fun SweepModeScreen(
             elapsedMs = uiState.sweep.elapsedMs,
             isActive = uiState.sweep.isActive,
             isPaused = uiState.sweep.isPaused,
+            heatMapEnabled = heatMapEnabled,
+            onToggleHeatMap = { heatMapEnabled = !heatMapEnabled },
             onBack = {
                 sweepViewModel.stopSweep()
                 onBack()
@@ -204,6 +216,8 @@ fun SweepModeScreen(
         ) {
             SweepMapView(
                 uiState = uiState,
+                heatMapPoints = if (heatMapEnabled) heatMapPoints else emptyList(),
+                heatMapEnabled = heatMapEnabled,
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -228,6 +242,18 @@ fun SweepModeScreen(
                         fontSize = 14.sp
                     )
                 }
+            }
+
+            // Heat map legend
+            androidx.compose.animation.AnimatedVisibility(
+                visible = heatMapEnabled && heatMapPoints.isNotEmpty(),
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 4.dp, bottom = 24.dp)
+            ) {
+                HeatMapLegend(showPeerLegend = true)
             }
 
             // Map attribution
@@ -276,6 +302,8 @@ private fun SweepTopBar(
     elapsedMs: Long,
     isActive: Boolean,
     isPaused: Boolean,
+    heatMapEnabled: Boolean = false,
+    onToggleHeatMap: () -> Unit = {},
     onBack: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "sweep_pulse")
@@ -326,6 +354,19 @@ private fun SweepTopBar(
             modifier = Modifier.weight(1f)
         )
 
+        // Heat map toggle
+        IconButton(
+            onClick = onToggleHeatMap,
+            modifier = Modifier.size(36.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Layers,
+                contentDescription = "Heat Map",
+                tint = if (heatMapEnabled) SweepBlue else TextSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
         // Elapsed time
         Text(
             text = formatDuration(elapsedMs),
@@ -342,6 +383,8 @@ private fun SweepTopBar(
 @Composable
 private fun SweepMapView(
     uiState: SweepUiState,
+    heatMapPoints: List<HeatMapPoint> = emptyList(),
+    heatMapEnabled: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -366,13 +409,32 @@ private fun SweepMapView(
         }
     }
 
+    // Heat map overlay (persistent instance)
+    val heatMapOverlay = remember { HeatMapOverlay() }
+
+    // Update heat map data
+    LaunchedEffect(heatMapPoints, heatMapEnabled) {
+        if (heatMapEnabled) {
+            heatMapOverlay.setPoints(heatMapPoints)
+        } else {
+            heatMapOverlay.setPoints(emptyList())
+        }
+        mapView.invalidate()
+    }
+
     // Update overlays when state changes
     LaunchedEffect(
         uiState.userLat, uiState.userLng,
         uiState.peers, uiState.targets,
-        uiState.markers, uiState.flashObservationDeviceId
+        uiState.markers, uiState.flashObservationDeviceId,
+        heatMapEnabled
     ) {
         mapView.overlays.clear()
+
+        // Heat map layer first (renders behind all markers)
+        if (heatMapEnabled) {
+            mapView.overlays.add(heatMapOverlay)
+        }
 
         // ── Coverage polygon (connecting peer positions) ────────
         val polygonPoints = mutableListOf<GeoPoint>()

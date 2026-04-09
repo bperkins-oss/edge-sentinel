@@ -16,6 +16,7 @@ import android.os.Build
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bp22intel.edgesentinel.detection.geo.HeatMapPoint
 import com.bp22intel.edgesentinel.detection.geo.ThreatGeolocation
 import com.bp22intel.edgesentinel.export.AlertExporter
 import com.bp22intel.edgesentinel.mesh.CooperativeLocalizationManager
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -133,7 +135,8 @@ data class SweepUiState(
 @HiltViewModel
 class SweepModeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val alertExporter: AlertExporter
+    private val alertExporter: AlertExporter,
+    private val threatGeolocation: ThreatGeolocation
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SweepUiState())
@@ -147,6 +150,20 @@ class SweepModeViewModel @Inject constructor(
     private var meshUiStateProvider: (() -> MeshUiState)? = null
     private var cooperativeEnabledProvider: (() -> Boolean)? = null
     private var userLocationProvider: (() -> Pair<Double, Double>)? = null
+
+    /**
+     * Flattened heat map points (local + peer) for sweep map overlay.
+     */
+    val heatMapPoints: StateFlow<List<HeatMapPoint>> = threatGeolocation.heatMapPoints
+        .let { flow ->
+            val mapped = MutableStateFlow<List<HeatMapPoint>>(emptyList())
+            viewModelScope.launch {
+                flow.collectLatest { map ->
+                    mapped.value = map.values.flatten()
+                }
+            }
+            mapped.asStateFlow()
+        }
 
     // Track previously known accuracy per CID to detect improvements
     private val previousAccuracy = mutableMapOf<Long, Double>()

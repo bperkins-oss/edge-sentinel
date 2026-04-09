@@ -21,6 +21,7 @@ import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bp22intel.edgesentinel.detection.geo.GeolocatedThreat
+import com.bp22intel.edgesentinel.detection.geo.HeatMapPoint
 import com.bp22intel.edgesentinel.detection.geo.ThreatGeolocation
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -54,6 +55,21 @@ class ThreatMapViewModel @Inject constructor(
 
     private val _isLocationEnabled = MutableStateFlow(false)
     val isLocationEnabled: StateFlow<Boolean> = _isLocationEnabled.asStateFlow()
+
+    /**
+     * Flattened heat map points from the geolocation engine.
+     * All cells combined into a single list for rendering.
+     */
+    val heatMapPoints: StateFlow<List<HeatMapPoint>> = threatGeolocation.heatMapPoints
+        .let { flow ->
+            val mapped = MutableStateFlow<List<HeatMapPoint>>(emptyList())
+            viewModelScope.launch {
+                flow.collectLatest { map ->
+                    mapped.value = map.values.flatten()
+                }
+            }
+            mapped.asStateFlow()
+        }
 
     private val locationManager: LocationManager by lazy {
         context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
