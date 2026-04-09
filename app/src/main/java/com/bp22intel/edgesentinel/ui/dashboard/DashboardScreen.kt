@@ -13,6 +13,9 @@ package com.bp22intel.edgesentinel.ui.dashboard
 import android.content.Intent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,8 +56,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material.icons.filled.TrendingDown
+import androidx.compose.material.icons.filled.TrendingFlat
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -443,9 +454,12 @@ fun DashboardScreen(
 @Composable
 private fun FusedThreatHeader(posture: DashboardPosture) {
     val color = fusedLevelColor(posture.level)
+    var expanded by remember { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded },
         colors = CardDefaults.cardColors(containerColor = Surface),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -455,21 +469,12 @@ private fun FusedThreatHeader(posture: DashboardPosture) {
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Large threat level circle
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .background(color.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = posture.levelLabel.uppercase(),
-                    color = color,
-                    fontSize = if (posture.levelLabel.length > 6) 14.sp else 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            // Interactive threat indicator (replaces raw Box/Text)
+            ThreatIndicator(
+                fusedLevel = posture.level,
+                size = 120.dp,
+                score = posture.score
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -486,6 +491,125 @@ private fun FusedThreatHeader(posture: DashboardPosture) {
                     style = MaterialTheme.typography.bodySmall,
                     color = color
                 )
+            }
+
+            // ── Expandable detail section ──
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    HorizontalDivider(color = color.copy(alpha = 0.2f))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Score explanation
+                    Text(
+                        text = "Score: ${"%,.1f".format(posture.score)} / 10",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = color,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = posture.scoreExplanation,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Trend row
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val trendIcon = when (posture.trend) {
+                            ThreatTrend.IMPROVING -> Icons.Filled.TrendingDown
+                            ThreatTrend.STABLE -> Icons.Filled.TrendingFlat
+                            ThreatTrend.WORSENING -> Icons.Filled.TrendingUp
+                        }
+                        val trendColor = when (posture.trend) {
+                            ThreatTrend.IMPROVING -> StatusClear
+                            ThreatTrend.STABLE -> TextSecondary
+                            ThreatTrend.WORSENING -> StatusDangerous
+                        }
+                        Icon(
+                            imageVector = trendIcon,
+                            contentDescription = posture.trend.label,
+                            tint = trendColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = posture.trendDescription,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = trendColor
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Per-category mini breakdown
+                    Text(
+                        text = "Sensor Breakdown",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextSecondary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    posture.categoryBreakdown.forEach { cat ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = cat.category.name.lowercase()
+                                    .replaceFirstChar { it.uppercase() },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                modifier = Modifier.width(80.dp)
+                            )
+                            LinearProgressIndicator(
+                                progress = { cat.score.toFloat().coerceIn(0f, 1f) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = when {
+                                    cat.score > 0.7 -> StatusDangerous
+                                    cat.score > 0.3 -> StatusElevated
+                                    else -> StatusClear
+                                },
+                                trackColor = color.copy(alpha = 0.1f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (cat.activeThreatCount > 0)
+                                    "${cat.activeThreatCount}" else "—",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (cat.activeThreatCount > 0) color else TextSecondary,
+                                modifier = Modifier.width(20.dp),
+                                textAlign = TextAlign.End
+                            )
+                        }
+                    }
+
+                    // Brief summary
+                    if (posture.briefSummary.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = posture.briefSummary,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                }
             }
         }
     }

@@ -28,7 +28,9 @@ data class DashboardPosture(
     val trendDescription: String,
     val timeSinceLastDetection: String,
     val activeThreatCount: Int,
-    val briefSummary: String
+    val briefSummary: String,
+    val score: Double = 0.0,
+    val scoreExplanation: String = ""
 )
 
 @Singleton
@@ -56,6 +58,19 @@ class OverallThreatDashboard @Inject constructor(
             overallLevel = assessment.overallLevel
         )
 
+        // Compute 0–10 threat score from category max + level weighting
+        val maxCatScore = assessment.categoryScores.maxOfOrNull { it.score } ?: 0.0
+        val levelWeight = assessment.overallLevel.ordinal_rank.toDouble() / 3.0
+        val score = ((maxCatScore * 0.6 + levelWeight * 0.4) * 10.0).coerceIn(0.0, 10.0)
+
+        val scoreExplanation = when {
+            score < 1.0 -> "All sensors nominal. No threats detected."
+            score < 3.0 -> "Minor anomalies detected. Monitoring."
+            score < 5.0 -> "Suspicious signals from one or more sensors."
+            score < 7.0 -> "Multiple threat indicators active across sensors."
+            else -> "Critical threat indicators. Immediate attention recommended."
+        }
+
         return DashboardPosture(
             level = assessment.overallLevel,
             levelLabel = assessment.overallLevel.label,
@@ -64,7 +79,9 @@ class OverallThreatDashboard @Inject constructor(
             trendDescription = trendDescription,
             timeSinceLastDetection = timeSinceStr,
             activeThreatCount = assessment.activeThreatCount,
-            briefSummary = briefSummary
+            briefSummary = briefSummary,
+            score = score,
+            scoreExplanation = scoreExplanation
         )
     }
 

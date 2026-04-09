@@ -20,6 +20,7 @@ import com.bp22intel.edgesentinel.data.local.dao.AlertFeedbackDao
 import com.bp22intel.edgesentinel.data.local.entity.AlertFeedbackEntity
 import com.bp22intel.edgesentinel.domain.model.Alert
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository
+import com.bp22intel.edgesentinel.fusion.SensorFusionEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,7 +44,8 @@ class AlertDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val alertRepository: AlertRepository,
     private val threatAnalyst: ThreatAnalyst,
-    private val feedbackDao: AlertFeedbackDao
+    private val feedbackDao: AlertFeedbackDao,
+    private val sensorFusionEngine: SensorFusionEngine
 ) : ViewModel() {
 
     private val alertId: Long = savedStateHandle["alertId"] ?: 0L
@@ -133,6 +135,12 @@ class AlertDetailViewModel @Inject constructor(
             if ((feedback == "FALSE_POSITIVE" || feedback == "KNOWN_DEVICE") && !_uiState.value.isAcknowledged) {
                 alertRepository.acknowledgeAlert(alertId)
                 _uiState.value = _uiState.value.copy(isAcknowledged = true)
+            }
+
+            // Dismiss the detection from the fusion engine so the threat
+            // posture recalculates immediately.
+            if (feedback == "FALSE_POSITIVE" || feedback == "KNOWN_DEVICE") {
+                sensorFusionEngine.dismissDetection(alert.threatType.name)
             }
         }
     }

@@ -62,6 +62,25 @@ class SensorFusionEngine @Inject constructor(
         recomputeAssessment()
     }
 
+    /**
+     * Dismiss (remove) active detections matching [detectionType].
+     * Called when a user marks an alert as known-device or false-positive.
+     */
+    @Synchronized
+    fun dismissDetection(detectionType: String) {
+        activeDetections.removeAll { it.detectionType == detectionType }
+        recomputeAssessment()
+    }
+
+    /**
+     * Force a full recalculation of the current assessment.
+     * Useful after external state changes (e.g., alert feedback).
+     */
+    @Synchronized
+    fun recalculate() {
+        recomputeAssessment()
+    }
+
     @Synchronized
     fun clearAll() {
         activeDetections.clear()
