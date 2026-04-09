@@ -165,18 +165,31 @@ class AlertDetailViewModel @Inject constructor(
                 alertRepository.acknowledgeAlert(alertId)
                 _uiState.value = _uiState.value.copy(isAcknowledged = true)
 
-                // Bulk-acknowledge ALL alerts for this tower CID or SSID
-                // Use detailsJson search for both — the cell_id column stores
-                // Room entity PK, not the actual CID, so column match won't work.
+                // Bulk-acknowledge ALL alerts for this tower CID or SSID.
+                // For cell towers: the anomalous CID may not be in the "cellId"
+                // field (which stores the serving cell). The flagged CID appears
+                // in indicator keys like "duplicate_cid_245249855" or "band_change_245249855".
+                // So we search for the CID number anywhere in the JSON string.
                 if (isWifiAlert && ssid != null) {
                     alertRepository.acknowledgeAllForSsid(ssid)
                 } else {
+                    // Try the cellId field first (covers serving cell alerts)
                     val cid = details.optLong("cellId", -1L)
                     if (cid > 0) {
-                        // Search by CID in the JSON: "cellId":245249855
-                        alertRepository.acknowledgeAllForSsid("\"cellId\":$cid")
-                        // Also try the string variant: "cellId":"245249855"
-                        alertRepository.acknowledgeAllForSsid("\"cellId\":\"$cid\"")
+                        alertRepository.acknowledgeAllForSsid("$cid")
+                    }
+                    // Also extract CIDs from indicator keys (e.g. "duplicate_cid_pci_245249855")
+                    val allCids = mutableSetOf<String>()
+                    details.keys().forEach { key ->
+                        // Keys like band_change_12345, duplicate_cid_12345, signal_anomaly_12345
+                        val parts = key.split("_")
+                        val lastPart = parts.lastOrNull() ?: ""
+                        if (lastPart.toLongOrNull() != null && lastPart.length >= 3) {
+                            allCids.add(lastPart)
+                        }
+                    }
+                    allCids.forEach { cidStr ->
+                        alertRepository.acknowledgeAllForSsid(cidStr)
                     }
                 }
 

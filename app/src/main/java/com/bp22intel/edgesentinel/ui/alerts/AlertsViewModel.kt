@@ -1,5 +1,5 @@
 /*
- * Edge Sentinel — Cellular Threat Detection for Android
+ * Edge Sentinel - Cellular Threat Detection for Android
  * Copyright (C) 2024-2026 BP22 Intel. All Rights Reserved.
  *
  * This software is proprietary and confidential. Unauthorized copying,
@@ -57,15 +57,16 @@ class AlertsViewModel @Inject constructor(
         _selectedFilter,
         _selectedCategoryFilter
     ) { allAlerts, filter, categoryFilter ->
-        var filteredAlerts = allAlerts
-        
+        // Hide acknowledged alerts
+        var filteredAlerts = allAlerts.filter { !it.acknowledged }
+
         // Apply severity filter
         filteredAlerts = when (filter) {
             AlertFilter.ALL -> filteredAlerts
             AlertFilter.SUSPICIOUS -> filteredAlerts.filter { it.severity == ThreatLevel.SUSPICIOUS }
             AlertFilter.THREAT -> filteredAlerts.filter { it.severity == ThreatLevel.THREAT }
         }
-        
+
         // Apply category filter
         filteredAlerts = when (categoryFilter) {
             CategoryFilter.ALL -> filteredAlerts
@@ -75,7 +76,7 @@ class AlertsViewModel @Inject constructor(
             CategoryFilter.NETWORK -> filteredAlerts.filter { threatTypeToSensorCategory(it.threatType) == SensorCategory.NETWORK }
             CategoryFilter.BASELINE -> filteredAlerts.filter { threatTypeToSensorCategory(it.threatType) == SensorCategory.BASELINE }
         }
-        
+
         filteredAlerts
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

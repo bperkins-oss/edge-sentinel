@@ -14,8 +14,8 @@ android {
         applicationId = "com.bp22intel.edgesentinel"
         minSdk = 26
         targetSdk = 35
-        versionCode = 69
-        versionName = "2.0.69"
+        versionCode = 70
+        versionName = "2.0.70"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

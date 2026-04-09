@@ -68,7 +68,8 @@ class DashboardViewModel @Inject constructor(
     private val _currentCell = MutableStateFlow<CellTower?>(null)
     val currentCell: StateFlow<CellTower?> = _currentCell.asStateFlow()
 
-    val recentAlerts: StateFlow<List<Alert>> = alertRepository.getRecentAlerts(10)
+    val recentAlerts: StateFlow<List<Alert>> = alertRepository.getRecentAlerts(20)
+        .map { alerts -> alerts.filter { !it.acknowledged }.take(10) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val isMonitoring: StateFlow<Boolean> = MonitoringService.isRunning
