@@ -220,12 +220,23 @@ fun DashboardScreen(
                 DetectionLayerCards(
                     categoryScores = posture.categoryBreakdown,
                     onLayerClick = { category ->
-                        val route = when (category) {
-                            SensorCategory.CELLULAR -> "cell_info"
-                            SensorCategory.WIFI -> "wifi"
-                            SensorCategory.BLUETOOTH -> "bluetooth"
-                            SensorCategory.NETWORK -> "network"
-                            SensorCategory.BASELINE -> "baseline"
+                        // If the layer has active alerts, go to alerts tab
+                        // Otherwise go to the detail screen for that sensor
+                        val hasAlerts = posture.categoryBreakdown
+                            .find { it.category == category }
+                            ?.activeThreatCount ?: 0 > 0
+                        val route = if (hasAlerts) {
+                            // Navigate to alerts tab — the category filter
+                            // will be applied by the alert list
+                            "alerts"
+                        } else {
+                            when (category) {
+                                SensorCategory.CELLULAR -> "cell_info"
+                                SensorCategory.WIFI -> "wifi"
+                                SensorCategory.BLUETOOTH -> "bluetooth"
+                                SensorCategory.NETWORK -> "network"
+                                SensorCategory.BASELINE -> "baseline"
+                            }
                         }
                         onNavigate(route)
                     }

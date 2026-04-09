@@ -87,7 +87,7 @@ class NetworkIntegrityViewModel @Inject constructor(
             val untrusted = snapshot.mitmEndpoints.filter { it !in updated }
             if (untrusted.isEmpty()) {
                 sensorFusionEngine.dismissDetection("TLS_MITM")
-                sensorFusionEngine.recalculate()
+                sensorFusionEngine.recalculateClean()
             }
         }
     }

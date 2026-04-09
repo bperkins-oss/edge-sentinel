@@ -78,6 +78,19 @@ class SensorFusionEngine @Inject constructor(
      */
     @Synchronized
     fun recalculate() {
+        pruneExpiredDetections()
+        recomputeAssessment()
+    }
+
+    /**
+     * Full reset: clears all active detections and recomputes.
+     * Used after trust actions (Known Device/Network) to ensure
+     * stale detections from before the trust don't linger.
+     * The next scan cycle will re-populate with only untrusted detections.
+     */
+    @Synchronized
+    fun recalculateClean() {
+        activeDetections.clear()
         recomputeAssessment()
     }
 

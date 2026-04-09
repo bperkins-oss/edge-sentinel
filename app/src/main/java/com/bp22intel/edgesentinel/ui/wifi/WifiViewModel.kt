@@ -146,7 +146,7 @@ class WifiViewModel @Inject constructor(
             sensorFusionEngine.dismissDetection("ROGUE_AP")
             sensorFusionEngine.dismissDetection("DEAUTH_FLOOD")
             sensorFusionEngine.dismissDetection("KARMA_ATTACK")
-            sensorFusionEngine.recalculate()
+            sensorFusionEngine.recalculateClean()
         }
     }
 
@@ -156,7 +156,7 @@ class WifiViewModel @Inject constructor(
     fun untrustSsid(ssid: String) {
         viewModelScope.launch {
             trustedNetworkDao.removeBySsid(ssid)
-            sensorFusionEngine.recalculate()
+            sensorFusionEngine.recalculateClean()
         }
     }
 

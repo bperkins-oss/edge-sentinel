@@ -205,7 +205,7 @@ class AlertDetailViewModel @Inject constructor(
                         "TEMPORAL_ANOMALY", "COMPOUND_PATTERN", "NR_ANOMALY"
                     ).forEach { sensorFusionEngine.dismissDetection(it) }
                 }
-                sensorFusionEngine.recalculate()
+                sensorFusionEngine.recalculateClean()
             }
         }
     }
