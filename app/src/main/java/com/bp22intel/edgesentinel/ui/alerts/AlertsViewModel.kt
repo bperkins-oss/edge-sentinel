@@ -117,6 +117,7 @@ class AlertsViewModel @Inject constructor(
             ThreatType.NR_ANOMALY,
             ThreatType.REGISTRATION_FAILURE,
             ThreatType.TEMPORAL_ANOMALY,
+            ThreatType.KNOWN_TOWER_ANOMALY,
             ThreatType.COMPOUND_PATTERN -> SensorCategory.CELLULAR
         }
     }

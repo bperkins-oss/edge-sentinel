@@ -785,6 +785,7 @@ private fun threatTypeIcon(type: ThreatType): ImageVector {
         ThreatType.NR_ANOMALY -> Icons.Filled.NetworkCheck
         ThreatType.REGISTRATION_FAILURE -> Icons.Filled.GppBad
         ThreatType.TEMPORAL_ANOMALY -> Icons.Filled.TrackChanges
+        ThreatType.KNOWN_TOWER_ANOMALY -> Icons.Filled.GppMaybe
         ThreatType.COMPOUND_PATTERN -> Icons.Filled.Warning
     }
 }
@@ -800,6 +801,7 @@ private fun threatTypeLabel(type: ThreatType): String {
         ThreatType.NR_ANOMALY -> "5G NR Anomaly"
         ThreatType.REGISTRATION_FAILURE -> "Authentication Failure"
         ThreatType.TEMPORAL_ANOMALY -> "Temporal Anomaly"
+        ThreatType.KNOWN_TOWER_ANOMALY -> "Known Tower Anomaly"
         ThreatType.COMPOUND_PATTERN -> "Compound Attack Pattern"
     }
 }
@@ -858,6 +860,7 @@ private fun AlertLocationMapSection(alert: Alert) {
         if (!it.isNaN()) it else when (alert.threatType) {
             ThreatType.FAKE_BTS -> 300.0
             ThreatType.SIGNAL_ANOMALY -> 500.0
+            ThreatType.KNOWN_TOWER_ANOMALY -> 250.0
             ThreatType.COMPOUND_PATTERN -> 200.0
             else -> 400.0
         }

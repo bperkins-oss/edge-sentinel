@@ -20,6 +20,10 @@ enum class ThreatType {
     NR_ANOMALY,
     REGISTRATION_FAILURE,
     TEMPORAL_ANOMALY,
+    /** Behavioral anomaly on a KNOWN tower — the tower exists in our database but is acting differently
+     *  than its established baseline (band change, signal spike, TAC shift, neighbor list change, etc.).
+     *  This catches the most sophisticated attack: spoofing a real Cell ID. */
+    KNOWN_TOWER_ANOMALY,
     /** Synthetic type emitted by the fusion layer when a compound attack pattern is detected. */
     COMPOUND_PATTERN
 }

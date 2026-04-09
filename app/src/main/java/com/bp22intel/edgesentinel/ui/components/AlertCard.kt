@@ -68,6 +68,7 @@ private fun threatTypeIcon(type: ThreatType): ImageVector {
         ThreatType.NR_ANOMALY -> Icons.Filled.NetworkCheck
         ThreatType.REGISTRATION_FAILURE -> Icons.Filled.GppBad
         ThreatType.TEMPORAL_ANOMALY -> Icons.Filled.TrackChanges
+        ThreatType.KNOWN_TOWER_ANOMALY -> Icons.Filled.GppMaybe
         ThreatType.COMPOUND_PATTERN -> Icons.Filled.Warning
     }
 }
@@ -83,6 +84,7 @@ private fun threatTypeLabel(type: ThreatType): String {
         ThreatType.NR_ANOMALY -> "5G NR"
         ThreatType.REGISTRATION_FAILURE -> "Auth Fail"
         ThreatType.TEMPORAL_ANOMALY -> "Temporal"
+        ThreatType.KNOWN_TOWER_ANOMALY -> "Tower Clone"
         ThreatType.COMPOUND_PATTERN -> "Compound"
     }
 }

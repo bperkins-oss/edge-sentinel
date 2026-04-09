@@ -78,6 +78,7 @@ class ThreatAnalyst @Inject constructor(
             ThreatType.NR_ANOMALY        -> analyzeNrAnomaly(alert, details)
             ThreatType.REGISTRATION_FAILURE -> analyzeRegistrationFailure(alert, details)
             ThreatType.TEMPORAL_ANOMALY  -> analyzeTemporalAnomaly(alert, details)
+            ThreatType.KNOWN_TOWER_ANOMALY -> analyzeKnownTowerAnomaly(alert, details)
             ThreatType.COMPOUND_PATTERN  -> analyzeCompoundPattern(alert, details)
         }
     }
@@ -1304,6 +1305,120 @@ class ThreatAnalyst @Inject constructor(
             confidence = confidenceToFloat(alert.confidence, riskLevel),
             possibleCauses = possibleCauses,
             shouldWorry = riskLevel >= RiskLevel.HIGH
+        )
+    }
+
+    // -----------------------------------------------------------------
+    // KNOWN_TOWER_ANOMALY analysis (behavioral baseline detector)
+    // -----------------------------------------------------------------
+
+    private fun analyzeKnownTowerAnomaly(alert: Alert, details: JSONObject): AlertAnalysis {
+        val summary = alert.summary
+        val hasDuplicate = details.keys().asSequence().any {
+            it.startsWith("duplicate_cid_pci_")
+        }
+        val hasBandChange = details.keys().asSequence().any {
+            it.startsWith("band_change_")
+        }
+        val hasTacChange = details.keys().asSequence().any {
+            it.startsWith("tac_change_")
+        }
+        val hasGeoDisplacement = details.keys().asSequence().any {
+            it.startsWith("geo_displacement_")
+        }
+        val hasSignalAnomaly = details.keys().asSequence().any {
+            it.startsWith("signal_anomaly_")
+        }
+        val hasNeighborMismatch = details.keys().asSequence().any {
+            it.startsWith("neighbor_mismatch_")
+        }
+
+        val riskLevel = when {
+            hasDuplicate -> RiskLevel.CRITICAL
+            hasBandChange && hasTacChange -> RiskLevel.HIGH
+            hasBandChange || hasTacChange -> RiskLevel.HIGH
+            hasGeoDisplacement && hasSignalAnomaly -> RiskLevel.HIGH
+            hasGeoDisplacement -> RiskLevel.MEDIUM
+            hasNeighborMismatch -> RiskLevel.MEDIUM
+            hasSignalAnomaly -> RiskLevel.MEDIUM
+            else -> RiskLevel.LOW
+        }
+
+        val shouldWorry = riskLevel >= RiskLevel.HIGH
+
+        val plainEnglish = when {
+            hasDuplicate ->
+                "Two transmitters are broadcasting the same Cell ID with different " +
+                "Physical Cell IDs. This is definitive evidence of cell identity " +
+                "spoofing — someone has cloned a real tower's identity. This is " +
+                "the most sophisticated form of IMSI catcher attack."
+            hasBandChange ->
+                "A tower you've connected to many times before is suddenly broadcasting " +
+                "on a different frequency band. Real cell towers are physically tuned " +
+                "to specific frequencies and don't change them. Someone is likely " +
+                "spoofing this tower's identity from a different device."
+            hasTacChange ->
+                "A known cell tower has appeared under a different Tracking Area Code. " +
+                "Carriers don't reassign TACs for existing towers — this is strong " +
+                "evidence that a fake transmitter is broadcasting this tower's identity."
+            hasGeoDisplacement && hasSignalAnomaly ->
+                "A known tower is producing an abnormally strong signal AND appears " +
+                "to be much closer than its actual position. This combination strongly " +
+                "suggests a nearby device is spoofing this tower's identity."
+            hasGeoDisplacement ->
+                "A known tower's signal suggests it's much closer than its actual " +
+                "registered position. This could indicate a nearby fake transmitter " +
+                "broadcasting the same Cell ID."
+            hasNeighborMismatch ->
+                "A known tower is reporting a completely different set of neighbor " +
+                "cells than usual. A spoofer typically doesn't know the real tower's " +
+                "neighbor configuration, so this is a telltale sign of impersonation."
+            hasSignalAnomaly ->
+                "A known tower is producing signal levels significantly outside its " +
+                "learned baseline. While this can occasionally be caused by " +
+                "environmental changes, a large deviation warrants monitoring."
+            else ->
+                "Behavioral changes were detected on a tower in your area that " +
+                "you've previously connected to. The changes are unusual for " +
+                "legitimate infrastructure."
+        }
+
+        val recommendation = when (riskLevel) {
+            RiskLevel.CRITICAL ->
+                "This is near-certain spoofing. Switch to airplane mode immediately, " +
+                "use WiFi for communications, and leave the area if possible. Report " +
+                "this detection — it is strong evidence of active surveillance."
+            RiskLevel.HIGH ->
+                "This is highly suspicious. Use encrypted messaging apps only, avoid " +
+                "making phone calls, and monitor whether this anomaly persists. If " +
+                "it follows you as you move, it's almost certainly targeting you."
+            RiskLevel.MEDIUM ->
+                "Monitor this situation. If you see multiple anomaly types appear " +
+                "simultaneously, treat it as a high-priority alert. Use encrypted " +
+                "communications as a precaution."
+            else ->
+                "This is likely benign. No immediate action needed, but the system " +
+                "will continue monitoring for escalation."
+        }
+
+        val possibleCauses = buildList {
+            if (hasDuplicate) add("Active cell-identity spoofing / IMSI catcher clone attack")
+            if (hasBandChange) add("Fake transmitter using wrong frequency for this Cell ID")
+            if (hasTacChange) add("Fake transmitter using wrong Tracking Area Code")
+            if (hasGeoDisplacement) add("Nearby portable fake base station spoofing a distant tower")
+            if (hasSignalAnomaly) add("Nearby high-power transmitter impersonating known tower")
+            if (hasNeighborMismatch) add("Fake transmitter lacking knowledge of real tower's neighbors")
+            add("Carrier network maintenance or reconfiguration (rare but possible)")
+            add("Temporary cell-on-wheels for event coverage")
+        }
+
+        return AlertAnalysis(
+            plainEnglish = plainEnglish,
+            riskLevel = riskLevel,
+            recommendation = recommendation,
+            confidence = confidenceToFloat(alert.confidence, riskLevel),
+            possibleCauses = possibleCauses,
+            shouldWorry = shouldWorry
         )
     }
 

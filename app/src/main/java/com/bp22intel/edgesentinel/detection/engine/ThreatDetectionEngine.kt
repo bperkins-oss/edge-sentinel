@@ -321,6 +321,41 @@ class ThreatDetectionEngine @Inject constructor(
                 }
             }
 
+            ThreatType.KNOWN_TOWER_ANOMALY -> {
+                // Behavioral anomaly on a KNOWN tower — the most sophisticated attack.
+                // Band / frequency change → protocol violation (towers don't change bands)
+                if (result.details.keys.any { it.startsWith("band_change_") }) {
+                    accumulateWeightedMax(indicators, counts, ThreatScorer.KEY_PROTOCOL_VIOLATION, 0.9)
+                }
+                // Signal anomaly on known tower
+                if (result.details.keys.any { it.startsWith("signal_anomaly_") }) {
+                    accumulateWeightedMax(indicators, counts, ThreatScorer.KEY_SIGNAL_ANOMALY, 0.8)
+                }
+                // Geographic displacement
+                if (result.details.keys.any { it.startsWith("geo_displacement_") }) {
+                    accumulateWeightedMax(indicators, counts, ThreatScorer.KEY_SIGNAL_ANOMALY, 0.85)
+                    accumulateWeightedMax(indicators, counts, ThreatScorer.KEY_TOWER_BEHAVIOR, 0.8)
+                }
+                // Duplicate CID with different PCI — definite clone (very high confidence)
+                if (result.details.keys.any { it.startsWith("duplicate_cid_pci_") }) {
+                    accumulateWeightedMax(indicators, counts, ThreatScorer.KEY_TOWER_BEHAVIOR, 0.95)
+                    accumulateWeightedMax(indicators, counts, ThreatScorer.KEY_PROTOCOL_VIOLATION, 0.9)
+                }
+                // Duplicate CID (same PCI) — suspicious clone
+                if (result.details.keys.any { it.startsWith("duplicate_cid_") && !it.startsWith("duplicate_cid_pci_") }) {
+                    accumulateWeightedMax(indicators, counts, ThreatScorer.KEY_TOWER_BEHAVIOR, 0.85)
+                }
+                // Neighbour list inconsistency
+                if (result.details.keys.any { it.startsWith("neighbor_mismatch_") }) {
+                    accumulateWeightedMax(indicators, counts, ThreatScorer.KEY_TOWER_BEHAVIOR, 0.75)
+                    accumulateWeightedMax(indicators, counts, ThreatScorer.KEY_TEMPORAL_PATTERN, 0.6)
+                }
+                // TAC change — very high confidence (real towers don't change TAC)
+                if (result.details.keys.any { it.startsWith("tac_change_") }) {
+                    accumulateWeightedMax(indicators, counts, ThreatScorer.KEY_TOWER_BEHAVIOR, 0.9)
+                }
+            }
+
             ThreatType.COMPOUND_PATTERN -> {
                 // Compound patterns are scored at the fusion level and do not
                 // feed back into per-category indicators to avoid circular boosting.

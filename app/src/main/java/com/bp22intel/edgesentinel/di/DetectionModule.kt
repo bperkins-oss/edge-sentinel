@@ -10,6 +10,7 @@
 
 package com.bp22intel.edgesentinel.di
 
+import com.bp22intel.edgesentinel.detection.detectors.BehavioralBaselineDetector
 import com.bp22intel.edgesentinel.detection.detectors.CipherModeDetector
 import com.bp22intel.edgesentinel.detection.detectors.FakeBtsDetector
 import com.bp22intel.edgesentinel.detection.detectors.NetworkDowngradeDetector
@@ -55,4 +56,8 @@ abstract class DetectionModule {
     @Binds
     @IntoSet
     abstract fun bindRegistrationFailureDetector(impl: RegistrationFailureDetector): ThreatDetector
+
+    @Binds
+    @IntoSet
+    abstract fun bindBehavioralBaselineDetector(impl: BehavioralBaselineDetector): ThreatDetector
 }
