@@ -483,18 +483,30 @@ class MonitoringService : LifecycleService() {
 
                     // Enrich detailsJson with tower location from known tower DB
                     val enrichedJson = try {
-                        val cell = currentCells.firstOrNull()
-                        if (cell != null) {
-                            val known = knownTowerDao.findTower(cell.mcc, cell.mnc, cell.lacTac, cell.cid.toInt())
+                        val obj = org.json.JSONObject(detailsJson)
+                        // Skip if already has location
+                        if (!obj.has("latitude")) {
+                            // Try 1: look up from the alert's own cellId/mcc/mnc/lac
+                            val alertCid = obj.optLong("cellId", -1L)
+                            val alertMcc = obj.optInt("mcc", -1)
+                            val alertMnc = obj.optInt("mnc", -1)
+                            val alertLac = obj.optInt("lac", -1)
+                            val known = if (alertCid > 0 && alertMcc > 0) {
+                                knownTowerDao.findTower(alertMcc, alertMnc, alertLac, alertCid.toInt())
+                            } else {
+                                // Try 2: fall back to serving cell
+                                currentCells.firstOrNull()?.let { cell ->
+                                    knownTowerDao.findTower(cell.mcc, cell.mnc, cell.lacTac, cell.cid.toInt())
+                                }
+                            }
                             if (known != null && known.latitude != 0.0) {
-                                val obj = org.json.JSONObject(detailsJson)
                                 obj.put("latitude", known.latitude)
                                 obj.put("longitude", known.longitude)
                                 obj.put("towerRange", known.range)
                                 obj.put("accuracyMeters", known.range.coerceAtLeast(200))
-                                obj.toString()
-                            } else detailsJson
-                        } else detailsJson
+                            }
+                        }
+                        obj.toString()
                     } catch (_: Exception) { detailsJson }
 
                     val alert = Alert(
