@@ -58,10 +58,24 @@ class OverallThreatDashboard @Inject constructor(
             overallLevel = assessment.overallLevel
         )
 
-        // Compute 0–10 threat score from category max + level weighting
+        // Compute 0–10 threat score from category scores and active threat count
         val maxCatScore = assessment.categoryScores.maxOfOrNull { it.score } ?: 0.0
-        val levelWeight = assessment.overallLevel.ordinal_rank.toDouble() / 3.0
-        val score = ((maxCatScore * 0.6 + levelWeight * 0.4) * 10.0).coerceIn(0.0, 10.0)
+        val avgCatScore = assessment.categoryScores
+            .filter { it.score > 0 }
+            .takeIf { it.isNotEmpty() }
+            ?.map { it.score }?.average() ?: 0.0
+        val threatCountFactor = (assessment.activeThreatCount.coerceAtMost(10) / 10.0) * 0.2
+        // Blend: 50% max category + 30% avg active categories + 20% threat count
+        val score = ((maxCatScore * 0.5 + avgCatScore * 0.3 + threatCountFactor) * 10.0)
+            .coerceIn(0.0, 10.0)
+
+        // Derive level FROM the score so they're always consistent
+        val derivedLevel = when {
+            score >= 7.0 -> FusedThreatLevel.CRITICAL
+            score >= 4.5 -> FusedThreatLevel.DANGEROUS
+            score >= 2.0 -> FusedThreatLevel.ELEVATED
+            else -> FusedThreatLevel.CLEAR
+        }
 
         val scoreExplanation = when {
             score < 1.0 -> "All sensors nominal. No threats detected."
@@ -72,8 +86,8 @@ class OverallThreatDashboard @Inject constructor(
         }
 
         return DashboardPosture(
-            level = assessment.overallLevel,
-            levelLabel = assessment.overallLevel.label,
+            level = derivedLevel,
+            levelLabel = derivedLevel.label,
             categoryBreakdown = assessment.categoryScores,
             trend = assessment.trend,
             trendDescription = trendDescription,

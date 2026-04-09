@@ -203,18 +203,19 @@ fun ThreatIndicator(
                 text = labelText,
                 color = baseColor,
                 fontSize = when {
-                    labelText.length > 8 -> 14.sp
-                    threatLevel == ThreatLevel.SUSPICIOUS -> 16.sp
-                    else -> 20.sp
+                    labelText.length >= 9 -> 11.sp
+                    labelText.length >= 7 -> 13.sp
+                    else -> 18.sp
                 },
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1
             )
             if (score != null) {
                 Text(
-                    text = "Score: %.1f/10".format(score),
+                    text = "%.1f / 10".format(score),
                     color = baseColor.copy(alpha = 0.7f),
-                    fontSize = 10.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.Medium,
                     style = MaterialTheme.typography.labelSmall
                 )

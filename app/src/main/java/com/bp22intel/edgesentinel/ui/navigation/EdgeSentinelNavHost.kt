@@ -100,7 +100,7 @@ enum class BottomNavTab(
     val label: String,
     val icon: ImageVector
 ) {
-    DASHBOARD(Routes.DASHBOARD, "Dashboard", Icons.Default.Home),
+    DASHBOARD(Routes.DASHBOARD, "Home", Icons.Default.Home),
     ALERTS(Routes.ALERTS, "Alerts", Icons.Default.Notifications),
     TRAVEL(Routes.TRAVEL, "Travel", Icons.Default.Flight),
     SETTINGS(Routes.SETTINGS, "Settings", Icons.Default.Settings)
