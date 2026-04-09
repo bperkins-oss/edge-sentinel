@@ -20,6 +20,9 @@ import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.bp22intel.edgesentinel.detection.geo.ThreatGeolocation
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -41,7 +44,10 @@ import java.util.UUID
  * ZERO cloud dependency — all communication is local (BLE + WiFi Direct).
  * Privacy-first: devices share alert data but NOT identity, IMSI, or location.
  */
+@AndroidEntryPoint
 class MeshService : Service() {
+
+    @Inject lateinit var threatGeolocation: ThreatGeolocation
 
     companion object {
         private const val TAG = "MeshService"
@@ -106,6 +112,9 @@ class MeshService : Service() {
         try {
             meshDeviceId = getOrCreateDeviceId()
             aggregator = MeshAlertAggregator(meshDeviceId)
+            aggregator.onPeerObservation = { obs ->
+                threatGeolocation.addMeshPeerObservation(obs)
+            }
 
             discovery = MeshDiscovery(
                 context = this,

@@ -21,7 +21,7 @@ import java.util.UUID
  * Privacy-first: no identity, IMSI, or location data is transmitted.
  */
 object MeshProtocol {
-    const val PROTOCOL_VERSION = 1
+    const val PROTOCOL_VERSION = 2
     const val SERVICE_UUID = "ed9e-5e71-1ne1-mesh"
 
     /** Message types exchanged between mesh peers. */
@@ -48,6 +48,15 @@ data class MeshAlert(
     val cellMnc: Int? = null,
     val cellLacTac: Int? = null,
     val cellCid: Int? = null,
+    /**
+     * Coarse peer position (grid-snapped to ~100m for privacy).
+     * Used for cooperative multi-device geolocation.
+     * Protocol v2+. Null if peer opts out of position sharing.
+     */
+    val peerLatCoarse: Double? = null,
+    val peerLngCoarse: Double? = null,
+    /** RSRP of the suspicious cell as seen by the peer. */
+    val cellRsrp: Int? = null,
     val hopCount: Int = 0
 ) {
     fun toJson(): String {
@@ -65,6 +74,9 @@ data class MeshAlert(
         cellMnc?.let { json.put("mnc", it) }
         cellLacTac?.let { json.put("lac", it) }
         cellCid?.let { json.put("cid", it) }
+        peerLatCoarse?.let { json.put("plat", it) }
+        peerLngCoarse?.let { json.put("plng", it) }
+        cellRsrp?.let { json.put("rsrp", it) }
         json.put("hop", hopCount)
         return json.toString()
     }
@@ -72,6 +84,9 @@ data class MeshAlert(
     fun toBytes(): ByteArray = toJson().toByteArray(Charsets.UTF_8)
 
     companion object {
+        fun snapToGrid(coord: Double): Double =
+            (coord * 1000.0).toLong() / 1000.0
+
         fun fromBytes(bytes: ByteArray): MeshAlert? = fromJson(String(bytes, Charsets.UTF_8))
 
         fun fromJson(raw: String): MeshAlert? {
@@ -93,6 +108,9 @@ data class MeshAlert(
                     cellMnc = if (json.has("mnc")) json.getInt("mnc") else null,
                     cellLacTac = if (json.has("lac")) json.getInt("lac") else null,
                     cellCid = if (json.has("cid")) json.getInt("cid") else null,
+                    peerLatCoarse = if (json.has("plat")) json.getDouble("plat") else null,
+                    peerLngCoarse = if (json.has("plng")) json.getDouble("plng") else null,
+                    cellRsrp = if (json.has("rsrp")) json.getInt("rsrp") else null,
                     hopCount = json.optInt("hop", 0)
                 )
             } catch (e: Exception) {

@@ -10,6 +10,7 @@
 
 package com.bp22intel.edgesentinel.mesh
 
+import com.bp22intel.edgesentinel.detection.geo.MeshPeerObservation
 import com.bp22intel.edgesentinel.domain.model.Confidence
 import com.bp22intel.edgesentinel.domain.model.ThreatType
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,11 +57,28 @@ class MeshAlertAggregator(private val localDeviceId: String) {
     // Track message IDs to avoid duplicates
     private val seenMessageIds = linkedSetOf<String>()
 
+    /** Callback for cooperative geolocation observations. */
+    var onPeerObservation: ((MeshPeerObservation) -> Unit)? = null
+
     /** Ingest a mesh alert from a peer device. */
     fun onAlertReceived(alert: MeshAlert) {
         // Ignore our own alerts bounced back and duplicates
         if (alert.deviceId == localDeviceId) return
         if (!seenMessageIds.add(alert.messageId)) return
+
+        // Extract cooperative geolocation observation if peer shared position
+        if (alert.peerLatCoarse != null && alert.peerLngCoarse != null &&
+            alert.cellCid != null && alert.cellRsrp != null) {
+            onPeerObservation?.invoke(
+                MeshPeerObservation(
+                    peerLat = alert.peerLatCoarse,
+                    peerLng = alert.peerLngCoarse,
+                    cellCid = alert.cellCid,
+                    rsrpDbm = alert.cellRsrp,
+                    timestamp = alert.timestamp
+                )
+            )
+        }
 
         // Cap the seen set
         while (seenMessageIds.size > MAX_BUFFER_SIZE * 2) {
