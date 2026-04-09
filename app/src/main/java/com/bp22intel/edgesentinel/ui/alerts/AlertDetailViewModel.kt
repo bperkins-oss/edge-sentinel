@@ -166,17 +166,32 @@ class AlertDetailViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(isAcknowledged = true)
 
                 // Bulk-acknowledge ALL alerts for this tower CID or SSID
+                // Use detailsJson search for both — the cell_id column stores
+                // Room entity PK, not the actual CID, so column match won't work.
                 if (isWifiAlert && ssid != null) {
                     alertRepository.acknowledgeAllForSsid(ssid)
                 } else {
-                    val cellId = details.optLong("cellId", -1L)
-                    if (cellId > 0) {
-                        alertRepository.acknowledgeAllForCellId(cellId)
+                    val cid = details.optLong("cellId", -1L)
+                    if (cid > 0) {
+                        // Search by CID in the JSON: "cellId":245249855
+                        alertRepository.acknowledgeAllForSsid("\"cellId\":$cid")
+                        // Also try the string variant: "cellId":"245249855"
+                        alertRepository.acknowledgeAllForSsid("\"cellId\":\"$cid\"")
                     }
                 }
 
-                // Dismiss from fusion engine + recalculate
+                // Dismiss from fusion engine + recalculate.
+                // Dismiss the specific type AND related types (a trusted tower
+                // may have triggered multiple detector types).
                 sensorFusionEngine.dismissDetection(alert.threatType.name)
+                if (!isWifiAlert) {
+                    // Cell tower trust: also dismiss related cellular detections
+                    listOf(
+                        "FAKE_BTS", "KNOWN_TOWER_ANOMALY", "SIGNAL_ANOMALY",
+                        "NETWORK_DOWNGRADE", "REGISTRATION_FAILURE",
+                        "TEMPORAL_ANOMALY", "COMPOUND_PATTERN", "NR_ANOMALY"
+                    ).forEach { sensorFusionEngine.dismissDetection(it) }
+                }
                 sensorFusionEngine.recalculate()
             }
         }
