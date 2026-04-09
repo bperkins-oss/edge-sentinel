@@ -41,3 +41,4 @@ val SensorBaseline = Color(0xFFF59E0B)
 
 // Accent
 val AccentBlue = Color(0xFF58A6FF)
+val AccentCyan = Color(0xFF06B6D4)

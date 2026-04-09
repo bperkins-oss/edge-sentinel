@@ -10,6 +10,8 @@
 
 package com.bp22intel.edgesentinel.ui.mesh
 
+import com.bp22intel.edgesentinel.ui.utils.TimeFormatUtils
+
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -891,7 +893,7 @@ private fun SharedAlertCard(alert: SharedAlert) {
                 horizontalAlignment = Alignment.End
             ) {
                 Text(
-                    text = formatTimestamp(alert.timestamp),
+                    text = TimeFormatUtils.formatTimestampShort(alert.timestamp),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )
@@ -1051,10 +1053,7 @@ private fun GuideStep(number: String, title: String, description: String) {
 }
 
 // Utility functions
-private fun formatTimestamp(timestamp: Long): String {
-    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-    return timeFormat.format(Date(timestamp))
-}
+// formatTimestamp removed — use TimeFormatUtils.formatTimestampShort()
 
 private fun formatLastSeen(lastSeen: Long): String {
     val now = System.currentTimeMillis()

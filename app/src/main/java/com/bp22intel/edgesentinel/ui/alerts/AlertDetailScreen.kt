@@ -348,17 +348,59 @@ private fun AnalysisCard(analysis: AlertAnalysis) {
                         color = TextPrimary
                     )
                 }
+            }
+
+            // Graduated assessment (replaces binary "Should Worry")
+            val (assessmentLabel, assessmentColor, assessmentExplanation) = when {
+                analysis.riskLevel == RiskLevel.HIGH || analysis.riskLevel == RiskLevel.CRITICAL ->
+                    Triple(
+                        "Take action",
+                        StatusThreat,
+                        "High confidence detection with significant risk — review and respond."
+                    )
+                analysis.riskLevel == RiskLevel.MEDIUM ->
+                    Triple(
+                        "Worth monitoring",
+                        StatusSuspicious,
+                        "Something unusual but not yet confirmed — keep an eye on it."
+                    )
+                else ->
+                    Triple(
+                        "No action needed",
+                        StatusClear,
+                        "Low risk detection — likely normal network behavior."
+                    )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(assessmentColor.copy(alpha = 0.1f))
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = when {
+                        analysis.riskLevel == RiskLevel.HIGH || analysis.riskLevel == RiskLevel.CRITICAL -> Icons.Default.Warning
+                        analysis.riskLevel == RiskLevel.MEDIUM -> Icons.Default.GppMaybe
+                        else -> Icons.Default.CheckCircle
+                    },
+                    contentDescription = null,
+                    tint = assessmentColor,
+                    modifier = Modifier.size(24.dp)
+                )
                 Column {
                     Text(
-                        text = "Should Worry",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary
-                    )
-                    Text(
-                        text = if (analysis.shouldWorry) "Yes" else "No",
+                        text = assessmentLabel,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = if (analysis.shouldWorry) StatusThreat else StatusClear
+                        color = assessmentColor
+                    )
+                    Text(
+                        text = assessmentExplanation,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
                     )
                 }
             }
@@ -695,28 +737,37 @@ private fun FeedbackSection(
             }
 
             if (feedbackGiven == null) {
-                // ── No feedback yet — show the three buttons ───────────
+                // ── No feedback yet — show the four buttons ───────────
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // "Not a Threat" — outlined
+                    // "False Alarm" (was "Not a Threat") — outlined
                     OutlinedButton(
                         onClick = { onFeedback("FALSE_POSITIVE") },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Security,
-                            contentDescription = null,
-                            tint = StatusClear,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Not a Threat",
-                            color = StatusClear,
-                            style = MaterialTheme.typography.labelMedium
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Security,
+                                    contentDescription = null,
+                                    tint = StatusClear,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "False Alarm",
+                                    color = StatusClear,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                            Text(
+                                text = "Detection was incorrect",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary
+                            )
+                        }
                     }
 
                     // "Real Threat" — filled red
@@ -727,20 +778,29 @@ private fun FeedbackSection(
                             containerColor = StatusThreat
                         )
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Real Threat",
-                            style = MaterialTheme.typography.labelMedium
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Real Threat",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                            Text(
+                                text = "I believe this is real",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 }
 
-                // Known Device + Not Sure row
+                // My Device + Not Sure row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -749,45 +809,63 @@ private fun FeedbackSection(
                         onClick = { onFeedback("KNOWN_DEVICE") },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(
-                            imageVector = if (isWifiAlert) Icons.Default.Wifi else Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = AccentBlue,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (isWifiAlert) "Known Network" else "Known Device",
-                            color = AccentBlue,
-                            style = MaterialTheme.typography.labelMedium
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = if (isWifiAlert) Icons.Default.Wifi else Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = AccentBlue,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isWifiAlert) "My Network" else "My Device",
+                                    color = AccentBlue,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                            Text(
+                                text = "Correct detection, I trust it",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary
+                            )
+                        }
                     }
 
                     TextButton(
                         onClick = { onFeedback("UNSURE") },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.HelpOutline,
-                            contentDescription = null,
-                            tint = TextSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Not Sure",
-                            color = TextSecondary,
-                            style = MaterialTheme.typography.labelMedium
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.HelpOutline,
+                                    contentDescription = null,
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Not Sure",
+                                    color = TextSecondary,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                            Text(
+                                text = "I don't know",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 }
             } else {
                 // ── Feedback already given — show what they chose ──────
                 val (label, color) = when (feedbackGiven) {
-                    "FALSE_POSITIVE" -> "Marked as Not a Threat" to StatusClear
+                    "FALSE_POSITIVE" -> "Marked as False Alarm" to StatusClear
                     "CONFIRMED_THREAT" -> "Confirmed as Real Threat" to StatusThreat
-                    "KNOWN_DEVICE" -> if (isWifiAlert) "Known Network (trusted)" to AccentBlue
-                        else "Known Device (booster/femtocell)" to AccentBlue
+                    "KNOWN_DEVICE" -> if (isWifiAlert) "My Network (trusted)" to AccentBlue
+                        else "My Device (trusted)" to AccentBlue
                     else -> "Marked as Unsure" to TextSecondary
                 }
                 Row(

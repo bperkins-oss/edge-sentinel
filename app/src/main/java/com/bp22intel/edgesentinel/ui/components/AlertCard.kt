@@ -14,6 +14,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,14 +28,19 @@ import androidx.compose.material.icons.filled.SignalCellular4Bar
 import androidx.compose.material.icons.filled.GppBad
 import androidx.compose.material.icons.filled.GppMaybe
 import androidx.compose.material.icons.filled.NetworkCheck
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,11 +56,13 @@ import com.bp22intel.edgesentinel.domain.model.Alert
 import com.bp22intel.edgesentinel.domain.model.Confidence
 import com.bp22intel.edgesentinel.domain.model.ThreatLevel
 import com.bp22intel.edgesentinel.domain.model.ThreatType
+import com.bp22intel.edgesentinel.ui.theme.AccentBlue
 import com.bp22intel.edgesentinel.ui.theme.EdgeSentinelTheme
 import com.bp22intel.edgesentinel.ui.theme.StatusClear
 import com.bp22intel.edgesentinel.ui.theme.StatusSuspicious
 import com.bp22intel.edgesentinel.ui.theme.StatusThreat
 import com.bp22intel.edgesentinel.ui.theme.Surface
+import com.bp22intel.edgesentinel.ui.theme.TextPrimary
 import com.bp22intel.edgesentinel.ui.theme.TextSecondary
 
 private fun threatTypeIcon(type: ThreatType): ImageVector {
@@ -110,11 +118,61 @@ private fun formatRelativeTime(timestampMs: Long): String {
 fun AlertCard(
     alert: Alert,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onTrustDevice: ((Long) -> Unit)? = null
 ) {
     // Slide-in animation when card first appears
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
+
+    // Trust confirmation dialog state
+    var showTrustDialog by remember { mutableStateOf(false) }
+
+    // Determine entity label for trust dialog
+    val trustEntityLabel = remember(alert.detailsJson) {
+        try {
+            val dj = org.json.JSONObject(alert.detailsJson)
+            when {
+                dj.has("ssid") -> "network \"${dj.optString("ssid", "")}\""
+                dj.has("cellId") -> "tower CID ${dj.optString("cellId", "")}"
+                else -> "device"
+            }
+        } catch (_: Exception) { "device" }
+    }
+
+    // Trust confirmation dialog
+    if (showTrustDialog && onTrustDevice != null) {
+        AlertDialog(
+            onDismissRequest = { showTrustDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Security,
+                    contentDescription = null,
+                    tint = AccentBlue
+                )
+            },
+            title = { Text("Trust this $trustEntityLabel?") },
+            text = {
+                Text(
+                    text = "Future alerts from this $trustEntityLabel will be suppressed.",
+                    color = TextSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showTrustDialog = false
+                    onTrustDevice(alert.id)
+                }) {
+                    Text("Trust", color = AccentBlue)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTrustDialog = false }) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            }
+        )
+    }
 
     AnimatedVisibility(
         visible = visible,
@@ -126,74 +184,95 @@ fun AlertCard(
             colors = CardDefaults.cardColors(containerColor = Surface),
             shape = MaterialTheme.shapes.medium
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Confidence ring on the left
-                ConfidenceRing(
-                    confidence = alert.confidence,
-                    size = 44.dp,
-                    strokeWidth = 3.dp,
-                    ringColor = when (alert.severity) {
-                        ThreatLevel.CLEAR -> StatusClear
-                        ThreatLevel.SUSPICIOUS -> StatusSuspicious
-                        ThreatLevel.THREAT -> StatusThreat
-                    }
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+            Box {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    // Confidence ring on the left
+                    ConfidenceRing(
+                        confidence = alert.confidence,
+                        size = 44.dp,
+                        strokeWidth = 3.dp,
+                        ringColor = when (alert.severity) {
+                            ThreatLevel.CLEAR -> StatusClear
+                            ThreatLevel.SUSPICIOUS -> StatusSuspicious
+                            ThreatLevel.THREAT -> StatusThreat
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = threatTypeLabel(alert.threatType),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            StatusBadge(
+                                text = alert.severity.label.uppercase(),
+                                threatLevel = alert.severity
+                            )
+                        }
+
                         Text(
-                            text = threatTypeLabel(alert.threatType),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = alert.summary,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            maxLines = 2
                         )
-                        StatusBadge(
-                            text = alert.severity.label.uppercase(),
-                            threatLevel = alert.severity
+
+                        // Rich details from detailsJson
+                        AlertDetailChips(alert.detailsJson)
+
+                        ExplainableText(
+                            text = "${threatTypeLabel(alert.threatType)} ${alert.summary}",
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+
+                        Text(
+                            text = formatRelativeTime(alert.timestamp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
                         )
                     }
 
-                    Text(
-                        text = alert.summary,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
-                        maxLines = 2
-                    )
-
-                    // Rich details from detailsJson
-                    AlertDetailChips(alert.detailsJson)
-
-                    ExplainableText(
-                        text = "${threatTypeLabel(alert.threatType)} ${alert.summary}",
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-
-                    Text(
-                        text = formatRelativeTime(alert.timestamp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary
+                    // Threat type icon on the right
+                    Icon(
+                        imageVector = threatTypeIcon(alert.threatType),
+                        contentDescription = threatTypeLabel(alert.threatType),
+                        tint = TextSecondary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
-                // Threat type icon on the right
-                Icon(
-                    imageVector = threatTypeIcon(alert.threatType),
-                    contentDescription = threatTypeLabel(alert.threatType),
-                    tint = TextSecondary,
-                    modifier = Modifier.size(20.dp)
-                )
+                // Quick-trust shortcut button (top-right corner)
+                if (onTrustDevice != null) {
+                    IconButton(
+                        onClick = { showTrustDialog = true },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(32.dp),
+                        colors = IconButtonDefaults.iconButtonColors(
+                            contentColor = AccentBlue.copy(alpha = 0.6f)
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = "Trust this $trustEntityLabel",
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
             }
         }
     }

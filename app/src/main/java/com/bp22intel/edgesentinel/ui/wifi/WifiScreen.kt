@@ -68,8 +68,15 @@ import com.bp22intel.edgesentinel.detection.wifi.SecurityType
 import com.bp22intel.edgesentinel.detection.wifi.WifiDetectionResult
 import com.bp22intel.edgesentinel.domain.model.Confidence
 import com.bp22intel.edgesentinel.domain.model.WifiThreatType
+import com.bp22intel.edgesentinel.ui.theme.AccentCyan
 import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
+import com.bp22intel.edgesentinel.ui.theme.StatusClear
+import com.bp22intel.edgesentinel.ui.theme.StatusSuspicious
+import com.bp22intel.edgesentinel.ui.theme.StatusThreat
+import com.bp22intel.edgesentinel.ui.theme.Surface
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
+import com.bp22intel.edgesentinel.ui.theme.TextSecondary
+import com.bp22intel.edgesentinel.ui.theme.TextTertiary
 
 @Composable
 fun WifiScreen(
@@ -127,7 +134,7 @@ fun WifiScreen(
                     "Evil Twin Warnings",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFEF4444),
+                    color = StatusThreat,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
@@ -198,9 +205,9 @@ fun WifiScreen(
 @Composable
 private fun ConnectionStatusCard(state: WifiUiState) {
     val statusColor = when {
-        state.threats.any { it.confidence == Confidence.HIGH } -> Color(0xFFEF4444)
-        state.threats.isNotEmpty() -> Color(0xFFF59E0B)
-        else -> Color(0xFF10B981)
+        state.threats.any { it.confidence == Confidence.HIGH } -> StatusThreat
+        state.threats.isNotEmpty() -> StatusSuspicious
+        else -> StatusClear
     }
     val statusText = when {
         !state.isScanning -> "Not Scanning"
@@ -248,7 +255,7 @@ private fun ConnectionStatusCard(state: WifiUiState) {
                 modifier = Modifier
                     .size(12.dp)
                     .clip(CircleShape)
-                    .background(if (state.isScanning) statusColor else Color.Gray)
+                    .background(if (state.isScanning) statusColor else TextTertiary)
             )
         }
     }
@@ -257,12 +264,15 @@ private fun ConnectionStatusCard(state: WifiUiState) {
 @Composable
 private fun EnvironmentHealthCard(healthScore: Int, summary: String?) {
     val healthColor = when {
-        healthScore >= 80 -> Color(0xFF10B981)
-        healthScore >= 50 -> Color(0xFFF59E0B)
-        else -> Color(0xFFEF4444)
+        healthScore >= 80 -> StatusClear
+        healthScore >= 50 -> StatusSuspicious
+        else -> StatusThreat
     }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Surface)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -311,14 +321,15 @@ private fun EvilTwinCard(
     onUntrustSsid: () -> Unit = {}
 ) {
     val severityColor = when (threat.confidence) {
-        Confidence.HIGH -> Color(0xFFEF4444)
-        Confidence.MEDIUM -> Color(0xFFF59E0B)
-        Confidence.LOW -> Color(0xFF10B981)
+        Confidence.HIGH -> StatusThreat
+        Confidence.MEDIUM -> StatusSuspicious
+        Confidence.LOW -> StatusClear
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = severityColor.copy(alpha = 0.1f))
+        colors = CardDefaults.cardColors(containerColor = severityColor.copy(alpha = 0.1f)),
+        shape = MaterialTheme.shapes.medium
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -359,7 +370,8 @@ private fun EvilTwinCard(
                             modifier = Modifier.weight(1f),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
+                            ),
+                            shape = MaterialTheme.shapes.medium
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
                                 Text(
@@ -387,14 +399,14 @@ private fun EvilTwinCard(
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = null,
-                        tint = Color(0xFF06B6D4),
+                        tint = AccentCyan,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         "\"$ssid\" is trusted — tap to remove",
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color(0xFF06B6D4)
+                        color = AccentCyan
                     )
                 }
             } else {
@@ -402,7 +414,7 @@ private fun EvilTwinCard(
                     onClick = onTrustSsid,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF06B6D4)
+                        containerColor = AccentCyan
                     )
                 ) {
                     Icon(
@@ -424,14 +436,15 @@ private fun EvilTwinCard(
 @Composable
 private fun ThreatAlertCard(threat: WifiDetectionResult) {
     val severityColor = when (threat.confidence) {
-        Confidence.HIGH -> Color(0xFFEF4444)
-        Confidence.MEDIUM -> Color(0xFFF59E0B)
-        Confidence.LOW -> Color(0xFF10B981)
+        Confidence.HIGH -> StatusThreat
+        Confidence.MEDIUM -> StatusSuspicious
+        Confidence.LOW -> StatusClear
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = severityColor.copy(alpha = 0.08f))
+        colors = CardDefaults.cardColors(containerColor = severityColor.copy(alpha = 0.08f)),
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -464,12 +477,16 @@ private fun ThreatAlertCard(threat: WifiDetectionResult) {
 @Composable
 private fun ProbePrivacyCard(status: com.bp22intel.edgesentinel.detection.wifi.ProbePrivacyStatus) {
     val riskColor = when (status.probeLeakRisk) {
-        ProbeLeakRisk.HIGH -> Color(0xFFEF4444)
-        ProbeLeakRisk.MEDIUM -> Color(0xFFF59E0B)
-        ProbeLeakRisk.LOW -> Color(0xFF10B981)
+        ProbeLeakRisk.HIGH -> StatusThreat
+        ProbeLeakRisk.MEDIUM -> StatusSuspicious
+        ProbeLeakRisk.LOW -> StatusClear
     }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = MaterialTheme.shapes.medium
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -483,9 +500,9 @@ private fun ProbePrivacyCard(status: com.bp22intel.edgesentinel.detection.wifi.P
                 )
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(RoundedCornerShape(50))
                         .background(riskColor.copy(alpha = 0.2f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(
                         status.probeLeakRisk.label.uppercase(),
@@ -499,18 +516,18 @@ private fun ProbePrivacyCard(status: com.bp22intel.edgesentinel.detection.wifi.P
             ProbeDetailRow(
                 "MAC Randomization",
                 if (status.macRandomizationEnabled) "Enabled" else "Disabled",
-                if (status.macRandomizationEnabled) Color(0xFF10B981) else Color(0xFFEF4444)
+                if (status.macRandomizationEnabled) StatusClear else StatusThreat
             )
             ProbeDetailRow(
                 "Saved Networks",
                 "${status.savedNetworkCount}",
-                if (status.savedNetworkCount > 15) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurface
+                if (status.savedNetworkCount > 15) StatusSuspicious else MaterialTheme.colorScheme.onSurface
             )
             if (status.openSavedNetworks.isNotEmpty()) {
                 ProbeDetailRow(
                     "Open Networks",
                     status.openSavedNetworks.take(3).joinToString(", "),
-                    Color(0xFFF59E0B)
+                    StatusSuspicious
                 )
             }
             if (status.recommendations.isNotEmpty()) {
@@ -536,13 +553,17 @@ private fun AccessPointCard(
     onToggleTrust: () -> Unit = {}
 ) {
     val threatColor = when {
-        isTrusted -> Color(0xFF06B6D4) // Cyan for trusted
-        threatLevel == ApThreatLevel.SAFE -> Color(0xFF10B981)
-        threatLevel == ApThreatLevel.SUSPICIOUS -> Color(0xFFF59E0B)
-        else -> Color(0xFFEF4444)
+        isTrusted -> AccentCyan
+        threatLevel == ApThreatLevel.SAFE -> StatusClear
+        threatLevel == ApThreatLevel.SUSPICIOUS -> StatusSuspicious
+        else -> StatusThreat
     }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = MaterialTheme.shapes.medium
+    ) {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -562,7 +583,7 @@ private fun AccessPointCard(
                     Icons.Default.LockOpen else Icons.Default.Lock,
                 contentDescription = null,
                 tint = if (ap.securityType == SecurityType.OPEN)
-                    Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    StatusSuspicious else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -579,7 +600,7 @@ private fun AccessPointCard(
                         Text(
                             "TRUSTED",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF06B6D4),
+                            color = AccentCyan,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -606,7 +627,7 @@ private fun AccessPointCard(
                     Text(
                         if (isTrusted) "Untrust" else "Trust",
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (isTrusted) Color(0xFFF59E0B) else Color(0xFF06B6D4)
+                        color = if (isTrusted) StatusSuspicious else AccentCyan
                     )
                 }
             }
@@ -618,9 +639,9 @@ private fun AccessPointCard(
 private fun ConfidenceBadge(confidence: Confidence, color: Color) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
+            .clip(RoundedCornerShape(50))
             .background(color.copy(alpha = 0.2f))
-            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         Text(
             confidence.name,

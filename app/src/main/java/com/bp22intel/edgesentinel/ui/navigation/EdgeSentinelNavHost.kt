@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.People
@@ -105,7 +104,7 @@ enum class BottomNavTab(
 ) {
     DASHBOARD(Routes.DASHBOARD, "Home", Icons.Default.Home),
     ALERTS(Routes.ALERTS, "Alerts", Icons.Default.Notifications),
-    TRAVEL(Routes.TRAVEL, "Travel", Icons.Default.Flight),
+    RADAR(Routes.THREAT_MAP, "Radar", Icons.Default.Map),
     SETTINGS(Routes.SETTINGS, "Settings", Icons.Default.Settings)
 }
 
@@ -224,11 +223,7 @@ fun EdgeSentinelNavHost() {
                     },
                     onNavigateToTravel = {
                         navController.navigate(Routes.TRAVEL) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
                             launchSingleTop = true
-                            restoreState = true
                         }
                     },
                     onNavigateToTowerDatabase = {

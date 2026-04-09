@@ -10,6 +10,7 @@
 
 package com.bp22intel.edgesentinel.ui.map
 
+import com.bp22intel.edgesentinel.ui.utils.TimeFormatUtils
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -772,7 +773,7 @@ internal fun ThreatInfoPopup(
             }
 
             Text(
-                text = formatTimestamp(threat.timestamp),
+                text = TimeFormatUtils.formatRelativeTimeCompact(threat.timestamp),
                 style = MaterialTheme.typography.labelSmall,
                 color = TextSecondary
             )
@@ -895,14 +896,4 @@ private fun calculateBearing(
     return Math.toDegrees(kotlin.math.atan2(deltaLng, deltaLat))
 }
 
-private fun formatTimestamp(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = (now - timestamp) / 1000
-    
-    return when {
-        diff < 60 -> "${diff}s ago"
-        diff < 3600 -> "${diff / 60}m ago"
-        diff < 86400 -> "${diff / 3600}h ago"
-        else -> "${diff / 86400}d ago"
-    }
-}
+// formatTimestamp removed — use TimeFormatUtils.formatRelativeTimeCompact()

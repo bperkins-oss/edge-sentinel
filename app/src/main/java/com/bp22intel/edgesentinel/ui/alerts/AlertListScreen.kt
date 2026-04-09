@@ -11,7 +11,13 @@
 package com.bp22intel.edgesentinel.ui.alerts
 
 import android.content.Intent
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,18 +27,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -44,11 +54,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bp22intel.edgesentinel.domain.model.Alert
@@ -64,6 +80,7 @@ import com.bp22intel.edgesentinel.ui.theme.Surface
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
 import com.bp22intel.edgesentinel.ui.theme.TextSecondary
 import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -214,23 +231,79 @@ fun AlertListScreen(
             onRefresh = { viewModel.refresh() }
         ) {
             if (alerts.isEmpty()) {
-                Text(
-                    text = "No alerts match the selected filter",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
-                    modifier = Modifier.padding(top = 24.dp)
-                )
+                // ── Empty state card ────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 48.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Surface),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Security,
+                                contentDescription = null,
+                                tint = StatusClear,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Text(
+                                text = "All Clear",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = StatusClear
+                            )
+                            Text(
+                                text = "No active threats detected. Edge Sentinel is monitoring your environment.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
             } else {
+                // Swipe hint visibility — shows once then fades
+                var showSwipeHint by remember { mutableStateOf(true) }
+                LaunchedEffect(Unit) {
+                    delay(3000)
+                    showSwipeHint = false
+                }
+
                 LazyColumn(
                     contentPadding = PaddingValues(bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(alerts, key = { it.id }) { alert ->
+                    itemsIndexed(alerts, key = { _, alert -> alert.id }) { index, alert ->
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { value ->
                                 if (value == SwipeToDismissBoxValue.EndToStart ||
                                     value == SwipeToDismissBoxValue.StartToEnd
                                 ) {
+                                    // Haptic feedback on successful swipe
+                                    try {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                            val vm = context.getSystemService(VibratorManager::class.java)
+                                            vm?.defaultVibrator?.vibrate(
+                                                VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE)
+                                            )
+                                        } else {
+                                            @Suppress("DEPRECATION")
+                                            val v = context.getSystemService(Vibrator::class.java)
+                                            v?.vibrate(
+                                                VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE)
+                                            )
+                                        }
+                                    } catch (_: Exception) { /* graceful fallback */ }
+
                                     viewModel.acknowledgeAlert(alert.id)
                                     true
                                 } else {
@@ -239,35 +312,58 @@ fun AlertListScreen(
                             }
                         )
 
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            backgroundContent = {
-                                val color by animateColorAsState(
-                                    targetValue = when (dismissState.targetValue) {
-                                        SwipeToDismissBoxValue.Settled -> Surface
-                                        else -> StatusClear.copy(alpha = 0.2f)
-                                    },
-                                    label = "swipe_bg"
+                        Column {
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                backgroundContent = {
+                                    val color by animateColorAsState(
+                                        targetValue = when (dismissState.targetValue) {
+                                            SwipeToDismissBoxValue.Settled -> Surface
+                                            else -> StatusClear.copy(alpha = 0.2f)
+                                        },
+                                        label = "swipe_bg"
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(color, MaterialTheme.shapes.medium)
+                                            .padding(horizontal = 20.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = "Acknowledge",
+                                            tint = StatusClear
+                                        )
+                                    }
+                                }
+                            ) {
+                                AlertCard(
+                                    alert = alert,
+                                    onClick = { onAlertClick(alert) },
+                                    onTrustDevice = { alertId ->
+                                        viewModel.acknowledgeAlert(alertId)
+                                    }
                                 )
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(color, MaterialTheme.shapes.medium)
-                                        .padding(horizontal = 20.dp),
-                                    contentAlignment = Alignment.CenterEnd
+                            }
+
+                            // Swipe hint on first card only, fades after 3s
+                            if (index == 0) {
+                                AnimatedVisibility(
+                                    visible = showSwipeHint,
+                                    exit = fadeOut()
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = "Acknowledge",
-                                        tint = StatusClear
+                                    Text(
+                                        text = "← Swipe to acknowledge",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary.copy(alpha = 0.7f),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 4.dp),
+                                        textAlign = TextAlign.Center
                                     )
                                 }
                             }
-                        ) {
-                            AlertCard(
-                                alert = alert,
-                                onClick = { onAlertClick(alert) }
-                            )
                         }
                     }
                 }

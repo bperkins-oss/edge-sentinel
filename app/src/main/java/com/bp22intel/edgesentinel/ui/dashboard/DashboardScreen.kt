@@ -11,7 +11,6 @@
 package com.bp22intel.edgesentinel.ui.dashboard
 
 import android.content.Intent
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -36,20 +35,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.NavigateNext
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.TableChart
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -82,12 +74,10 @@ import com.bp22intel.edgesentinel.domain.model.SensorCategory
 import com.bp22intel.edgesentinel.domain.model.SensorCategoryScore
 import com.bp22intel.edgesentinel.domain.model.ThreatTrend
 import com.bp22intel.edgesentinel.fusion.DashboardPosture
-import com.bp22intel.edgesentinel.export.AlertExporter
 import com.bp22intel.edgesentinel.ui.components.AlertCard
 import com.bp22intel.edgesentinel.ui.components.CellInfoCard
 import com.bp22intel.edgesentinel.ui.components.CellInfoCardWithVerification
 import com.bp22intel.edgesentinel.detection.tower.TowerVerifier
-import com.bp22intel.edgesentinel.ui.components.MonitoringStatusBar
 import com.bp22intel.edgesentinel.ui.components.SectionHeader
 import com.bp22intel.edgesentinel.ui.components.ThreatIndicator
 import com.bp22intel.edgesentinel.ui.theme.AccentBlue
@@ -98,6 +88,8 @@ import com.bp22intel.edgesentinel.ui.theme.SensorCellular
 import com.bp22intel.edgesentinel.ui.theme.SensorNetwork
 import com.bp22intel.edgesentinel.ui.theme.SensorWifi
 import androidx.compose.material.icons.filled.CellTower
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -154,23 +146,16 @@ fun DashboardScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-            // Version ID
+            // ── 1. Fused Threat Header (hero) with integrated monitoring status ──
             item {
-                Text(
-                    text = "Edge Sentinel v${com.bp22intel.edgesentinel.BuildConfig.VERSION_NAME} (Build ${com.bp22intel.edgesentinel.BuildConfig.VERSION_CODE})",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
+                FusedThreatHeader(
+                    posture = posture,
+                    isMonitoring = isMonitoring,
+                    monitoringStartTime = monitoringStartTime
                 )
             }
 
-            // Unified fused threat indicator
-            item {
-                FusedThreatHeader(posture = posture)
-            }
-
-            // AI Situation Analysis — real ThreatAnalyst output
+            // ── 2. AI Situation Analysis (collapsible) ──
             item {
                 SituationAnalysisCard(
                     brief = situationBrief,
@@ -178,36 +163,39 @@ fun DashboardScreen(
                 )
             }
 
-            // Active Alerts — front and center
+            // ── 3. Active Alerts (max 3, with "See all" link) ──
             if (recentAlerts.isNotEmpty()) {
                 item {
                     SectionHeader(
                         title = "Active Alerts (${recentAlerts.size})",
-                        actionText = "View All",
+                        actionText = if (recentAlerts.size > 3) "View All" else null,
                         onActionClick = { onNavigate("alerts") }
                     )
                 }
 
-                items(recentAlerts.take(5), key = { it.id }) { alert ->
+                items(recentAlerts.take(3), key = { it.id }) { alert ->
                     AlertCard(
                         alert = alert,
                         onClick = { onAlertClick(alert) }
                     )
                 }
 
-                if (recentAlerts.size > 5) {
+                if (recentAlerts.size > 3) {
                     item {
                         TextButton(
                             onClick = { onNavigate("alerts") },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("View all ${recentAlerts.size} alerts", color = AccentBlue)
+                            Text(
+                                "See all ${recentAlerts.size} alerts \u2192",
+                                color = AccentBlue
+                            )
                         }
                     }
                 }
             }
 
-            // Detection Layers — the 5 sensors
+            // ── 4. Detection Layers ──
             item {
                 SectionHeader(
                     title = "Detection Layers",
@@ -220,14 +208,10 @@ fun DashboardScreen(
                 DetectionLayerCards(
                     categoryScores = posture.categoryBreakdown,
                     onLayerClick = { category ->
-                        // If the layer has active alerts, go to alerts tab
-                        // Otherwise go to the detail screen for that sensor
                         val hasAlerts = posture.categoryBreakdown
                             .find { it.category == category }
                             ?.activeThreatCount ?: 0 > 0
                         val route = if (hasAlerts) {
-                            // Navigate to alerts tab — the category filter
-                            // will be applied by the alert list
                             "alerts"
                         } else {
                             when (category) {
@@ -243,219 +227,91 @@ fun DashboardScreen(
                 )
             }
 
-            // Threat Map — full-width prominent card
+            // ── 5. Quick Actions (scan, radar, mesh, export) ──
             item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onNavigate("threat_map") },
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF0A1628)
-                    ),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, AccentBlue.copy(alpha = 0.3f))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(
-                                    AccentBlue.copy(alpha = 0.15f),
-                                    RoundedCornerShape(12.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Radar,
-                                contentDescription = null,
-                                tint = AccentBlue,
-                                modifier = Modifier.size(28.dp)
+                QuickActionsRow(
+                    onScanNow = { viewModel.forceScan() },
+                    onRadar = { onNavigate("threat_map") },
+                    onMesh = { onNavigate("mesh") },
+                    onExport = {
+                        if (recentAlerts.isNotEmpty()) {
+                            val intent = viewModel.alertExporter.shareTextReport(
+                                alerts = recentAlerts,
+                                situationBrief = situationBrief
+                            )
+                            context.startActivity(
+                                Intent.createChooser(intent, "Share Report")
                             )
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "THREAT RADAR",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = AccentBlue,
-                                letterSpacing = 1.sp
-                            )
-                            Text(
-                                text = "Tactical map of detected threats around you",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Filled.NavigateNext,
-                            contentDescription = "Open",
-                            tint = TextSecondary
-                        )
                     }
-                }
+                )
             }
 
-            // Mesh Network
+            // ── 6. Details (collapsible — connected tower) ──
             item {
+                var detailsExpanded by remember { mutableStateOf(false) }
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onNavigate("mesh") },
-                    colors = CardDefaults.cardColors(
-                        containerColor = Surface
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.People,
-                            contentDescription = null,
-                            tint = Color(0xFF06B6D4),
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Mesh Network",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = "Peer-to-peer BLE alerts",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Filled.NavigateNext,
-                            contentDescription = "Open",
-                            tint = TextSecondary
-                        )
-                    }
-                }
-            }
-
-            // Force Scan + Export buttons
-            item {
-                Button(
-                    onClick = { viewModel.forceScan() },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentBlue,
-                        contentColor = BackgroundPrimary
-                    ),
+                    colors = CardDefaults.cardColors(containerColor = Surface),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Force Scan", style = MaterialTheme.typography.labelLarge)
-                }
-            }
-
-            // Export actions
-            if (recentAlerts.isNotEmpty()) {
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        val alertExporter = viewModel.alertExporter
-                        Button(
-                            onClick = {
-                                val intent = alertExporter.shareTextReport(
-                                    alerts = recentAlerts,
-                                    situationBrief = situationBrief
-                                )
-                                context.startActivity(Intent.createChooser(intent, "Share Report"))
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Surface,
-                                contentColor = TextPrimary
-                            ),
-                            shape = RoundedCornerShape(12.dp)
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { detailsExpanded = !detailsExpanded }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.Description,
+                                imageVector = Icons.Filled.CellTower,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                                tint = TextSecondary,
+                                modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Export Report", style = MaterialTheme.typography.labelMedium)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Connected Tower",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                imageVector = if (detailsExpanded)
+                                    Icons.Filled.KeyboardArrowUp
+                                else
+                                    Icons.Filled.KeyboardArrowDown,
+                                contentDescription = if (detailsExpanded) "Collapse" else "Expand",
+                                tint = TextSecondary
+                            )
                         }
-                        Button(
-                            onClick = {
-                                val intent = alertExporter.shareCsvExport(recentAlerts)
-                                context.startActivity(Intent.createChooser(intent, "Share CSV"))
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Surface,
-                                contentColor = TextPrimary
-                            ),
-                            shape = RoundedCornerShape(12.dp)
+                        AnimatedVisibility(
+                            visible = detailsExpanded,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.TableChart,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Export CSV", style = MaterialTheme.typography.labelMedium)
+                            Column(
+                                modifier = Modifier.padding(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    bottom = 16.dp
+                                )
+                            ) {
+                                val cell = currentCell
+                                if (cell != null) {
+                                    CellInfoCardWithVerification(cellTower = cell)
+                                } else {
+                                    EmptyStateCard(
+                                        icon = Icons.Filled.CellTower,
+                                        title = "No Cell Data",
+                                        subtitle = "Waiting for cell tower information"
+                                    )
+                                }
+                            }
                         }
                     }
                 }
-            }
-
-            // Monitoring status
-            item {
-                MonitoringStatusBar(
-                    isActive = isMonitoring,
-                    startTime = monitoringStartTime
-                )
-            }
-
-            // Connected tower information
-            item {
-                SectionHeader(
-                    title = "Connected Tower",
-                    actionText = null,
-                    onActionClick = {}
-                )
-            }
-
-            item {
-                val cell = currentCell
-                if (cell != null) {
-                    CellInfoCardWithVerification(cellTower = cell)
-                } else {
-                    EmptyStateCard(
-                        icon = Icons.Filled.CellTower,
-                        title = "No Cell Data",
-                        subtitle = "Waiting for cell tower information"
-                    )
-                }
-            }
-
-            // Bottom spacer
-            item {
-                Spacer(modifier = Modifier.height(72.dp))
             }
         }
         }
@@ -463,7 +319,11 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun FusedThreatHeader(posture: DashboardPosture) {
+private fun FusedThreatHeader(
+    posture: DashboardPosture,
+    isMonitoring: Boolean = true,
+    monitoringStartTime: Long = 0L
+) {
     val color = fusedLevelColor(posture.level)
     var expanded by remember { mutableStateOf(false) }
 
@@ -493,6 +353,28 @@ private fun FusedThreatHeader(posture: DashboardPosture) {
                 text = "Fused Threat Posture",
                 style = MaterialTheme.typography.titleSmall,
                 color = TextSecondary
+            )
+
+            // Integrated monitoring status (replaces separate MonitoringStatusBar)
+            Spacer(modifier = Modifier.height(4.dp))
+            val monitoringText = if (isMonitoring) {
+                val elapsed = if (monitoringStartTime > 0L) {
+                    val seconds = (System.currentTimeMillis() - monitoringStartTime) / 1000
+                    when {
+                        seconds < 60 -> "${seconds}s"
+                        seconds < 3600 -> "${seconds / 60}m"
+                        else -> "${seconds / 3600}h ${(seconds % 3600) / 60}m"
+                    }
+                } else null
+                if (elapsed != null) "Monitoring active \u00B7 Running for $elapsed"
+                else "Monitoring active"
+            } else {
+                "Monitoring inactive"
+            }
+            Text(
+                text = monitoringText,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isMonitoring) StatusClear else TextSecondary
             )
 
             if (posture.activeThreatCount > 0) {
@@ -711,6 +593,8 @@ private fun SituationAnalysisCard(
     brief: com.bp22intel.edgesentinel.analysis.SituationBrief,
     posture: DashboardPosture
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     val color = when (brief.overallRisk) {
         com.bp22intel.edgesentinel.analysis.RiskLevel.CRITICAL -> StatusDangerous
         com.bp22intel.edgesentinel.analysis.RiskLevel.HIGH -> StatusElevated
@@ -726,7 +610,9 @@ private fun SituationAnalysisCard(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded },
         colors = CardDefaults.cardColors(
             containerColor = color.copy(alpha = 0.08f)
         ),
@@ -738,7 +624,7 @@ private fun SituationAnalysisCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Header
+            // Header — always visible
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -750,7 +636,7 @@ private fun SituationAnalysisCard(
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "AI THREAT ANALYSIS",
                         style = MaterialTheme.typography.titleSmall,
@@ -765,71 +651,128 @@ private fun SituationAnalysisCard(
                         color = TextPrimary
                     )
                 }
+                Icon(
+                    imageVector = if (expanded)
+                        Icons.Filled.KeyboardArrowUp
+                    else
+                        Icons.Filled.KeyboardArrowDown,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = TextSecondary
+                )
             }
 
-            // Main situation summary from ThreatAnalyst
+            // Summary — collapsed: 2 lines, expanded: full
             Text(
                 text = brief.summary,
                 style = MaterialTheme.typography.bodySmall,
                 color = TextPrimary,
-                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
+                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
+                maxLines = if (expanded) Int.MAX_VALUE else 2,
+                overflow = TextOverflow.Ellipsis
             )
 
-            // Top concerns — each one is a specific finding
-            if (brief.topConcerns.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                brief.topConcerns.forEachIndexed { index, concern ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Text(
-                            text = "\u2022",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (index == 0) color else TextSecondary,
-                            modifier = Modifier.padding(end = 6.dp, top = 1.dp)
-                        )
-                        Text(
-                            text = concern,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (index == 0) TextPrimary else TextSecondary,
-                            lineHeight = MaterialTheme.typography.bodySmall.lineHeight
-                        )
-                    }
-                }
+            if (!expanded) {
+                Text(
+                    text = "Read more \u25BE",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AccentBlue,
+                    fontWeight = FontWeight.Medium
+                )
             }
 
-            // Recommendations
-            if (brief.recommendations.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = Surface
-                    ),
-                    shape = RoundedCornerShape(8.dp)
+            // ── Expanded details ──
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "RECOMMENDED ACTIONS",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = AccentBlue,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
-                        brief.recommendations.forEach { rec ->
-                            Row(verticalAlignment = Alignment.Top) {
-                                Icon(
-                                    imageVector = Icons.Filled.Shield,
-                                    contentDescription = null,
-                                    tint = AccentBlue,
-                                    modifier = Modifier.size(14.dp).padding(top = 2.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
+                    // Top concerns — each one is a specific finding
+                    if (brief.topConcerns.isNotEmpty()) {
+                        brief.topConcerns.forEachIndexed { index, concern ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Top
+                            ) {
                                 Text(
-                                    text = rec,
+                                    text = "\u2022",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (index == 0) color else TextSecondary,
+                                    modifier = Modifier.padding(end = 6.dp, top = 1.dp)
+                                )
+                                Text(
+                                    text = concern,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (index == 0) TextPrimary else TextSecondary,
+                                    lineHeight = MaterialTheme.typography.bodySmall.lineHeight
+                                )
+                            }
+                        }
+                    }
+
+                    // Recommendations
+                    if (brief.recommendations.isNotEmpty()) {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = Surface
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "RECOMMENDED ACTIONS",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = AccentBlue,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.5.sp
+                                )
+                                brief.recommendations.forEach { rec ->
+                                    Row(verticalAlignment = Alignment.Top) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Shield,
+                                            contentDescription = null,
+                                            tint = AccentBlue,
+                                            modifier = Modifier
+                                                .size(14.dp)
+                                                .padding(top = 2.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = rec,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextPrimary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Cooperative localization context
+                    brief.cooperativeContext?.let { coopCtx ->
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFF59E0B).copy(alpha = 0.08f)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Text(
+                                    text = "\u2B50",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(end = 6.dp, top = 1.dp)
+                                )
+                                Text(
+                                    text = coopCtx,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextPrimary,
                                     fontWeight = FontWeight.Medium
@@ -837,36 +780,94 @@ private fun SituationAnalysisCard(
                             }
                         }
                     }
-                }
-            }
 
-            // Cooperative localization context
-            brief.cooperativeContext?.let { coopCtx ->
-                Spacer(modifier = Modifier.height(4.dp))
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFF59E0B).copy(alpha = 0.08f)
-                    ),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Text(
-                            text = "\u2B50",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(end = 6.dp, top = 1.dp)
-                        )
-                        Text(
-                            text = coopCtx,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextPrimary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                    Text(
+                        text = "Show less \u25B4",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AccentBlue,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun QuickActionsRow(
+    onScanNow: () -> Unit,
+    onRadar: () -> Unit,
+    onMesh: () -> Unit,
+    onExport: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        QuickActionButton(
+            icon = Icons.Filled.Refresh,
+            label = "Scan",
+            tint = AccentBlue,
+            modifier = Modifier.weight(1f),
+            onClick = onScanNow
+        )
+        QuickActionButton(
+            icon = Icons.Filled.Radar,
+            label = "Radar",
+            tint = AccentBlue,
+            modifier = Modifier.weight(1f),
+            onClick = onRadar
+        )
+        QuickActionButton(
+            icon = Icons.Filled.People,
+            label = "Mesh",
+            tint = Color(0xFF06B6D4),
+            modifier = Modifier.weight(1f),
+            onClick = onMesh
+        )
+        QuickActionButton(
+            icon = Icons.Filled.Share,
+            label = "Export",
+            tint = TextSecondary,
+            modifier = Modifier.weight(1f),
+            onClick = onExport
+        )
+    }
+}
+
+@Composable
+private fun QuickActionButton(
+    icon: ImageVector,
+    label: String,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        shape = RoundedCornerShape(12.dp),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = tint,
+                modifier = Modifier.size(22.dp)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = TextSecondary,
+                fontSize = 11.sp
+            )
         }
     }
 }

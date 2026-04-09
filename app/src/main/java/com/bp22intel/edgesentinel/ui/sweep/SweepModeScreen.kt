@@ -103,9 +103,11 @@ import com.bp22intel.edgesentinel.ui.map.HeatMapLegend
 import com.bp22intel.edgesentinel.ui.map.HeatMapOverlay
 import com.bp22intel.edgesentinel.ui.theme.AccentBlue
 import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
+import com.bp22intel.edgesentinel.ui.theme.SensorBluetooth
 import com.bp22intel.edgesentinel.ui.theme.StatusClear
 import com.bp22intel.edgesentinel.ui.theme.StatusDangerous
 import com.bp22intel.edgesentinel.ui.theme.StatusSuspicious
+import com.bp22intel.edgesentinel.ui.theme.StatusThreat
 import com.bp22intel.edgesentinel.ui.theme.Surface
 import com.bp22intel.edgesentinel.ui.theme.SurfaceVariant
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
@@ -118,15 +120,6 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
-
-// ── Colors ───────────────────────────────────────────────────────────────
-
-private val SweepGreen = Color(0xFF10B981)
-private val SweepCyan = Color(0xFF06B6D4)
-private val SweepRed = Color(0xFFEF4444)
-private val SweepYellow = Color(0xFFF59E0B)
-private val SweepBlue = Color(0xFF3B82F6)
-private val SweepOrange = Color(0xFFFF6B35)
 
 private val CARTO_DARK_MATTER = XYTileSource(
     "CartoDB Dark Matter",
@@ -230,8 +223,8 @@ fun SweepModeScreen(
             ) {
                 Card(
                     modifier = Modifier.padding(top = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = SweepRed.copy(alpha = 0.9f)),
-                    shape = RoundedCornerShape(8.dp)
+                    colors = CardDefaults.cardColors(containerColor = StatusThreat.copy(alpha = 0.9f)),
+                    shape = MaterialTheme.shapes.medium
                 ) {
                     Text(
                         text = "⚡ TARGET LOCATED — CID ${uiState.targetLocatedCid}",
@@ -338,8 +331,8 @@ private fun SweepTopBar(
                 .size(10.dp)
                 .clip(CircleShape)
                 .background(
-                    if (isActive && !isPaused) SweepGreen.copy(alpha = pulseAlpha)
-                    else if (isPaused) SweepYellow
+                    if (isActive && !isPaused) StatusClear.copy(alpha = pulseAlpha)
+                    else if (isPaused) StatusSuspicious
                     else TextSecondary
                 )
         )
@@ -347,7 +340,7 @@ private fun SweepTopBar(
 
         Text(
             text = "SWEEP MODE",
-            color = SweepGreen,
+            color = StatusClear,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
             fontSize = 16.sp,
@@ -362,7 +355,7 @@ private fun SweepTopBar(
             Icon(
                 imageVector = Icons.Default.Layers,
                 contentDescription = "Heat Map",
-                tint = if (heatMapEnabled) SweepBlue else TextSecondary,
+                tint = if (heatMapEnabled) SensorBluetooth else TextSecondary,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -662,7 +655,7 @@ private fun SweepBottomPanel(
                 }
                 Text(
                     text = statusText,
-                    color = if (uiState.sweep.isActive) SweepGreen else TextSecondary,
+                    color = if (uiState.sweep.isActive) StatusClear else TextSecondary,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -727,7 +720,7 @@ private fun SweepBottomPanel(
                         onClick = onExportReport,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = SweepGreen
+                            contentColor = StatusClear
                         )
                     ) {
                         Icon(
@@ -775,9 +768,9 @@ private fun SweepBottomPanel(
 @Composable
 private fun TargetCard(target: SweepTarget) {
     val accentColor = when (target.accuracyColor) {
-        AccuracyTier.HIGH -> SweepGreen
-        AccuracyTier.MEDIUM -> SweepYellow
-        AccuracyTier.LOW -> SweepRed
+        AccuracyTier.HIGH -> StatusClear
+        AccuracyTier.MEDIUM -> StatusSuspicious
+        AccuracyTier.LOW -> StatusThreat
         AccuracyTier.UNKNOWN -> TextSecondary
     }
 
@@ -793,7 +786,7 @@ private fun TargetCard(target: SweepTarget) {
         colors = CardDefaults.cardColors(
             containerColor = accentColor.copy(alpha = 0.08f)
         ),
-        shape = RoundedCornerShape(8.dp)
+        shape = MaterialTheme.shapes.medium
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
@@ -823,7 +816,7 @@ private fun TargetCard(target: SweepTarget) {
                 // Accuracy badge
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(RoundedCornerShape(50))
                         .background(accentColor.copy(alpha = 0.2f))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
@@ -901,14 +894,14 @@ private fun PeerStatusRow(peers: List<SweepPeer>) {
 @Composable
 private fun PeerChip(peer: SweepPeer) {
     val (bgColor, statusIcon, statusColor) = when (peer.status) {
-        PeerStatus.CONTRIBUTING -> Triple(SweepGreen.copy(alpha = 0.1f), "✓", SweepGreen)
-        PeerStatus.CONNECTED_IDLE -> Triple(SweepYellow.copy(alpha = 0.1f), "⏳", SweepYellow)
-        PeerStatus.OUT_OF_RANGE -> Triple(SweepRed.copy(alpha = 0.1f), "✗", SweepRed)
+        PeerStatus.CONTRIBUTING -> Triple(StatusClear.copy(alpha = 0.1f), "✓", StatusClear)
+        PeerStatus.CONNECTED_IDLE -> Triple(StatusSuspicious.copy(alpha = 0.1f), "⏳", StatusSuspicious)
+        PeerStatus.OUT_OF_RANGE -> Triple(StatusThreat.copy(alpha = 0.1f), "✗", StatusThreat)
     }
 
     Row(
         modifier = Modifier
-            .background(bgColor, RoundedCornerShape(6.dp))
+            .background(bgColor, RoundedCornerShape(50))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

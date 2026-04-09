@@ -10,6 +10,7 @@
 
 package com.bp22intel.edgesentinel.ui.sweep
 
+import com.bp22intel.edgesentinel.ui.utils.TimeFormatUtils
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -381,7 +382,7 @@ class SweepModeViewModel @Inject constructor(
      */
     fun generateSweepReport(): String {
         val state = _uiState.value
-        val duration = formatDuration(state.sweep.elapsedMs)
+        val duration = TimeFormatUtils.formatDurationClock(state.sweep.elapsedMs)
         val now = dateFormat.format(Date())
 
         return buildString {
@@ -478,13 +479,7 @@ class SweepModeViewModel @Inject constructor(
         }
     }
 
-    private fun formatDuration(ms: Long): String {
-        val totalSeconds = ms / 1000
-        val hours = totalSeconds / 3600
-        val minutes = (totalSeconds % 3600) / 60
-        val seconds = totalSeconds % 60
-        return "%02d:%02d:%02d".format(hours, minutes, seconds)
-    }
+    // formatDuration removed — use TimeFormatUtils.formatDurationClock()
 
     override fun onCleared() {
         stopSweep()

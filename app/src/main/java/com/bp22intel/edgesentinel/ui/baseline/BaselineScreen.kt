@@ -10,6 +10,8 @@
 
 package com.bp22intel.edgesentinel.ui.baseline
 
+import com.bp22intel.edgesentinel.ui.utils.TimeFormatUtils
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -471,7 +473,7 @@ private fun BaselineDetailScreen(
                         DetailRow("Confidence", baseline.confidence.name)
                         DetailRow("Observations", "${baseline.observationCount}")
                         DetailRow("Radius", "%.0fm".format(baseline.radiusMeters))
-                        DetailRow("Last updated", formatTimestamp(baseline.updatedAt))
+                        DetailRow("Last updated", TimeFormatUtils.formatTimestampDate(baseline.updatedAt))
                     }
                 }
             }
@@ -635,7 +637,4 @@ private fun NetworkDistRow(type: String, pct: Double) {
     }
 }
 
-private fun formatTimestamp(timestamp: Long): String {
-    val sdf = java.text.SimpleDateFormat("MMM d, HH:mm", java.util.Locale.getDefault())
-    return sdf.format(java.util.Date(timestamp))
-}
+// formatTimestamp removed — use TimeFormatUtils.formatTimestampDate()
