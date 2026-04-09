@@ -266,8 +266,9 @@ class MonitoringService : LifecycleService() {
                 .collect { snapshot ->
                     val history = wifiMonitor.getHistory()
                     val trustedBssids = trustedNetworkDao.getAllTrustedBssids().toSet()
+                    val trustedSsids = trustedNetworkDao.getAllTrustedSsids().toSet()
                     val results = wifiThreatDetector.analyze(
-                        snapshot, history, emptyList(), trustedBssids
+                        snapshot, history, emptyList(), trustedBssids, trustedSsids
                     )
                     val now = System.currentTimeMillis()
                     val fusionDetections = results.map { result ->
