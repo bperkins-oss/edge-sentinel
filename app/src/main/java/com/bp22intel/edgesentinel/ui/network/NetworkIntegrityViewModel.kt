@@ -18,7 +18,9 @@ import com.bp22intel.edgesentinel.detection.network.NetworkIntegritySnapshot
 import com.bp22intel.edgesentinel.detection.network.TlsIntegrityChecker
 import com.bp22intel.edgesentinel.detection.network.VpnMonitor
 import com.bp22intel.edgesentinel.domain.model.NetworkThreatType
+import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,13 +33,24 @@ class NetworkIntegrityViewModel @Inject constructor(
     private val vpnMonitor: VpnMonitor,
     private val dnsChecker: DnsIntegrityChecker,
     private val tlsChecker: TlsIntegrityChecker,
-    private val captivePortalDetector: CaptivePortalDetector
+    private val captivePortalDetector: CaptivePortalDetector,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
+
+    companion object {
+        private const val PREFS_NAME = "trusted_mitm_services"
+        private const val KEY_TRUSTED = "trusted_endpoints"
+    }
+
+    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     val vpnStatus = vpnMonitor.vpnStatus
 
     private val _snapshot = MutableStateFlow<NetworkIntegritySnapshot?>(null)
     val snapshot: StateFlow<NetworkIntegritySnapshot?> = _snapshot.asStateFlow()
+
+    private val _trustedMitmServices = MutableStateFlow<Set<String>>(emptySet())
+    val trustedMitmServices: StateFlow<Set<String>> = _trustedMitmServices.asStateFlow()
 
     private val _checkHistory = MutableStateFlow<List<NetworkIntegritySnapshot>>(emptyList())
     val checkHistory: StateFlow<List<NetworkIntegritySnapshot>> = _checkHistory.asStateFlow()
@@ -47,6 +60,19 @@ class NetworkIntegrityViewModel @Inject constructor(
 
     init {
         vpnMonitor.startMonitoring()
+        _trustedMitmServices.value = prefs.getStringSet(KEY_TRUSTED, emptySet()) ?: emptySet()
+    }
+
+    fun trustMitmService(endpoint: String) {
+        val updated = _trustedMitmServices.value + endpoint
+        _trustedMitmServices.value = updated
+        prefs.edit().putStringSet(KEY_TRUSTED, updated).apply()
+    }
+
+    fun untrustMitmService(endpoint: String) {
+        val updated = _trustedMitmServices.value - endpoint
+        _trustedMitmServices.value = updated
+        prefs.edit().putStringSet(KEY_TRUSTED, updated).apply()
     }
 
     /**
@@ -82,7 +108,8 @@ class NetworkIntegrityViewModel @Inject constructor(
                 if (vpnResult.bypassLeakDetected) score -= 15
                 if (dnsResult.hijackedDomains.isNotEmpty()) score -= 25
                 if (dnsResult.nxdomainHijacked) score -= 10
-                if (tlsResult.mitmEndpoints.isNotEmpty()) score -= 30
+                val untrustedMitm = tlsResult.mitmEndpoints.filter { it !in _trustedMitmServices.value }
+                if (untrustedMitm.isNotEmpty()) score -= 30
                 if (portalResult.captivePortalDetected) score -= 10
                 if (portalResult.jsInjectionDetected) score -= 15
 

@@ -30,6 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -39,13 +41,18 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,6 +85,7 @@ fun NetworkIntegrityScreen(
     val snapshot by viewModel.snapshot.collectAsState()
     val history by viewModel.checkHistory.collectAsState()
     val isChecking by viewModel.isChecking.collectAsState()
+    val trustedMitmServices by viewModel.trustedMitmServices.collectAsState()
 
     Scaffold(
         topBar = {
@@ -144,7 +152,14 @@ fun NetworkIntegrityScreen(
 
         // TLS Integrity
         item { SectionHeader(title = "TLS Integrity") }
-        item { TlsStatusCard(snapshot) }
+        item {
+            TlsStatusCard(
+                snapshot = snapshot,
+                trustedMitmServices = trustedMitmServices,
+                onTrustService = { viewModel.trustMitmService(it) },
+                onUntrustService = { viewModel.untrustMitmService(it) }
+            )
+        }
 
         // Captive Portal
         item { SectionHeader(title = "Captive Portal") }
@@ -298,8 +313,15 @@ private fun DnsStatusCard(snapshot: NetworkIntegritySnapshot?) {
 }
 
 @Composable
-private fun TlsStatusCard(snapshot: NetworkIntegritySnapshot?) {
+private fun TlsStatusCard(
+    snapshot: NetworkIntegritySnapshot?,
+    trustedMitmServices: Set<String> = emptySet(),
+    onTrustService: (String) -> Unit = {},
+    onUntrustService: (String) -> Unit = {}
+) {
     val tls = snapshot?.tlsIntegrity
+    var showExplainer by remember { mutableStateOf(false) }
+
     Card(
         colors = CardDefaults.cardColors(containerColor = Surface),
         shape = MaterialTheme.shapes.medium
@@ -317,16 +339,129 @@ private fun TlsStatusCard(snapshot: NetworkIntegritySnapshot?) {
                     color = TextSecondary
                 )
             } else {
-                StatusIcon(tls.overallClean)
+                // Filter out trusted services from MITM list
+                val untrustedMitm = tls.mitmEndpoints.filter { it !in trustedMitmServices }
+                val trustedMitm = tls.mitmEndpoints.filter { it in trustedMitmServices }
+
+                StatusIcon(untrustedMitm.isEmpty())
                 StatusRow("Last Check", formatTimestamp(tls.timestamp))
                 StatusRow("Endpoints Checked", "${tls.endpointResults.size}")
-                if (tls.mitmEndpoints.isNotEmpty()) {
+
+                // Untrusted MITM endpoints (shown as threats)
+                if (untrustedMitm.isNotEmpty()) {
                     StatusRow(
                         "MITM Detected",
-                        tls.mitmEndpoints.joinToString(", "),
+                        untrustedMitm.joinToString(", "),
                         StatusThreat
                     )
+
+                    // "What's this?" button
+                    TextButton(onClick = { showExplainer = !showExplainer }) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = AccentBlue,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (showExplainer) "Hide explanation" else "What's this?",
+                            color = AccentBlue,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+
+                    if (showExplainer) {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = AccentBlue.copy(alpha = 0.1f)
+                            ),
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "TLS MITM (Man-in-the-Middle) means someone is intercepting your encrypted connections to these services.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = "This can be malicious (someone spying on your traffic) OR legitimate:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = "\u2022 Corporate security proxy / firewall\n" +
+                                        "\u2022 Antivirus with HTTPS scanning\n" +
+                                        "\u2022 Parental control software\n" +
+                                        "\u2022 Network security appliance (e.g. Fortinet, Palo Alto)\n" +
+                                        "\u2022 DNS-level security service (e.g. Cloudflare Gateway)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+                                Text(
+                                    text = "If you recognize this as your own security service, tap 'Trust' below. If not, your traffic may be compromised.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = TextPrimary
+                                )
+                            }
+                        }
+                    }
+
+                    // Trust buttons for each untrusted MITM endpoint
+                    untrustedMitm.forEach { endpoint ->
+                        OutlinedButton(
+                            onClick = { onTrustService(endpoint) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = AccentBlue,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Trust $endpoint",
+                                color = AccentBlue,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    }
                 }
+
+                // Trusted MITM endpoints (shown as acknowledged)
+                if (trustedMitm.isNotEmpty()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Shield,
+                            contentDescription = null,
+                            tint = StatusClear,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "Trusted: ${trustedMitm.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = StatusClear
+                        )
+                    }
+                    trustedMitm.forEach { endpoint ->
+                        TextButton(onClick = { onUntrustService(endpoint) }) {
+                            Text(
+                                text = "Remove trust for $endpoint",
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
+                }
+
                 tls.endpointResults.forEach { result ->
                     if (result.error != null) {
                         StatusRow(result.hostname, result.error, TextSecondary)
