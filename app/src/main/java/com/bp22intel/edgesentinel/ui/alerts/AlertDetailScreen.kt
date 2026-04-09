@@ -85,6 +85,7 @@ import com.bp22intel.edgesentinel.ui.theme.Surface
 import com.bp22intel.edgesentinel.ui.theme.SurfaceVariant
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
 import com.bp22intel.edgesentinel.ui.theme.TextSecondary
+import com.bp22intel.edgesentinel.ui.components.AlertLocationMap
 import com.bp22intel.edgesentinel.ui.components.ConfidenceRing
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -152,7 +153,10 @@ fun AlertDetailScreen(
                 // 7. Timestamp + duration
                 TimestampCard(alert = alert)
 
-                // 8. Action buttons (acknowledge + share)
+                // 8. Location map (if coordinates available)
+                AlertLocationMapSection(alert = alert)
+
+                // 9. Action buttons (acknowledge + share)
                 ActionButtons(
                     isAcknowledged = uiState.isAcknowledged,
                     onAcknowledge = { viewModel.acknowledgeAlert() },
@@ -798,6 +802,60 @@ private fun formatDuration(ms: Long): String {
         minutes > 0 -> "$minutes minute${if (minutes != 1L) "s" else ""}"
         else -> "Less than a minute"
     }
+}
+
+@Composable
+private fun AlertLocationMapSection(alert: Alert) {
+    val details = try { JSONObject(alert.detailsJson) } catch (_: Exception) { return }
+
+    // Try to get coordinates from the alert details
+    val lat = details.optDouble("latitude", Double.NaN)
+    val lng = details.optDouble("longitude", Double.NaN)
+
+    // Also check for tower location fields
+    val towerLat = details.optDouble("towerLatitude", Double.NaN)
+    val towerLng = details.optDouble("towerLongitude", Double.NaN)
+
+    // User location (if stored with the alert)
+    val userLat = details.optDouble("userLatitude", Double.NaN)
+    val userLng = details.optDouble("userLongitude", Double.NaN)
+
+    val finalLat = when {
+        !lat.isNaN() -> lat
+        !towerLat.isNaN() -> towerLat
+        else -> return  // No location data
+    }
+    val finalLng = when {
+        !lng.isNaN() -> lng
+        !towerLng.isNaN() -> towerLng
+        else -> return
+    }
+
+    // Accuracy from details, or default based on detection type
+    val accuracy = details.optDouble("accuracyMeters", Double.NaN).let {
+        if (!it.isNaN()) it else when (alert.threatType) {
+            ThreatType.FAKE_BTS -> 300.0
+            ThreatType.SIGNAL_ANOMALY -> 500.0
+            ThreatType.COMPOUND_PATTERN -> 200.0
+            else -> 400.0
+        }
+    }
+
+    val cid = details.optString("cellId", "")
+    val label = if (cid.isNotEmpty()) {
+        "${threatTypeLabel(alert.threatType)} — CID $cid"
+    } else {
+        threatTypeLabel(alert.threatType)
+    }
+
+    AlertLocationMap(
+        latitude = finalLat,
+        longitude = finalLng,
+        accuracyM = accuracy,
+        label = label,
+        userLat = if (!userLat.isNaN()) userLat else null,
+        userLng = if (!userLng.isNaN()) userLng else null
+    )
 }
 
 private fun shareAlertToClipboard(context: Context, alert: Alert, analysis: AlertAnalysis) {

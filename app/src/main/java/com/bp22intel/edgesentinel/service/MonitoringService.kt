@@ -84,6 +84,8 @@ class MonitoringService : LifecycleService() {
     @Inject lateinit var captivePortalDetector: CaptivePortalDetector
     @Inject lateinit var vpnMonitor: VpnMonitor
 
+    @Inject lateinit var knownTowerDao: com.bp22intel.edgesentinel.data.local.dao.KnownTowerDao
+
     private var scanJob: Job? = null
     private var wifiJob: Job? = null
     private var bleJob: Job? = null
@@ -479,13 +481,29 @@ class MonitoringService : LifecycleService() {
                         put("motionState", motionDetector.motionState.value.name)
                     }.toString()
 
+                    // Enrich detailsJson with tower location from known tower DB
+                    val enrichedJson = try {
+                        val cell = currentCells.firstOrNull()
+                        if (cell != null) {
+                            val known = knownTowerDao.findTower(cell.mcc, cell.mnc, cell.lacTac, cell.cid.toInt())
+                            if (known != null && known.latitude != 0.0) {
+                                val obj = org.json.JSONObject(detailsJson)
+                                obj.put("latitude", known.latitude)
+                                obj.put("longitude", known.longitude)
+                                obj.put("towerRange", known.range)
+                                obj.put("accuracyMeters", known.range.coerceAtLeast(200))
+                                obj.toString()
+                            } else detailsJson
+                        } else detailsJson
+                    } catch (_: Exception) { detailsJson }
+
                     val alert = Alert(
                         timestamp = startTime,
                         threatType = result.threatType,
                         severity = severity,
                         confidence = result.confidence,
                         summary = result.summary,
-                        detailsJson = detailsJson,
+                        detailsJson = enrichedJson,
                         cellId = currentCells.firstOrNull()?.id,
                         acknowledged = false
                     )
