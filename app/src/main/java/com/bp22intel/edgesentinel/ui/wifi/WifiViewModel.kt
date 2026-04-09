@@ -141,8 +141,11 @@ class WifiViewModel @Inject constructor(
                 )
             }
 
-            // Dismiss related detections and recalculate fusion posture
+            // Dismiss WiFi and related network detections from fusion
             sensorFusionEngine.dismissDetection(WifiThreatType.EVIL_TWIN.name)
+            sensorFusionEngine.dismissDetection("ROGUE_AP")
+            sensorFusionEngine.dismissDetection("DEAUTH_FLOOD")
+            sensorFusionEngine.dismissDetection("KARMA_ATTACK")
             sensorFusionEngine.recalculate()
         }
     }

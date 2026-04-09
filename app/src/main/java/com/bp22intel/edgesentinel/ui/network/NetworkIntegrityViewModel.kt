@@ -41,6 +41,7 @@ class NetworkIntegrityViewModel @Inject constructor(
     private val dnsChecker: DnsIntegrityChecker,
     private val tlsChecker: TlsIntegrityChecker,
     private val captivePortalDetector: CaptivePortalDetector,
+    private val sensorFusionEngine: com.bp22intel.edgesentinel.fusion.SensorFusionEngine,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -80,6 +81,15 @@ class NetworkIntegrityViewModel @Inject constructor(
         val updated = _trustedMitmServices.value + endpoint
         _trustedMitmServices.value = updated
         prefs.edit().putStringSet(KEY_TRUSTED, updated).apply()
+        // Dismiss TLS_MITM from fusion engine if all MITM endpoints are now trusted
+        val snapshot = _snapshot.value?.tlsIntegrity
+        if (snapshot != null) {
+            val untrusted = snapshot.mitmEndpoints.filter { it !in updated }
+            if (untrusted.isEmpty()) {
+                sensorFusionEngine.dismissDetection("TLS_MITM")
+                sensorFusionEngine.recalculate()
+            }
+        }
     }
 
     fun untrustMitmService(endpoint: String) {
