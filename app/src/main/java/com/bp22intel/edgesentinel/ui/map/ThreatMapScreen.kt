@@ -21,6 +21,9 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -39,6 +42,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -68,6 +73,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -87,6 +93,11 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
+/**
+ * View mode for the threat map display.
+ */
+enum class MapViewMode { RADAR, MAP }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThreatMapScreen(
@@ -96,6 +107,17 @@ fun ThreatMapScreen(
     val threats by viewModel.geolocatedThreats.collectAsState()
     val userLocation by viewModel.userLocation.collectAsState()
     var selectedThreat by remember { mutableStateOf<GeolocatedThreat?>(null) }
+    var viewMode by remember { mutableStateOf(MapViewMode.RADAR) }
+
+    // Network connectivity check for map mode
+    val context = LocalContext.current
+    val isNetworkAvailable = remember {
+        try {
+            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val caps = cm.getNetworkCapabilities(cm.activeNetwork)
+            caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+        } catch (_: Exception) { false }
+    }
     
     // Zoom: user-controllable range in meters (what the outer ring represents)
     // Predefined zoom levels
@@ -132,12 +154,53 @@ fun ThreatMapScreen(
                     }
                 },
                 actions = {
-                    Text(
-                        text = "${threats.size} contacts",
-                        color = TextSecondary,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(end = 16.dp)
-                    )
+                    // View mode toggle
+                    Row(
+                        modifier = Modifier.padding(end = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${threats.size} contacts",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        IconButton(
+                            onClick = { viewMode = MapViewMode.RADAR },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(
+                                    if (viewMode == MapViewMode.RADAR) StatusClear.copy(alpha = 0.2f)
+                                    else Color.Transparent,
+                                    CircleShape
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Radar,
+                                contentDescription = "Radar View",
+                                tint = if (viewMode == MapViewMode.RADAR) StatusClear else TextSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = { viewMode = MapViewMode.MAP },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(
+                                    if (viewMode == MapViewMode.MAP) StatusClear.copy(alpha = 0.2f)
+                                    else Color.Transparent,
+                                    CircleShape
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Map,
+                                contentDescription = "Map View",
+                                tint = if (viewMode == MapViewMode.MAP) StatusClear else TextSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = BackgroundPrimary
@@ -151,64 +214,80 @@ fun ThreatMapScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Tactical Radar Display
+            // Tactical Radar / Map Display
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(16.dp)
             ) {
-                TacticalRadarCanvas(
-                    threats = threats,
-                    userLocation = userLocation,
-                    maxRangeMeters = maxDistance,
-                    onThreatClick = { threat ->
-                        selectedThreat = threat
-                    },
-                    onZoomIn = { if (zoomIndex > 0) zoomIndex-- },
-                    onZoomOut = { if (zoomIndex < zoomLevels.size - 1) zoomIndex++ }
-                )
-                
-                // Zoom controls
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    IconButton(
-                        onClick = { if (zoomIndex > 0) zoomIndex-- },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(Surface.copy(alpha = 0.8f), CircleShape)
-                    ) {
-                        Text("+", color = StatusClear, fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleMedium)
-                    }
-                    Text(
-                        text = if (maxDistance >= 1000) "${(maxDistance/1000).toInt()}km" else "${maxDistance.toInt()}m",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = StatusClear,
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
-                    )
-                    IconButton(
-                        onClick = { if (zoomIndex < zoomLevels.size - 1) zoomIndex++ },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(Surface.copy(alpha = 0.8f), CircleShape)
-                    ) {
-                        Text("\u2212", color = StatusClear, fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleMedium)
-                    }
-                }
+                when (viewMode) {
+                    MapViewMode.RADAR -> {
+                        TacticalRadarCanvas(
+                            threats = threats,
+                            userLocation = userLocation,
+                            maxRangeMeters = maxDistance,
+                            onThreatClick = { threat ->
+                                selectedThreat = threat
+                            },
+                            onZoomIn = { if (zoomIndex > 0) zoomIndex-- },
+                            onZoomOut = { if (zoomIndex < zoomLevels.size - 1) zoomIndex++ }
+                        )
 
-                // Selected threat popup
-                selectedThreat?.let { threat ->
-                    ThreatInfoPopup(
-                        threat = threat,
-                        onDismiss = { selectedThreat = null },
-                        modifier = Modifier.align(Alignment.TopEnd)
-                    )
+                        // Zoom controls (radar only)
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            IconButton(
+                                onClick = { if (zoomIndex > 0) zoomIndex-- },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(Surface.copy(alpha = 0.8f), CircleShape)
+                            ) {
+                                Text("+", color = StatusClear, fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium)
+                            }
+                            Text(
+                                text = if (maxDistance >= 1000) "${(maxDistance/1000).toInt()}km" else "${maxDistance.toInt()}m",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = StatusClear,
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            )
+                            IconButton(
+                                onClick = { if (zoomIndex < zoomLevels.size - 1) zoomIndex++ },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(Surface.copy(alpha = 0.8f), CircleShape)
+                            ) {
+                                Text("\u2212", color = StatusClear, fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium)
+                            }
+                        }
+
+                        // Selected threat popup (radar mode)
+                        selectedThreat?.let { threat ->
+                            ThreatInfoPopup(
+                                threat = threat,
+                                onDismiss = { selectedThreat = null },
+                                modifier = Modifier.align(Alignment.TopEnd)
+                            )
+                        }
+                    }
+
+                    MapViewMode.MAP -> {
+                        ThreatMapView(
+                            threats = threats,
+                            userLocation = userLocation,
+                            onThreatClick = { threat ->
+                                selectedThreat = threat
+                            },
+                            isNetworkAvailable = isNetworkAvailable,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
 
@@ -483,7 +562,7 @@ private fun DrawScope.drawRadarSweep(center: Offset, radius: Float, sweepAngle: 
 }
 
 @Composable
-private fun ThreatInfoPopup(
+internal fun ThreatInfoPopup(
     threat: GeolocatedThreat,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier

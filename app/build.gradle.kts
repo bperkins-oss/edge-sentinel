@@ -14,8 +14,8 @@ android {
         applicationId = "com.bp22intel.edgesentinel"
         minSdk = 26
         targetSdk = 35
-        versionCode = 52
-        versionName = "2.0.52"
+        versionCode = 53
+        versionName = "2.0.53"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -46,10 +46,20 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("edge-sentinel-release.jks")
+            storePassword = "EdgeSentinel2026!"
+            keyAlias = "edge-sentinel"
+            keyPassword = "EdgeSentinel2026!"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -131,6 +141,9 @@ dependencies {
     // Glance - App Widgets
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
+
+    // OpenStreetMap (osmdroid) - Threat Map view
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
 
     // Testing
     testImplementation(libs.junit)
