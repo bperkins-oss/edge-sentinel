@@ -80,31 +80,43 @@ class WifiThreatDetector @Inject constructor(
      *
      * When [trustedBssids] is provided, detections involving ONLY trusted APs
      * are suppressed entirely, and mixed detections have their score reduced.
+     *
+     * When [trustedSsids] is provided, evil-twin detections for those SSIDs are
+     * suppressed (mesh networks with multiple BSSIDs are expected). Anomaly
+     * detections (e.g., encryption downgrade) on trusted SSIDs are still raised.
      */
     fun analyze(
         current: WifiScanSnapshot,
         history: List<WifiScanSnapshot>,
         disconnectTimestamps: List<Long> = emptyList(),
-        trustedBssids: Set<String> = emptySet()
+        trustedBssids: Set<String> = emptySet(),
+        trustedSsids: Set<String> = emptySet()
     ): List<WifiDetectionResult> {
         val results = mutableListOf<WifiDetectionResult>()
 
-        detectEvilTwins(current)?.let { results.addAll(it) }
+        detectEvilTwins(current, trustedSsids)?.let { results.addAll(it) }
         detectRogueAps(current, history)?.let { results.addAll(it) }
         detectDeauthAttack(disconnectTimestamps)?.let { results.add(it) }
         detectSsidSpoofing(current)?.let { results.addAll(it) }
         detectKarmaAttack(current, history)?.let { results.addAll(it) }
 
-        if (trustedBssids.isEmpty()) return results
+        if (trustedBssids.isEmpty() && trustedSsids.isEmpty()) return results
 
         // Filter / attenuate results based on trusted networks
         return results.mapNotNull { result ->
+            // Check if all involved APs belong to a trusted SSID
+            val involvedSsids = result.involvedAps.map { it.ssid }.toSet()
+            val allSsidsTrusted = involvedSsids.isNotEmpty() && involvedSsids.all { it in trustedSsids }
+
             val involvedBssids = result.involvedAps.map { it.bssid }.toSet()
+            val allBssidsTrusted = involvedBssids.isNotEmpty() && involvedBssids.all { it in trustedBssids }
+
             when {
-                // All involved APs are trusted — suppress entirely
-                involvedBssids.isNotEmpty() && involvedBssids.all { it in trustedBssids } -> null
+                // All involved APs are trusted (by SSID or BSSID) — suppress entirely
+                allSsidsTrusted || allBssidsTrusted -> null
                 // Some involved APs are trusted — reduce score
-                involvedBssids.any { it in trustedBssids } -> result.copy(
+                involvedBssids.any { it in trustedBssids } ||
+                    involvedSsids.any { it in trustedSsids } -> result.copy(
                     score = result.score * 0.5,
                     confidence = scoreToConfidence(result.score * 0.5)
                 )
@@ -115,7 +127,7 @@ class WifiThreatDetector @Inject constructor(
     }
 
     /**
-     * Convenience: load trusted BSSIDs from the database and run analysis.
+     * Convenience: load trusted BSSIDs and SSIDs from the database and run analysis.
      */
     suspend fun analyzeWithTrustedNetworks(
         current: WifiScanSnapshot,
@@ -123,14 +135,23 @@ class WifiThreatDetector @Inject constructor(
         disconnectTimestamps: List<Long> = emptyList()
     ): List<WifiDetectionResult> {
         val trustedBssids = trustedNetworkDao.getAllTrustedBssids().toSet()
-        return analyze(current, history, disconnectTimestamps, trustedBssids)
+        val trustedSsids = trustedNetworkDao.getAllTrustedSsids().toSet()
+        return analyze(current, history, disconnectTimestamps, trustedBssids, trustedSsids)
     }
 
     /**
      * Evil Twin: Multiple APs sharing the same SSID but different BSSIDs,
      * especially when one is open and the other is secured.
+     *
+     * When [trustedSsids] contains an SSID, the "multiple BSSIDs" heuristic
+     * is skipped (mesh networks are expected). However, security anomalies
+     * (e.g., open AP among secured ones) are still flagged even for trusted
+     * SSIDs — an attacker could spoof a trusted network name.
      */
-    private fun detectEvilTwins(scan: WifiScanSnapshot): List<WifiDetectionResult>? {
+    private fun detectEvilTwins(
+        scan: WifiScanSnapshot,
+        trustedSsids: Set<String> = emptySet()
+    ): List<WifiDetectionResult>? {
         val results = mutableListOf<WifiDetectionResult>()
 
         // Group by SSID, ignore hidden/empty SSIDs
@@ -144,9 +165,17 @@ class WifiThreatDetector @Inject constructor(
             val uniqueBssids = aps.map { it.bssid }.distinct()
             if (uniqueBssids.size < 2) continue
 
+            val isTrustedSsid = ssid in trustedSsids
+
             val securityTypes = aps.map { it.securityType }.distinct()
             val hasOpenAndSecured = SecurityType.OPEN in securityTypes &&
                 securityTypes.any { it != SecurityType.OPEN && it != SecurityType.UNKNOWN }
+
+            // For trusted SSIDs: skip the multiple-BSSID heuristic entirely
+            // UNLESS there's a security mismatch (open+secured = possible attack)
+            if (isTrustedSsid && !hasOpenAndSecured) {
+                continue
+            }
 
             var score = 1.0
             val indicators = mutableMapOf<String, String>()
@@ -158,6 +187,10 @@ class WifiThreatDetector @Inject constructor(
                 score += 2.0
                 indicators["security_mismatch"] =
                     "Mixed security: ${securityTypes.joinToString { it.label }}"
+                if (isTrustedSsid) {
+                    indicators["trusted_anomaly"] =
+                        "⚠ Trusted network '$ssid' has an unexpected open AP — possible spoofing"
+                }
             }
 
             // Different channels for same SSID is more suspicious
@@ -184,7 +217,10 @@ class WifiThreatDetector @Inject constructor(
                     threatType = WifiThreatType.EVIL_TWIN,
                     score = score,
                     confidence = confidence,
-                    summary = buildEvilTwinSummary(ssid, uniqueBssids.size, hasOpenAndSecured),
+                    summary = if (isTrustedSsid)
+                        "Security anomaly on trusted network '$ssid': mixed open/secured APs detected"
+                    else
+                        buildEvilTwinSummary(ssid, uniqueBssids.size, hasOpenAndSecured),
                     details = indicators,
                     involvedAps = aps
                 )

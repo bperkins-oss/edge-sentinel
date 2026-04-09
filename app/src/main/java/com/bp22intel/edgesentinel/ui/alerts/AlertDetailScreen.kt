@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.SignalCellular4Bar
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -164,9 +165,16 @@ fun AlertDetailScreen(
                 )
 
                 // 9. Feedback buttons
+                // Detect if this is a WiFi alert for context-aware button labels
+                val isWifiAlert = try {
+                    val dj = JSONObject(alert.detailsJson)
+                    dj.has("ssid") || dj.has("bssid")
+                } catch (_: Exception) { false }
+
                 FeedbackSection(
                     feedbackGiven = uiState.feedbackGiven,
                     feedbackConfirmation = uiState.feedbackConfirmation,
+                    isWifiAlert = isWifiAlert,
                     onFeedback = { feedback -> viewModel.submitFeedback(feedback) }
                 )
 
@@ -605,6 +613,7 @@ private fun LearningStatusCard(filterRecommendation: FilterRecommendation?) {
 private fun FeedbackSection(
     feedbackGiven: String?,
     feedbackConfirmation: String?,
+    isWifiAlert: Boolean = false,
     onFeedback: (String) -> Unit
 ) {
     Card(
@@ -706,14 +715,14 @@ private fun FeedbackSection(
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.CheckCircle,
+                            imageVector = if (isWifiAlert) Icons.Default.Wifi else Icons.Default.CheckCircle,
                             contentDescription = null,
                             tint = AccentBlue,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Known Device",
+                            text = if (isWifiAlert) "Known Network" else "Known Device",
                             color = AccentBlue,
                             style = MaterialTheme.typography.labelMedium
                         )
@@ -742,7 +751,8 @@ private fun FeedbackSection(
                 val (label, color) = when (feedbackGiven) {
                     "FALSE_POSITIVE" -> "Marked as Not a Threat" to StatusClear
                     "CONFIRMED_THREAT" -> "Confirmed as Real Threat" to StatusThreat
-                    "KNOWN_DEVICE" -> "Known Device (booster/femtocell)" to AccentBlue
+                    "KNOWN_DEVICE" -> if (isWifiAlert) "Known Network (trusted)" to AccentBlue
+                        else "Known Device (booster/femtocell)" to AccentBlue
                     else -> "Marked as Unsure" to TextSecondary
                 }
                 Row(

@@ -73,20 +73,29 @@ class FalsePositiveFilter @Inject constructor(
         val threatType = alert.threatType.name
         val notes = mutableListOf<String>()
 
-        // ── 0. Check for KNOWN_DEVICE (booster/femtocell the user trusts) ──
+        // ── 0. Check for KNOWN_DEVICE (booster/femtocell/known network the user trusts) ──
+        val ssid = details.optString("ssid", "").takeIf { it.isNotEmpty() }
         val knownDeviceCount = when {
             cellId != null -> feedbackDao.getKnownDeviceCount(cellId)
+            // Check SSID-level trust first (mesh networks), then BSSID
+            ssid != null -> feedbackDao.getKnownDeviceCountForSsid(ssid)
+                .takeIf { it > 0 }
+                ?: (bssid?.let { feedbackDao.getKnownDeviceCountForBssid(it) } ?: 0)
             bssid != null -> feedbackDao.getKnownDeviceCountForBssid(bssid)
             else -> 0
         }
         if (knownDeviceCount > 0) {
-            notes.add("This tower is marked as a known device (booster/femtocell) — suppressing alert.")
+            val label = if (ssid != null) "network \"$ssid\"" else "tower"
+            notes.add("This $label is marked as known/trusted — suppressing alert.")
             return FilterRecommendation(action = SuppressionAction.SUPPRESS, learningNotes = notes)
         }
 
         // ── 1. Check for confirmed threats — always wins ──────────────────
         val confirmedCount = when {
             cellId != null -> feedbackDao.getConfirmedThreatCount(threatType, cellId)
+            ssid != null -> feedbackDao.getConfirmedThreatCountForSsid(threatType, ssid)
+                .takeIf { it > 0 }
+                ?: (bssid?.let { feedbackDao.getConfirmedThreatCountForBssid(threatType, it) } ?: 0)
             bssid != null -> feedbackDao.getConfirmedThreatCountForBssid(threatType, bssid)
             else -> 0
         }
@@ -98,6 +107,9 @@ class FalsePositiveFilter @Inject constructor(
         // ── 2. Count false-positive feedback ──────────────────────────────
         val fpCount = when {
             cellId != null -> feedbackDao.getFalsePositiveCount(threatType, cellId)
+            ssid != null -> feedbackDao.getFalsePositiveCountForSsid(threatType, ssid)
+                .takeIf { it > 0 }
+                ?: (bssid?.let { feedbackDao.getFalsePositiveCountForBssid(threatType, it) } ?: 0)
             bssid != null -> feedbackDao.getFalsePositiveCountForBssid(threatType, bssid)
             else -> 0
         }

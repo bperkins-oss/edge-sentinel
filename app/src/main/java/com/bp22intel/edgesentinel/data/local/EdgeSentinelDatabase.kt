@@ -41,7 +41,7 @@ import com.bp22intel.edgesentinel.data.local.entity.TrustedNetworkEntity
         KnownTowerEntity::class,
         TrustedNetworkEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

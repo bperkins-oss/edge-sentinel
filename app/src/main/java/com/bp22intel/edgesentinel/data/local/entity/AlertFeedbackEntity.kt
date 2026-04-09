@@ -48,6 +48,9 @@ data class AlertFeedbackEntity(
     /** WiFi BSSID if the alert was WiFi-related. */
     val bssid: String?,
 
+    /** WiFi SSID if the alert was WiFi-related (for SSID-level trust). */
+    val ssid: String? = null,
+
     @ColumnInfo(name = "signal_strength")
     val signalStrength: Int?,
 

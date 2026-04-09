@@ -83,6 +83,13 @@ private val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+private val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Add ssid column to alert_feedback for SSID-level known network tracking
+        db.execSQL("ALTER TABLE alert_feedback ADD COLUMN ssid TEXT DEFAULT NULL")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
@@ -96,7 +103,7 @@ object AppModule {
             context,
             EdgeSentinelDatabase::class.java,
             "edge_sentinel.db"
-        ).addMigrations(MIGRATION_1_2, MIGRATION_6_7)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_6_7, MIGRATION_7_8)
          .fallbackToDestructiveMigration()
          .build()
     }

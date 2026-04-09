@@ -33,8 +33,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -42,12 +45,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,8 +77,18 @@ fun WifiScreen(
     viewModel: WifiViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show trust confirmation as snackbar
+    LaunchedEffect(uiState.ssidTrustConfirmation) {
+        uiState.ssidTrustConfirmation?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            viewModel.clearSsidTrustConfirmation()
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("WiFi Threats") },
@@ -115,7 +132,14 @@ fun WifiScreen(
                 )
             }
             items(evilTwinThreats, key = { "et_${it.details["ssid"]}" }) { threat ->
-                EvilTwinCard(threat)
+                val ssid = threat.details["ssid"] ?: ""
+                val isTrusted = viewModel.isSsidTrusted(ssid)
+                EvilTwinCard(
+                    threat = threat,
+                    isSsidTrusted = isTrusted,
+                    onTrustSsid = { viewModel.trustSsid(ssid) },
+                    onUntrustSsid = { viewModel.untrustSsid(ssid) }
+                )
             }
         }
 
@@ -280,7 +304,12 @@ private fun EnvironmentHealthCard(healthScore: Int, summary: String?) {
 }
 
 @Composable
-private fun EvilTwinCard(threat: WifiDetectionResult) {
+private fun EvilTwinCard(
+    threat: WifiDetectionResult,
+    isSsidTrusted: Boolean = false,
+    onTrustSsid: () -> Unit = {},
+    onUntrustSsid: () -> Unit = {}
+) {
     val severityColor = when (threat.confidence) {
         Confidence.HIGH -> Color(0xFFEF4444)
         Confidence.MEDIUM -> Color(0xFFF59E0B)
@@ -344,6 +373,48 @@ private fun EvilTwinCard(threat: WifiDetectionResult) {
                             }
                         }
                     }
+                }
+            }
+
+            // Trust / untrust SSID button
+            Spacer(modifier = Modifier.height(8.dp))
+            val ssid = threat.details["ssid"] ?: "this network"
+            if (isSsidTrusted) {
+                TextButton(
+                    onClick = onUntrustSsid,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = Color(0xFF06B6D4),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "\"$ssid\" is trusted — tap to remove",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color(0xFF06B6D4)
+                    )
+                }
+            } else {
+                Button(
+                    onClick = onTrustSsid,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF06B6D4)
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.VerifiedUser,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "Trust \"$ssid\" (${threat.involvedAps.size} APs)",
+                        style = MaterialTheme.typography.labelMedium
+                    )
                 }
             }
         }

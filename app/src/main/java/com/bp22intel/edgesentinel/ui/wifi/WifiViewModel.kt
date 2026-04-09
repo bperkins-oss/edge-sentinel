@@ -24,6 +24,7 @@ import com.bp22intel.edgesentinel.detection.wifi.WifiThreatDetector
 import com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao
 import com.bp22intel.edgesentinel.data.local.entity.TrustedNetworkEntity
 import com.bp22intel.edgesentinel.domain.model.WifiThreatType
+import com.bp22intel.edgesentinel.fusion.SensorFusionEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +42,9 @@ data class WifiUiState(
     val probeStatus: ProbePrivacyStatus? = null,
     val healthScore: Int = 100,
     val trustedBssids: Set<String> = emptySet(),
+    val trustedSsids: Set<String> = emptySet(),
     val trustedNetworks: List<TrustedNetworkEntity> = emptyList(),
+    val ssidTrustConfirmation: String? = null,
     val error: String? = null
 )
 
@@ -51,7 +54,8 @@ class WifiViewModel @Inject constructor(
     private val threatDetector: WifiThreatDetector,
     private val environmentAnalyzer: WifiEnvironmentAnalyzer,
     private val probeProtector: WifiProbeProtector,
-    private val trustedNetworkDao: TrustedNetworkDao
+    private val trustedNetworkDao: TrustedNetworkDao,
+    private val sensorFusionEngine: SensorFusionEngine
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WifiUiState())
@@ -71,6 +75,7 @@ class WifiViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         trustedBssids = trusted.map { it.bssid }.toSet(),
+                        trustedSsids = trusted.map { it.ssid }.toSet(),
                         trustedNetworks = trusted
                     )
                 }
@@ -96,8 +101,72 @@ class WifiViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Trust an entire SSID — all current and future BSSIDs broadcasting this
+     * SSID will be considered trusted. This is the right approach for mesh
+     * networks where many APs share one SSID.
+     *
+     * Inserts a trust entry for every currently-visible AP with this SSID,
+     * plus an SSID-level marker so new BSSIDs are auto-trusted.
+     */
+    fun trustSsid(ssid: String) {
+        viewModelScope.launch {
+            // Insert trust entries for all currently-visible APs with this SSID
+            val visibleAps = _uiState.value.accessPoints.filter { it.ssid == ssid }
+            val entities = visibleAps.map { ap ->
+                TrustedNetworkEntity(
+                    bssid = ap.bssid,
+                    ssid = ssid,
+                    label = "$ssid (auto-trusted)"
+                )
+            }
+            if (entities.isNotEmpty()) {
+                trustedNetworkDao.insertAll(entities)
+            } else {
+                // No visible APs yet — insert an SSID-level marker
+                trustedNetworkDao.insert(
+                    TrustedNetworkEntity(
+                        bssid = "ssid-trust:$ssid",
+                        ssid = ssid,
+                        label = "$ssid (SSID-level trust)"
+                    )
+                )
+            }
+
+            val apCount = visibleAps.size
+            _uiState.update { state ->
+                state.copy(
+                    ssidTrustConfirmation = "\"$ssid\" trusted" +
+                        if (apCount > 0) " ($apCount access points)" else ""
+                )
+            }
+
+            // Dismiss related detections and recalculate fusion posture
+            sensorFusionEngine.dismissDetection(WifiThreatType.EVIL_TWIN.name)
+            sensorFusionEngine.recalculate()
+        }
+    }
+
+    /**
+     * Remove trust for an entire SSID.
+     */
+    fun untrustSsid(ssid: String) {
+        viewModelScope.launch {
+            trustedNetworkDao.removeBySsid(ssid)
+            sensorFusionEngine.recalculate()
+        }
+    }
+
     fun isNetworkTrusted(bssid: String): Boolean {
         return _uiState.value.trustedBssids.contains(bssid)
+    }
+
+    fun isSsidTrusted(ssid: String): Boolean {
+        return _uiState.value.trustedSsids.contains(ssid)
+    }
+
+    fun clearSsidTrustConfirmation() {
+        _uiState.update { it.copy(ssidTrustConfirmation = null) }
     }
 
     private fun startMonitoring() {
@@ -111,7 +180,8 @@ class WifiViewModel @Inject constructor(
 
                     // Run threat detection with trusted network awareness
                     val trustedBssids = _uiState.value.trustedBssids
-                    val threats = threatDetector.analyze(snapshot, history, disconnectTimestamps, trustedBssids)
+                    val trustedSsids = _uiState.value.trustedSsids
+                    val threats = threatDetector.analyze(snapshot, history, disconnectTimestamps, trustedBssids, trustedSsids)
 
                     // Run environment analysis
                     val baseline = environmentAnalyzer.buildBaseline(history)
@@ -121,10 +191,12 @@ class WifiViewModel @Inject constructor(
                     val probeLeak = probeProtector.detectProbeLeak()
                     val allThreatsRaw = if (probeLeak != null) threats + probeLeak else threats
 
-                    // Filter out threats involving only trusted networks
+                    // Filter out threats involving only trusted networks (by BSSID or SSID)
                     val allThreats = allThreatsRaw.filter { result ->
                         // Keep threat if ANY involved AP is NOT trusted
-                        result.involvedAps.any { !trustedBssids.contains(it.bssid) }
+                        result.involvedAps.any { ap ->
+                            !trustedBssids.contains(ap.bssid) && !trustedSsids.contains(ap.ssid)
+                        }
                     }
 
                     _uiState.update { state ->

@@ -83,6 +83,27 @@ interface AlertFeedbackDao {
     """)
     suspend fun getKnownDeviceCountForBssid(bssid: String): Int
 
+    /** Check if an SSID has been marked as a KNOWN_DEVICE (known network). */
+    @Query("""
+        SELECT COUNT(*) FROM alert_feedback
+        WHERE ssid = :ssid AND feedback = 'KNOWN_DEVICE'
+    """)
+    suspend fun getKnownDeviceCountForSsid(ssid: String): Int
+
+    /** Count of FALSE_POSITIVE reports for a given threat type + SSID. */
+    @Query("""
+        SELECT COUNT(*) FROM alert_feedback
+        WHERE threat_type = :threatType AND ssid = :ssid AND feedback = 'FALSE_POSITIVE'
+    """)
+    suspend fun getFalsePositiveCountForSsid(threatType: String, ssid: String): Int
+
+    /** Count of CONFIRMED_THREAT reports for a given threat type + SSID. */
+    @Query("""
+        SELECT COUNT(*) FROM alert_feedback
+        WHERE threat_type = :threatType AND ssid = :ssid AND feedback = 'CONFIRMED_THREAT'
+    """)
+    suspend fun getConfirmedThreatCountForSsid(threatType: String, ssid: String): Int
+
     /** Most recent FALSE_POSITIVE feedback matching threat type + cell, for "learning status" display. */
     @Query("""
         SELECT * FROM alert_feedback
