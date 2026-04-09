@@ -54,4 +54,10 @@ class AlertRepositoryImpl @Inject constructor(
         val since = System.currentTimeMillis() - 5 * 60 * 1000L // Last 5 minutes
         return alertDao.getActiveSince(since).map { it.toDomain() }
     }
+
+    override suspend fun acknowledgeAllForCellId(cellId: Long) =
+        alertDao.acknowledgeByCellId(cellId)
+
+    override suspend fun acknowledgeAllForSsid(ssid: String) =
+        alertDao.acknowledgeBySsid(ssid)
 }

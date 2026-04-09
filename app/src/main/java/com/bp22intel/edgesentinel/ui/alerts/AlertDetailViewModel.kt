@@ -159,17 +159,24 @@ class AlertDetailViewModel @Inject constructor(
                 feedbackConfirmation = confirmationMsg
             )
 
-            // Auto-acknowledge for FALSE_POSITIVE and KNOWN_DEVICE.
-            if ((feedback == "FALSE_POSITIVE" || feedback == "KNOWN_DEVICE") && !_uiState.value.isAcknowledged) {
+            // Auto-acknowledge this alert + ALL matching alerts for the same tower/network.
+            if (feedback == "FALSE_POSITIVE" || feedback == "KNOWN_DEVICE") {
+                // Acknowledge this specific alert
                 alertRepository.acknowledgeAlert(alertId)
                 _uiState.value = _uiState.value.copy(isAcknowledged = true)
-            }
 
-            // Dismiss the detection from the fusion engine so the threat
-            // posture recalculates immediately.
-            if (feedback == "FALSE_POSITIVE" || feedback == "KNOWN_DEVICE") {
+                // Bulk-acknowledge ALL alerts for this tower CID or SSID
+                if (isWifiAlert && ssid != null) {
+                    alertRepository.acknowledgeAllForSsid(ssid)
+                } else {
+                    val cellId = details.optLong("cellId", -1L)
+                    if (cellId > 0) {
+                        alertRepository.acknowledgeAllForCellId(cellId)
+                    }
+                }
+
+                // Dismiss from fusion engine + recalculate
                 sensorFusionEngine.dismissDetection(alert.threatType.name)
-                // Force full recalculation to pick up new trusted networks
                 sensorFusionEngine.recalculate()
             }
         }

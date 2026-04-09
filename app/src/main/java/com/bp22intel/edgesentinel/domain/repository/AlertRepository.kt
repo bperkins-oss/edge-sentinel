@@ -25,4 +25,8 @@ interface AlertRepository {
     fun getUnacknowledgedCount(): Flow<Int>
     /** Get active (recent, unacknowledged) alerts as a snapshot for cooperative sharing. */
     suspend fun getActiveAlerts(): List<Alert>
+    /** Bulk-acknowledge all alerts for a cell tower CID. */
+    suspend fun acknowledgeAllForCellId(cellId: Long)
+    /** Bulk-acknowledge all alerts matching an SSID. */
+    suspend fun acknowledgeAllForSsid(ssid: String)
 }

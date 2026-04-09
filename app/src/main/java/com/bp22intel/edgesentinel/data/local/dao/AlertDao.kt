@@ -45,4 +45,16 @@ interface AlertDao {
 
     @Query("SELECT * FROM alerts WHERE acknowledged = 0 AND timestamp > :since ORDER BY timestamp DESC LIMIT 20")
     suspend fun getActiveSince(since: Long): List<AlertEntity>
+
+    /** Bulk-acknowledge all unacknowledged alerts for a specific cell tower CID. */
+    @Query("UPDATE alerts SET acknowledged = 1 WHERE acknowledged = 0 AND cell_id = :cellId")
+    suspend fun acknowledgeByCellId(cellId: Long)
+
+    /** Bulk-acknowledge all unacknowledged alerts whose detailsJson contains the given SSID. */
+    @Query("UPDATE alerts SET acknowledged = 1 WHERE acknowledged = 0 AND details_json LIKE '%' || :ssid || '%'")
+    suspend fun acknowledgeBySsid(ssid: String)
+
+    /** Get all unacknowledged alerts. */
+    @Query("SELECT * FROM alerts WHERE acknowledged = 0 ORDER BY timestamp DESC")
+    suspend fun getAllUnacknowledged(): List<AlertEntity>
 }
