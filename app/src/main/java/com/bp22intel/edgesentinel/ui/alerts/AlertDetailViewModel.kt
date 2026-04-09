@@ -120,6 +120,7 @@ class AlertDetailViewModel @Inject constructor(
             val confirmationMsg = when (feedback) {
                 "FALSE_POSITIVE" -> "Got it. Future alerts from this tower will be adjusted."
                 "CONFIRMED_THREAT" -> "Confirmed. We'll stay extra alert for this threat type here."
+                "KNOWN_DEVICE" -> "Good catch! This tower is now marked as a known device (booster/femtocell). We'll suppress future alerts for this tower but the detection was correct."
                 else -> "Noted. We'll keep monitoring."
             }
 
@@ -128,8 +129,8 @@ class AlertDetailViewModel @Inject constructor(
                 feedbackConfirmation = confirmationMsg
             )
 
-            // If FALSE_POSITIVE, also auto-acknowledge the alert.
-            if (feedback == "FALSE_POSITIVE" && !_uiState.value.isAcknowledged) {
+            // Auto-acknowledge for FALSE_POSITIVE and KNOWN_DEVICE.
+            if ((feedback == "FALSE_POSITIVE" || feedback == "KNOWN_DEVICE") && !_uiState.value.isAcknowledged) {
                 alertRepository.acknowledgeAlert(alertId)
                 _uiState.value = _uiState.value.copy(isAcknowledged = true)
             }

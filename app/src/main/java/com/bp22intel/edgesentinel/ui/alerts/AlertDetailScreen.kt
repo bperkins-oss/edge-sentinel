@@ -696,12 +696,33 @@ private fun FeedbackSection(
                     }
                 }
 
-                // "Not Sure" — text button, centered
+                // Known Device + Not Sure row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TextButton(onClick = { onFeedback("UNSURE") }) {
+                    OutlinedButton(
+                        onClick = { onFeedback("KNOWN_DEVICE") },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = AccentBlue,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Known Device",
+                            color = AccentBlue,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+
+                    TextButton(
+                        onClick = { onFeedback("UNSURE") },
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.HelpOutline,
                             contentDescription = null,
@@ -721,6 +742,7 @@ private fun FeedbackSection(
                 val (label, color) = when (feedbackGiven) {
                     "FALSE_POSITIVE" -> "Marked as Not a Threat" to StatusClear
                     "CONFIRMED_THREAT" -> "Confirmed as Real Threat" to StatusThreat
+                    "KNOWN_DEVICE" -> "Known Device (booster/femtocell)" to AccentBlue
                     else -> "Marked as Unsure" to TextSecondary
                 }
                 Row(

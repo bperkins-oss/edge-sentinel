@@ -69,6 +69,20 @@ interface AlertFeedbackDao {
     @Query("SELECT * FROM alert_feedback WHERE alert_id = :alertId ORDER BY timestamp DESC LIMIT 1")
     suspend fun getFeedbackForAlert(alertId: Long): AlertFeedbackEntity?
 
+    /** Check if a cell tower has been marked as a KNOWN_DEVICE (booster, femtocell, etc.). */
+    @Query("""
+        SELECT COUNT(*) FROM alert_feedback
+        WHERE cell_id = :cellId AND feedback = 'KNOWN_DEVICE'
+    """)
+    suspend fun getKnownDeviceCount(cellId: Long): Int
+
+    /** Check if a BSSID has been marked as a KNOWN_DEVICE. */
+    @Query("""
+        SELECT COUNT(*) FROM alert_feedback
+        WHERE bssid = :bssid AND feedback = 'KNOWN_DEVICE'
+    """)
+    suspend fun getKnownDeviceCountForBssid(bssid: String): Int
+
     /** Most recent FALSE_POSITIVE feedback matching threat type + cell, for "learning status" display. */
     @Query("""
         SELECT * FROM alert_feedback

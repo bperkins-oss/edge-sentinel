@@ -73,6 +73,17 @@ class FalsePositiveFilter @Inject constructor(
         val threatType = alert.threatType.name
         val notes = mutableListOf<String>()
 
+        // ── 0. Check for KNOWN_DEVICE (booster/femtocell the user trusts) ──
+        val knownDeviceCount = when {
+            cellId != null -> feedbackDao.getKnownDeviceCount(cellId)
+            bssid != null -> feedbackDao.getKnownDeviceCountForBssid(bssid)
+            else -> 0
+        }
+        if (knownDeviceCount > 0) {
+            notes.add("This tower is marked as a known device (booster/femtocell) — suppressing alert.")
+            return FilterRecommendation(action = SuppressionAction.SUPPRESS, learningNotes = notes)
+        }
+
         // ── 1. Check for confirmed threats — always wins ──────────────────
         val confirmedCount = when {
             cellId != null -> feedbackDao.getConfirmedThreatCount(threatType, cellId)
