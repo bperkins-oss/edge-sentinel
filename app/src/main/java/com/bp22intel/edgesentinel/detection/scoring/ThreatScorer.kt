@@ -17,16 +17,19 @@
 package com.bp22intel.edgesentinel.detection.scoring
 
 import com.bp22intel.edgesentinel.domain.model.DetectionSensitivity
+import com.bp22intel.edgesentinel.domain.model.FusedThreatLevel
 import com.bp22intel.edgesentinel.domain.model.ThreatLevel
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Computes a composite threat score from six orthogonal detection categories.
+ * Computes a composite threat score from six orthogonal detection categories,
+ * with an optional fusion layer for compound attack pattern detection.
  *
  * Each category produces a normalised sub-score in [0, 1].  The final score
- * is a weighted sum mapped to a [ThreatLevel] according to the user's
- * configured [DetectionSensitivity].
+ * is a weighted sum mapped to both a legacy [ThreatLevel] (3-level) and a
+ * [FusedThreatLevel] (4-level) according to the user's configured
+ * [DetectionSensitivity].
  *
  * ### Category overview
  *
@@ -56,7 +59,9 @@ class ThreatScorer @Inject constructor() {
      * @property temporalPattern     Normalised temporal-pattern sub-score [0, 1].
      * @property environmentalContext Normalised environmental-context sub-score [0, 1].
      * @property total               Weighted composite score (0 – 10 scale).
-     * @property threatLevel         Final mapped threat level.
+     * @property threatLevel         Legacy 3-level threat level (CLEAR / SUSPICIOUS / THREAT).
+     * @property fusedThreatLevel    4-level threat level (CLEAR / ELEVATED / DANGEROUS / CRITICAL).
+     * @property compoundPatterns    Detected compound attack patterns from the fusion layer.
      */
     data class ScoringResult(
         val signalAnomaly: Double = 0.0,
@@ -66,7 +71,19 @@ class ThreatScorer @Inject constructor() {
         val temporalPattern: Double = 0.0,
         val environmentalContext: Double = 0.0,
         val total: Double = 0.0,
-        val threatLevel: ThreatLevel = ThreatLevel.CLEAR
+        val threatLevel: ThreatLevel = ThreatLevel.CLEAR,
+        val fusedThreatLevel: FusedThreatLevel = FusedThreatLevel.CLEAR,
+        val compoundPatterns: List<CompoundPattern> = emptyList()
+    )
+
+    /**
+     * A detected compound attack pattern from the fusion layer.
+     */
+    data class CompoundPattern(
+        val name: String,
+        val confidence: Double,
+        val description: String,
+        val matchedIndicators: List<String>
     )
 
     // -----------------------------------------------------------------
@@ -90,10 +107,15 @@ class ThreatScorer @Inject constructor() {
         /** Scale factor to map weighted [0,1] sum to a 0–10 threat scale. */
         private const val SCORE_SCALE = 10.0
 
-        /** Default threshold: score ≥ this → SUSPICIOUS. */
+        /** Default threshold: score ≥ this → SUSPICIOUS (legacy 3-level). */
         private const val SUSPICIOUS_THRESHOLD = 3.0
-        /** Default threshold: score ≥ this → THREAT. */
+        /** Default threshold: score ≥ this → THREAT (legacy 3-level). */
         private const val THREAT_THRESHOLD     = 6.0
+
+        /** 4-level thresholds (FusedThreatLevel). */
+        private const val ELEVATED_THRESHOLD  = 2.0
+        private const val DANGEROUS_THRESHOLD = 4.5
+        private const val CRITICAL_THRESHOLD  = 7.0
 
         // -- Indicator key constants (used by ThreatDetectionEngine) --
 
@@ -115,12 +137,14 @@ class ThreatScorer @Inject constructor() {
      * @param indicators  Map of category keys (see [KEY_SIGNAL_ANOMALY] etc.)
      *                    to raw values.  Values are clamped to [0, 1].
      * @param sensitivity Detection sensitivity that shifts thresholds.
+     * @param compoundPatterns Compound patterns detected by the fusion layer.
      * @return A [ScoringResult] with per-category scores, weighted total,
-     *         and the resulting [ThreatLevel].
+     *         and the resulting [ThreatLevel] and [FusedThreatLevel].
      */
     fun calculateScore(
         indicators: Map<String, Double>,
-        sensitivity: DetectionSensitivity = DetectionSensitivity.MEDIUM
+        sensitivity: DetectionSensitivity = DetectionSensitivity.MEDIUM,
+        compoundPatterns: List<CompoundPattern> = emptyList()
     ): ScoringResult {
         val signal   = clamp01(indicators[KEY_SIGNAL_ANOMALY])
         val tower    = clamp01(indicators[KEY_TOWER_BEHAVIOR])
@@ -137,6 +161,7 @@ class ThreatScorer @Inject constructor() {
                         environ  * W_ENVIRONMENTAL) * SCORE_SCALE
 
         val level = resolveLevel(weighted, sensitivity)
+        val fusedLevel = resolveFusedLevel(weighted, sensitivity, compoundPatterns)
 
         return ScoringResult(
             signalAnomaly       = signal,
@@ -146,7 +171,9 @@ class ThreatScorer @Inject constructor() {
             temporalPattern     = temporal,
             environmentalContext = environ,
             total               = weighted,
-            threatLevel         = level
+            threatLevel         = level,
+            fusedThreatLevel    = fusedLevel,
+            compoundPatterns    = compoundPatterns
         )
     }
 
@@ -159,7 +186,7 @@ class ThreatScorer @Inject constructor() {
         (value ?: 0.0).coerceIn(0.0, 1.0)
 
     /**
-     * Map a composite score to a [ThreatLevel], adjusting thresholds by
+     * Map a composite score to a legacy [ThreatLevel], adjusting thresholds by
      * the user's chosen [DetectionSensitivity].
      *
      * LOW  → multiplier > 1 → harder to trigger alerts.
@@ -174,6 +201,31 @@ class ThreatScorer @Inject constructor() {
             score >= THREAT_THRESHOLD     * m -> ThreatLevel.THREAT
             score >= SUSPICIOUS_THRESHOLD * m -> ThreatLevel.SUSPICIOUS
             else                              -> ThreatLevel.CLEAR
+        }
+    }
+
+    /**
+     * Map a composite score to a 4-level [FusedThreatLevel].
+     *
+     * Any high-confidence compound pattern automatically elevates to CRITICAL
+     * regardless of the raw score.
+     */
+    private fun resolveFusedLevel(
+        score: Double,
+        sensitivity: DetectionSensitivity,
+        compoundPatterns: List<CompoundPattern>
+    ): FusedThreatLevel {
+        // A high-confidence compound pattern always means CRITICAL
+        if (compoundPatterns.any { it.confidence >= 0.85 }) {
+            return FusedThreatLevel.CRITICAL
+        }
+
+        val m = sensitivity.thresholdMultiplier
+        return when {
+            score >= CRITICAL_THRESHOLD  * m -> FusedThreatLevel.CRITICAL
+            score >= DANGEROUS_THRESHOLD * m -> FusedThreatLevel.DANGEROUS
+            score >= ELEVATED_THRESHOLD  * m -> FusedThreatLevel.ELEVATED
+            else                             -> FusedThreatLevel.CLEAR
         }
     }
 }

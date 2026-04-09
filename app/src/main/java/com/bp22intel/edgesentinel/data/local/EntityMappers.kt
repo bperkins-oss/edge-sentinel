@@ -35,7 +35,9 @@ fun CellTowerEntity.toDomain(): CellTower = CellTower(
     longitude = longitude,
     firstSeen = firstSeen,
     lastSeen = lastSeen,
-    timesSeen = timesSeen
+    timesSeen = timesSeen,
+    earfcn = earfcn,
+    pci = pci
 )
 
 fun CellTower.toEntity(): CellTowerEntity = CellTowerEntity(
@@ -50,7 +52,9 @@ fun CellTower.toEntity(): CellTowerEntity = CellTowerEntity(
     longitude = longitude,
     firstSeen = firstSeen,
     lastSeen = lastSeen,
-    timesSeen = timesSeen
+    timesSeen = timesSeen,
+    earfcn = earfcn,
+    pci = pci
 )
 
 // ── Alert ───────────────────────────────────────────────────────────────────────

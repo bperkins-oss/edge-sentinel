@@ -85,6 +85,7 @@ import com.bp22intel.edgesentinel.ui.theme.Surface
 import com.bp22intel.edgesentinel.ui.theme.SurfaceVariant
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
 import com.bp22intel.edgesentinel.ui.theme.TextSecondary
+import com.bp22intel.edgesentinel.ui.components.ConfidenceRing
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -183,11 +184,12 @@ private fun AlertHeader(alert: Alert) {
                 .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = threatTypeIcon(alert.threatType),
-                contentDescription = threatTypeLabel(alert.threatType),
-                tint = severityColor(alert.severity),
-                modifier = Modifier.size(48.dp)
+            // Large confidence ring
+            ConfidenceRing(
+                confidence = alert.confidence,
+                size = 64.dp,
+                strokeWidth = 5.dp,
+                ringColor = severityColor(alert.severity)
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -208,13 +210,22 @@ private fun AlertHeader(alert: Alert) {
                         text = alert.severity.label.uppercase(),
                         color = severityColor(alert.severity)
                     )
-                    Text(
-                        text = "Confidence: ${alert.confidence.name}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TextSecondary
-                    )
                 }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Detection confidence: ${alert.confidence.name}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextSecondary
+                )
             }
+
+            // Threat type icon
+            Icon(
+                imageVector = threatTypeIcon(alert.threatType),
+                contentDescription = null,
+                tint = severityColor(alert.severity).copy(alpha = 0.5f),
+                modifier = Modifier.size(32.dp)
+            )
         }
     }
 }
@@ -746,6 +757,9 @@ private fun threatTypeIcon(type: ThreatType): ImageVector {
         ThreatType.CIPHER_ANOMALY -> Icons.Filled.GppBad
         ThreatType.SIGNAL_ANOMALY -> Icons.Filled.GppMaybe
         ThreatType.NR_ANOMALY -> Icons.Filled.NetworkCheck
+        ThreatType.REGISTRATION_FAILURE -> Icons.Filled.GppBad
+        ThreatType.TEMPORAL_ANOMALY -> Icons.Filled.TrackChanges
+        ThreatType.COMPOUND_PATTERN -> Icons.Filled.Warning
     }
 }
 
@@ -758,6 +772,9 @@ private fun threatTypeLabel(type: ThreatType): String {
         ThreatType.CIPHER_ANOMALY -> "Cipher Anomaly"
         ThreatType.SIGNAL_ANOMALY -> "Signal Anomaly"
         ThreatType.NR_ANOMALY -> "5G NR Anomaly"
+        ThreatType.REGISTRATION_FAILURE -> "Authentication Failure"
+        ThreatType.TEMPORAL_ANOMALY -> "Temporal Anomaly"
+        ThreatType.COMPOUND_PATTERN -> "Compound Attack Pattern"
     }
 }
 

@@ -69,13 +69,16 @@ class ThreatAnalyst @Inject constructor(
     fun analyzeAlert(alert: Alert): AlertAnalysis {
         val details = alert.detailsJson.parseJsonSafe()
         return when (alert.threatType) {
-            ThreatType.FAKE_BTS         -> analyzeFakeBts(alert, details)
+            ThreatType.FAKE_BTS          -> analyzeFakeBts(alert, details)
             ThreatType.NETWORK_DOWNGRADE -> analyzeNetworkDowngrade(alert, details)
-            ThreatType.SILENT_SMS       -> analyzeSilentSms(alert, details)
-            ThreatType.TRACKING_PATTERN -> analyzeTrackingPattern(alert, details)
-            ThreatType.CIPHER_ANOMALY   -> analyzeCipherAnomaly(alert, details)
-            ThreatType.SIGNAL_ANOMALY   -> analyzeSignalAnomaly(alert, details)
-            ThreatType.NR_ANOMALY       -> analyzeNrAnomaly(alert, details)
+            ThreatType.SILENT_SMS        -> analyzeSilentSms(alert, details)
+            ThreatType.TRACKING_PATTERN  -> analyzeTrackingPattern(alert, details)
+            ThreatType.CIPHER_ANOMALY    -> analyzeCipherAnomaly(alert, details)
+            ThreatType.SIGNAL_ANOMALY    -> analyzeSignalAnomaly(alert, details)
+            ThreatType.NR_ANOMALY        -> analyzeNrAnomaly(alert, details)
+            ThreatType.REGISTRATION_FAILURE -> analyzeRegistrationFailure(alert, details)
+            ThreatType.TEMPORAL_ANOMALY  -> analyzeTemporalAnomaly(alert, details)
+            ThreatType.COMPOUND_PATTERN  -> analyzeCompoundPattern(alert, details)
         }
     }
 
@@ -1185,6 +1188,205 @@ class ThreatAnalyst @Inject constructor(
      * Convert the raw detector [Confidence] and contextual [RiskLevel] into
      * a single 0-1 float for the analyst assessment.
      */
+    // -----------------------------------------------------------------
+    // REGISTRATION_FAILURE analysis
+    // -----------------------------------------------------------------
+
+    private fun analyzeRegistrationFailure(alert: Alert, details: JSONObject): AlertAnalysis {
+        val isSynchFailure = details.optBoolean("synch_failure", false) ||
+            details.optBoolean("auth_reject", false)
+        val failureCount = details.optInt("failure_count", 1)
+
+        val riskLevel = when {
+            isSynchFailure -> RiskLevel.CRITICAL
+            failureCount >= 3 -> RiskLevel.HIGH
+            else -> RiskLevel.MEDIUM
+        }
+
+        val plainEnglish = if (isSynchFailure) {
+            "Your phone failed mutual authentication with a cell tower — the tower " +
+            "could not prove it belongs to your carrier. This is a strong indicator " +
+            "of a fake base station. Legitimate towers never fail authentication."
+        } else {
+            "Your phone experienced $failureCount registration failure(s) with a " +
+            "nearby cell tower. While occasional failures happen during handovers, " +
+            "repeated failures can indicate a device trying to harvest your phone's identity."
+        }
+
+        val recommendation = when (riskLevel) {
+            RiskLevel.CRITICAL ->
+                "Authentication failure is near-certain evidence of a fake tower. " +
+                "Switch to airplane mode, move away, and use WiFi calling if available."
+            RiskLevel.HIGH ->
+                "Multiple registration failures are suspicious. Move to a different " +
+                "area and monitor if failures persist."
+            else ->
+                "A single failure may be transient. Watch for additional alerts."
+        }
+
+        val possibleCauses = buildList {
+            if (isSynchFailure) add("IMSI catcher / fake base station (near-certain)")
+            add("Network congestion or maintenance")
+            add("SIM card issue")
+            if (failureCount >= 3) add("Persistent fake tower forcing identity exposure")
+        }
+
+        return AlertAnalysis(
+            plainEnglish = plainEnglish,
+            riskLevel = riskLevel,
+            recommendation = recommendation,
+            confidence = confidenceToFloat(alert.confidence, riskLevel),
+            possibleCauses = possibleCauses,
+            shouldWorry = riskLevel >= RiskLevel.HIGH
+        )
+    }
+
+    // -----------------------------------------------------------------
+    // TEMPORAL_ANOMALY analysis
+    // -----------------------------------------------------------------
+
+    private fun analyzeTemporalAnomaly(alert: Alert, details: JSONObject): AlertAnalysis {
+        val hasTransient = details.has("transient_towers") || details.has("transient_tower")
+        val hasCellCycling = details.has("cell_cycling") || details.has("cell_cycling_stationary")
+        val hasSignalInstability = details.has("signal_instability")
+
+        val riskLevel = when {
+            hasTransient && hasCellCycling -> RiskLevel.HIGH
+            hasTransient -> RiskLevel.HIGH
+            hasCellCycling -> RiskLevel.MEDIUM
+            hasSignalInstability -> RiskLevel.MEDIUM
+            else -> RiskLevel.LOW
+        }
+
+        val plainEnglish = when {
+            hasTransient ->
+                "A cell tower appeared briefly and then disappeared. Real towers are " +
+                "permanent infrastructure — they don't vanish. This is consistent with " +
+                "a portable or vehicle-mounted surveillance device."
+            hasCellCycling ->
+                "Your phone is rapidly switching between cell towers even though you're " +
+                "not moving. This can happen when a device is trying to force your " +
+                "phone to connect to it by disrupting your current connection."
+            hasSignalInstability ->
+                "Unusual signal instability detected — the kind typically produced by " +
+                "SDR (software-defined radio) hardware rather than carrier-grade " +
+                "base station equipment."
+            else ->
+                "Minor timing irregularities were observed in cell tower behavior. " +
+                "This is usually caused by normal network operations."
+        }
+
+        val recommendation = when (riskLevel) {
+            RiskLevel.HIGH ->
+                "A transient tower is a strong indicator of a portable IMSI catcher. " +
+                "Use encrypted communications and consider moving to a different area."
+            RiskLevel.MEDIUM ->
+                "Monitor the situation. If cell cycling continues or other alerts " +
+                "appear, take it more seriously."
+            else ->
+                "Likely normal network behavior. No action needed."
+        }
+
+        val possibleCauses = buildList {
+            if (hasTransient) add("Portable IMSI catcher (van/backpack/drone-mounted)")
+            if (hasTransient) add("Temporary cell on wheels for event coverage")
+            if (hasCellCycling) add("Forced cell reselection attack")
+            if (hasCellCycling) add("Network congestion or tower maintenance")
+            if (hasSignalInstability) add("SDR-based fake base station")
+            if (hasSignalInstability) add("Environmental interference")
+            add("Normal network optimization")
+        }
+
+        return AlertAnalysis(
+            plainEnglish = plainEnglish,
+            riskLevel = riskLevel,
+            recommendation = recommendation,
+            confidence = confidenceToFloat(alert.confidence, riskLevel),
+            possibleCauses = possibleCauses,
+            shouldWorry = riskLevel >= RiskLevel.HIGH
+        )
+    }
+
+    // -----------------------------------------------------------------
+    // COMPOUND_PATTERN analysis (fusion layer output)
+    // -----------------------------------------------------------------
+
+    private fun analyzeCompoundPattern(alert: Alert, details: JSONObject): AlertAnalysis {
+        val patternName = details.optString("compound_pattern", "Unknown")
+        val confidence = details.optString("compound_confidence", "0.5").toDoubleOrNull() ?: 0.5
+        val matchedIndicators = details.optString("matched_indicators", "")
+
+        val riskLevel = when {
+            confidence >= 0.85 -> RiskLevel.CRITICAL
+            confidence >= 0.65 -> RiskLevel.HIGH
+            else -> RiskLevel.MEDIUM
+        }
+
+        val plainEnglish = when (patternName) {
+            "Classic Stingray" ->
+                "Multiple detection systems triggered simultaneously in a pattern that " +
+                "matches a known IMSI catcher signature: fake tower identity, overpowered " +
+                "signal, network downgrade, and missing neighbor information. This is the " +
+                "textbook signature of a Stingray-type surveillance device."
+            "Silent Interception" ->
+                "A tower mimicking a real cell was detected with cipher downgrade for " +
+                "silent call interception. This is a sophisticated attack where the " +
+                "attacker clones a legitimate tower's identity to avoid basic detection."
+            "Tracking-Only" ->
+                "A pattern consistent with identity harvesting was detected — your phone " +
+                "is being repeatedly asked to identify itself without any interception. " +
+                "Someone may be conducting mass surveillance to track who is in this area."
+            "Mobile IMSI Catcher" ->
+                "A transient cell tower with shifting characteristics was detected, " +
+                "consistent with a vehicle-mounted or drone-based surveillance device " +
+                "moving through the area."
+            else -> alert.summary
+        }
+
+        val recommendation = when (riskLevel) {
+            RiskLevel.CRITICAL ->
+                "HIGH CONFIDENCE: Multiple independent sensors confirm a surveillance device " +
+                "is operating nearby. Enable airplane mode immediately, move to a different " +
+                "location, and use WiFi with VPN for communications."
+            RiskLevel.HIGH ->
+                "Strong evidence of a surveillance device. Use encrypted communications " +
+                "(Signal, WhatsApp) and avoid sensitive calls/texts. Move if possible."
+            else ->
+                "Suspicious pattern detected. Stay alert and monitor for additional indicators."
+        }
+
+        val possibleCauses = buildList {
+            when (patternName) {
+                "Classic Stingray" -> {
+                    add("Law enforcement cell-site simulator (Stingray/Hailstorm)")
+                    add("Foreign intelligence IMSI catcher")
+                }
+                "Silent Interception" -> {
+                    add("Sophisticated evil-twin IMSI catcher")
+                    add("Advanced law enforcement interception device")
+                }
+                "Tracking-Only" -> {
+                    add("Mass surveillance / identity harvesting device")
+                    add("Foreign intelligence location tracking")
+                }
+                "Mobile IMSI Catcher" -> {
+                    add("Vehicle-mounted Stingray (surveillance van)")
+                    add("Airborne DRTbox / Dirtbox (aircraft/drone)")
+                    add("LEER-3 type military EW system")
+                }
+            }
+        }
+
+        return AlertAnalysis(
+            plainEnglish = plainEnglish,
+            riskLevel = riskLevel,
+            recommendation = recommendation,
+            confidence = confidence.toFloat().coerceIn(0.0f, 1.0f),
+            possibleCauses = possibleCauses,
+            shouldWorry = riskLevel >= RiskLevel.HIGH
+        )
+    }
+
     private fun confidenceToFloat(confidence: Confidence, risk: RiskLevel): Float {
         val base = when (confidence) {
             Confidence.LOW -> 0.3f

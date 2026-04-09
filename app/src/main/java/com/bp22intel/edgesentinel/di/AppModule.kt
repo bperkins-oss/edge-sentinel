@@ -76,6 +76,13 @@ private val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+private val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE cells ADD COLUMN earfcn INTEGER NOT NULL DEFAULT ${Int.MAX_VALUE}")
+        db.execSQL("ALTER TABLE cells ADD COLUMN pci INTEGER NOT NULL DEFAULT ${Int.MAX_VALUE}")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
@@ -89,7 +96,7 @@ object AppModule {
             context,
             EdgeSentinelDatabase::class.java,
             "edge_sentinel.db"
-        ).addMigrations(MIGRATION_1_2)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_6_7)
          .fallbackToDestructiveMigration()
          .build()
     }

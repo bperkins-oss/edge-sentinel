@@ -114,7 +114,10 @@ class AlertsViewModel @Inject constructor(
             ThreatType.TRACKING_PATTERN,
             ThreatType.CIPHER_ANOMALY,
             ThreatType.SIGNAL_ANOMALY,
-            ThreatType.NR_ANOMALY -> SensorCategory.CELLULAR
+            ThreatType.NR_ANOMALY,
+            ThreatType.REGISTRATION_FAILURE,
+            ThreatType.TEMPORAL_ANOMALY,
+            ThreatType.COMPOUND_PATTERN -> SensorCategory.CELLULAR
         }
     }
 }

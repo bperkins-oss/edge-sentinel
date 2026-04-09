@@ -521,7 +521,10 @@ class MonitoringService : LifecycleService() {
                         com.bp22intel.edgesentinel.domain.model.ThreatType.SILENT_SMS,
                         com.bp22intel.edgesentinel.domain.model.ThreatType.CIPHER_ANOMALY,
                         com.bp22intel.edgesentinel.domain.model.ThreatType.SIGNAL_ANOMALY,
-                        com.bp22intel.edgesentinel.domain.model.ThreatType.NR_ANOMALY ->
+                        com.bp22intel.edgesentinel.domain.model.ThreatType.NR_ANOMALY,
+                        com.bp22intel.edgesentinel.domain.model.ThreatType.REGISTRATION_FAILURE,
+                        com.bp22intel.edgesentinel.domain.model.ThreatType.TEMPORAL_ANOMALY,
+                        com.bp22intel.edgesentinel.domain.model.ThreatType.COMPOUND_PATTERN ->
                             com.bp22intel.edgesentinel.domain.model.SensorCategory.CELLULAR
                         com.bp22intel.edgesentinel.domain.model.ThreatType.TRACKING_PATTERN ->
                             com.bp22intel.edgesentinel.domain.model.SensorCategory.BLUETOOTH

@@ -19,6 +19,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,19 +36,58 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bp22intel.edgesentinel.domain.model.FusedThreatLevel
 import com.bp22intel.edgesentinel.domain.model.ThreatLevel
 import com.bp22intel.edgesentinel.ui.theme.EdgeSentinelTheme
 import com.bp22intel.edgesentinel.ui.theme.StatusClear
+import com.bp22intel.edgesentinel.ui.theme.StatusCritical
+import com.bp22intel.edgesentinel.ui.theme.StatusDangerous
+import com.bp22intel.edgesentinel.ui.theme.StatusElevated
 import com.bp22intel.edgesentinel.ui.theme.StatusSuspicious
 import com.bp22intel.edgesentinel.ui.theme.StatusThreat
+
+/**
+ * Overload accepting 4-level [FusedThreatLevel] for the upgraded scoring engine.
+ */
+@Composable
+fun ThreatIndicator(
+    fusedLevel: FusedThreatLevel,
+    modifier: Modifier = Modifier,
+    size: Dp = 200.dp,
+    /** Overall score from 0–10 for sub-label display. */
+    score: Double? = null
+) {
+    val mapped = when (fusedLevel) {
+        FusedThreatLevel.CLEAR -> ThreatLevel.CLEAR
+        FusedThreatLevel.ELEVATED -> ThreatLevel.SUSPICIOUS
+        FusedThreatLevel.DANGEROUS -> ThreatLevel.THREAT
+        FusedThreatLevel.CRITICAL -> ThreatLevel.THREAT
+    }
+    ThreatIndicator(
+        threatLevel = mapped,
+        modifier = modifier,
+        size = size,
+        overrideLabel = fusedLevel.label.uppercase(),
+        overrideColor = when (fusedLevel) {
+            FusedThreatLevel.CLEAR -> StatusClear
+            FusedThreatLevel.ELEVATED -> StatusElevated
+            FusedThreatLevel.DANGEROUS -> StatusDangerous
+            FusedThreatLevel.CRITICAL -> StatusCritical
+        },
+        score = score
+    )
+}
 
 @Composable
 fun ThreatIndicator(
     threatLevel: ThreatLevel,
     modifier: Modifier = Modifier,
-    size: Dp = 200.dp
+    size: Dp = 200.dp,
+    overrideLabel: String? = null,
+    overrideColor: Color? = null,
+    score: Double? = null
 ) {
-    val targetColor = when (threatLevel) {
+    val targetColor = overrideColor ?: when (threatLevel) {
         ThreatLevel.CLEAR -> StatusClear
         ThreatLevel.SUSPICIOUS -> StatusSuspicious
         ThreatLevel.THREAT -> StatusThreat
@@ -60,21 +100,27 @@ fun ThreatIndicator(
         label = "threat_color"
     )
 
-    val labelText = when (threatLevel) {
+    val labelText = overrideLabel ?: when (threatLevel) {
         ThreatLevel.CLEAR -> "CLEAR"
         ThreatLevel.SUSPICIOUS -> "SUSPICIOUS"
         ThreatLevel.THREAT -> "THREAT"
     }
 
+    val isCritical = overrideLabel == "CRITICAL"
+
     val infiniteTransition = rememberInfiniteTransition(label = "threat_pulse")
 
-    // Main pulse alpha
+    // Main pulse alpha — fastest for CRITICAL
     val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = if (threatLevel == ThreatLevel.THREAT) 0.3f else 1f,
+        initialValue = if (threatLevel == ThreatLevel.THREAT || isCritical) 0.3f else 1f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(
-                durationMillis = if (threatLevel == ThreatLevel.THREAT) 800 else 3000,
+                durationMillis = when {
+                    isCritical -> 500
+                    threatLevel == ThreatLevel.THREAT -> 800
+                    else -> 3000
+                },
                 easing = LinearEasing
             ),
             repeatMode = RepeatMode.Reverse
@@ -82,13 +128,17 @@ fun ThreatIndicator(
         label = "pulse_alpha"
     )
 
-    // Radar sweep — expanding ring that fades out (active on SUSPICIOUS and THREAT)
+    // Radar sweep — expanding ring that fades out
     val radarProgress by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(
-                durationMillis = if (threatLevel == ThreatLevel.THREAT) 1200 else 2400,
+                durationMillis = when {
+                    isCritical -> 800
+                    threatLevel == ThreatLevel.THREAT -> 1200
+                    else -> 2400
+                },
                 easing = LinearEasing
             ),
             repeatMode = RepeatMode.Restart
@@ -148,16 +198,28 @@ fun ThreatIndicator(
             )
         }
 
-        Text(
-            text = labelText,
-            color = baseColor,
-            fontSize = when (threatLevel) {
-                ThreatLevel.SUSPICIOUS -> 16.sp
-                else -> 20.sp
-            },
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleLarge
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = labelText,
+                color = baseColor,
+                fontSize = when {
+                    labelText.length > 8 -> 14.sp
+                    threatLevel == ThreatLevel.SUSPICIOUS -> 16.sp
+                    else -> 20.sp
+                },
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLarge
+            )
+            if (score != null) {
+                Text(
+                    text = "Score: %.1f/10".format(score),
+                    color = baseColor.copy(alpha = 0.7f),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
     }
 }
 

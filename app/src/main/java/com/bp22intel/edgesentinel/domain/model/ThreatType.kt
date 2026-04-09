@@ -17,5 +17,9 @@ enum class ThreatType {
     TRACKING_PATTERN,
     CIPHER_ANOMALY,
     SIGNAL_ANOMALY,
-    NR_ANOMALY
+    NR_ANOMALY,
+    REGISTRATION_FAILURE,
+    TEMPORAL_ANOMALY,
+    /** Synthetic type emitted by the fusion layer when a compound attack pattern is detected. */
+    COMPOUND_PATTERN
 }

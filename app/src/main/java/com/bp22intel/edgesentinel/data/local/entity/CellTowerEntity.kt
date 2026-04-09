@@ -34,5 +34,9 @@ data class CellTowerEntity(
     @ColumnInfo(name = "last_seen")
     val lastSeen: Long,
     @ColumnInfo(name = "times_seen")
-    val timesSeen: Int
+    val timesSeen: Int,
+    @ColumnInfo(name = "earfcn", defaultValue = "${Int.MAX_VALUE}")
+    val earfcn: Int = Int.MAX_VALUE,
+    @ColumnInfo(name = "pci", defaultValue = "${Int.MAX_VALUE}")
+    val pci: Int = Int.MAX_VALUE
 )

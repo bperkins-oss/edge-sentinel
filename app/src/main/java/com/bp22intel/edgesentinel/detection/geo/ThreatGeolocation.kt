@@ -1267,7 +1267,10 @@ class ThreatGeolocation @Inject constructor(
         ThreatType.SILENT_SMS,
         ThreatType.CIPHER_ANOMALY,
         ThreatType.SIGNAL_ANOMALY,
-        ThreatType.NR_ANOMALY -> SensorCategory.CELLULAR
+        ThreatType.NR_ANOMALY,
+        ThreatType.REGISTRATION_FAILURE,
+        ThreatType.TEMPORAL_ANOMALY,
+        ThreatType.COMPOUND_PATTERN -> SensorCategory.CELLULAR
         ThreatType.TRACKING_PATTERN -> SensorCategory.BLUETOOTH
     }
 

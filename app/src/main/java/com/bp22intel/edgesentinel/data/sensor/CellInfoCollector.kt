@@ -59,7 +59,9 @@ class CellInfoCollector @Inject constructor(
                         longitude = null,
                         firstSeen = now,
                         lastSeen = now,
-                        timesSeen = 1
+                        timesSeen = 1,
+                        earfcn = identity.earfcn,
+                        pci = identity.pci
                     )
                 }
                 is CellInfoNr -> {
@@ -84,7 +86,8 @@ class CellInfoCollector @Inject constructor(
                         longitude = null,
                         firstSeen = now,
                         lastSeen = now,
-                        timesSeen = 1
+                        timesSeen = 1,
+                        earfcn = identity.arfcn
                     )
                 }
                 is CellInfoWcdma -> {
@@ -102,7 +105,9 @@ class CellInfoCollector @Inject constructor(
                         longitude = null,
                         firstSeen = now,
                         lastSeen = now,
-                        timesSeen = 1
+                        timesSeen = 1,
+                        earfcn = identity.uarfcn,
+                        pci = identity.psc
                     )
                 }
                 is CellInfoCdma -> {
@@ -160,7 +165,9 @@ class CellInfoCollector @Inject constructor(
             longitude = null,
             firstSeen = timestamp,
             lastSeen = timestamp,
-            timesSeen = 1
+            timesSeen = 1,
+            earfcn = identity.nrarfcn,
+            pci = identity.pci
         )
     }
 

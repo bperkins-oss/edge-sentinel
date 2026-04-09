@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.GppMaybe
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -50,6 +51,9 @@ import com.bp22intel.edgesentinel.domain.model.Confidence
 import com.bp22intel.edgesentinel.domain.model.ThreatLevel
 import com.bp22intel.edgesentinel.domain.model.ThreatType
 import com.bp22intel.edgesentinel.ui.theme.EdgeSentinelTheme
+import com.bp22intel.edgesentinel.ui.theme.StatusClear
+import com.bp22intel.edgesentinel.ui.theme.StatusSuspicious
+import com.bp22intel.edgesentinel.ui.theme.StatusThreat
 import com.bp22intel.edgesentinel.ui.theme.Surface
 import com.bp22intel.edgesentinel.ui.theme.TextSecondary
 
@@ -62,6 +66,9 @@ private fun threatTypeIcon(type: ThreatType): ImageVector {
         ThreatType.CIPHER_ANOMALY -> Icons.Filled.GppBad
         ThreatType.SIGNAL_ANOMALY -> Icons.Filled.GppMaybe
         ThreatType.NR_ANOMALY -> Icons.Filled.NetworkCheck
+        ThreatType.REGISTRATION_FAILURE -> Icons.Filled.GppBad
+        ThreatType.TEMPORAL_ANOMALY -> Icons.Filled.TrackChanges
+        ThreatType.COMPOUND_PATTERN -> Icons.Filled.Warning
     }
 }
 
@@ -74,6 +81,9 @@ private fun threatTypeLabel(type: ThreatType): String {
         ThreatType.CIPHER_ANOMALY -> "Cipher"
         ThreatType.SIGNAL_ANOMALY -> "Signal"
         ThreatType.NR_ANOMALY -> "5G NR"
+        ThreatType.REGISTRATION_FAILURE -> "Auth Fail"
+        ThreatType.TEMPORAL_ANOMALY -> "Temporal"
+        ThreatType.COMPOUND_PATTERN -> "Compound"
     }
 }
 
@@ -120,11 +130,16 @@ fun AlertCard(
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = threatTypeIcon(alert.threatType),
-                    contentDescription = threatTypeLabel(alert.threatType),
-                    tint = TextSecondary,
-                    modifier = Modifier.size(24.dp)
+                // Confidence ring on the left
+                ConfidenceRing(
+                    confidence = alert.confidence,
+                    size = 44.dp,
+                    strokeWidth = 3.dp,
+                    ringColor = when (alert.severity) {
+                        ThreatLevel.CLEAR -> StatusClear
+                        ThreatLevel.SUSPICIOUS -> StatusSuspicious
+                        ThreatLevel.THREAT -> StatusThreat
+                    }
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -169,6 +184,14 @@ fun AlertCard(
                         color = TextSecondary
                     )
                 }
+
+                // Threat type icon on the right
+                Icon(
+                    imageVector = threatTypeIcon(alert.threatType),
+                    contentDescription = threatTypeLabel(alert.threatType),
+                    tint = TextSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }

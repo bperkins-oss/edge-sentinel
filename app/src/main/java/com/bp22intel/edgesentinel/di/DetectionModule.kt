@@ -14,6 +14,7 @@ import com.bp22intel.edgesentinel.detection.detectors.CipherModeDetector
 import com.bp22intel.edgesentinel.detection.detectors.FakeBtsDetector
 import com.bp22intel.edgesentinel.detection.detectors.NetworkDowngradeDetector
 import com.bp22intel.edgesentinel.detection.detectors.NrDetector
+import com.bp22intel.edgesentinel.detection.detectors.RegistrationFailureDetector
 import com.bp22intel.edgesentinel.detection.detectors.SilentSmsDetector
 import com.bp22intel.edgesentinel.detection.detectors.ThreatDetector
 import com.bp22intel.edgesentinel.detection.detectors.TrackingPatternDetector
@@ -50,4 +51,8 @@ abstract class DetectionModule {
     @Binds
     @IntoSet
     abstract fun bindNrDetector(impl: NrDetector): ThreatDetector
+
+    @Binds
+    @IntoSet
+    abstract fun bindRegistrationFailureDetector(impl: RegistrationFailureDetector): ThreatDetector
 }
