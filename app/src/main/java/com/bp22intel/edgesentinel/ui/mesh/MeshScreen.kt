@@ -80,6 +80,16 @@ import com.bp22intel.edgesentinel.ui.theme.StatusDangerous
 import com.bp22intel.edgesentinel.ui.theme.TextPrimary
 import com.bp22intel.edgesentinel.ui.theme.TextSecondary
 import com.bp22intel.edgesentinel.ui.theme.AccentBlue
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -132,6 +142,7 @@ fun MeshScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val coopEnabled by viewModel.isCooperativeEnabled.collectAsState()
+    var showCoopGuide by remember { mutableStateOf(false) }
     
     // Real discovered peers from BLE scan
     val realPeers = uiState.discoveredPeers.map { peer ->
@@ -252,6 +263,13 @@ fun MeshScreen(
             item {
                 CooperativeModeCard(coopState = coopState)
             }
+            item {
+                TextButton(onClick = { showCoopGuide = true }) {
+                    Icon(Icons.Filled.Info, null, tint = AccentBlue, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("How cooperative localization works", style = MaterialTheme.typography.bodySmall, color = AccentBlue)
+                }
+            }
 
             // Cooperatively tracked CIDs
             if (coopState.trackedCids.isNotEmpty()) {
@@ -315,6 +333,11 @@ fun MeshScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
+    }
+
+    // Cooperative guide bottom sheet
+    if (showCoopGuide) {
+        CooperativeGuideSheet(onDismiss = { showCoopGuide = false })
     }
 }
 
@@ -894,6 +917,104 @@ private fun StatColumn(label: String, value: String, color: Color = MeshCyan) {
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CooperativeGuideSheet(onDismiss: () -> Unit) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = "HOW COOPERATIVE LOCALIZATION WORKS",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = AccentBlue
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            GuideStep("1", "Install Edge Sentinel on every team member's phone",
+                "Each device becomes a sensor node. More devices = more accurate positioning.")
+            GuideStep("2", "Enable Mesh Network",
+                "Dashboard \u2192 Mesh Network \u2192 Enable. Devices find each other automatically via Bluetooth within ~50m line of sight.")
+            GuideStep("3", "Spread out around the area of concern",
+                "Devices need to be at different positions (50m+ apart) to triangulate. Think corners of a building, different floors, or spread across a facility.")
+            GuideStep("4", "Threats are automatically shared and triangulated",
+                "When a suspicious tower is detected, your phone shares anonymous signal observations with nearby Edge Sentinel users. With 3+ devices seeing the same tower, the system triangulates its position.")
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "WHAT\u2019S SHARED",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = StatusElevated
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("\u2022 Your approximate position (grid-snapped to ~100m \u2014 not exact GPS)",
+                style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text("\u2022 Signal strength and timing advance for the suspicious tower",
+                style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text("\u2022 Anonymous device ID (rotated every 24 hours)",
+                style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text("\u2022 NO personal data, NO exact location, NO phone identity",
+                style = MaterialTheme.typography.bodySmall, color = TextPrimary,
+                fontWeight = FontWeight.SemiBold)
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "TIPS FOR BEST RESULTS",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = StatusClear
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("\u2022 5+ devices can locate a tower to \u00b1100m",
+                style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text("\u2022 3 devices is the minimum for triangulation",
+                style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text("\u2022 Walk around the area \u2014 even 1 device moving gives multiple observation points",
+                style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text("\u2022 Stay within Bluetooth range (~50m) of at least one other device",
+                style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            Text("\u2022 The system works solo too \u2014 cooperative mode just makes it better",
+                style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun GuideStep(number: String, title: String, description: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .background(AccentBlue.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(number, color = AccentBlue, fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelLarge)
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(title, style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Text(description, style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary)
+        }
     }
 }
 
