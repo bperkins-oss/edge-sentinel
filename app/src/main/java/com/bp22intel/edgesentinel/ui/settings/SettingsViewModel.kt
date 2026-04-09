@@ -46,6 +46,7 @@ class SettingsViewModel @Inject constructor(
         private val KEY_DEMO_MODE = booleanPreferencesKey("demo_mode")
         private val KEY_ADVANCED_MODE = booleanPreferencesKey("advanced_mode")
         private val KEY_ALERT_RETENTION_DAYS = intPreferencesKey("alert_retention_days")
+        private val KEY_COOPERATIVE_LOCALIZATION = booleanPreferencesKey("cooperative_localization_enabled")
     }
 
     val isMonitoringEnabled: StateFlow<Boolean> = dataStore.data
@@ -82,6 +83,10 @@ class SettingsViewModel @Inject constructor(
     val alertRetentionDays: StateFlow<Int> = dataStore.data
         .map { prefs -> prefs[KEY_ALERT_RETENTION_DAYS] ?: 7 }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
+
+    val isCooperativeLocalization: StateFlow<Boolean> = dataStore.data
+        .map { prefs -> prefs[KEY_COOPERATIVE_LOCALIZATION] ?: true }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private val _isRooted = MutableStateFlow(false)
     val isRooted: StateFlow<Boolean> = _isRooted.asStateFlow()
@@ -130,6 +135,12 @@ class SettingsViewModel @Inject constructor(
     fun setAlertRetentionDays(days: Int) {
         viewModelScope.launch {
             dataStore.edit { prefs -> prefs[KEY_ALERT_RETENTION_DAYS] = days }
+        }
+    }
+
+    fun setCooperativeLocalization(enabled: Boolean) {
+        viewModelScope.launch {
+            dataStore.edit { prefs -> prefs[KEY_COOPERATIVE_LOCALIZATION] = enabled }
         }
     }
 

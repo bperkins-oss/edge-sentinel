@@ -704,6 +704,34 @@ private fun SituationAnalysisCard(
                     }
                 }
             }
+
+            // Cooperative localization context
+            brief.cooperativeContext?.let { coopCtx ->
+                Spacer(modifier = Modifier.height(4.dp))
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFF59E0B).copy(alpha = 0.08f)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Text(
+                            text = "\u2B50",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(end = 6.dp, top = 1.dp)
+                        )
+                        Text(
+                            text = coopCtx,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
         }
     }
 }

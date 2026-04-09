@@ -24,11 +24,19 @@ object MeshProtocol {
     const val PROTOCOL_VERSION = 2
     const val SERVICE_UUID = "ed9e-5e71-1ne1-mesh"
 
+    /** Valid BLE service UUID for Edge Sentinel mesh. */
+    val BLE_SERVICE_UUID: java.util.UUID = java.util.UUID.fromString("ed9e5e71-1ae1-4d3a-b5c7-ae5b00000001")
+
+    /** Cooperative observation GATT characteristics. */
+    val OBSERVATION_SHARE_UUID: java.util.UUID = java.util.UUID.fromString("ed9e5e71-1ae1-4d3a-b5c7-ae5b00000010")
+    val OBSERVATION_RECEIVE_UUID: java.util.UUID = java.util.UUID.fromString("ed9e5e71-1ae1-4d3a-b5c7-ae5b00000011")
+
     /** Message types exchanged between mesh peers. */
     enum class MessageType {
-        ALERT,      // Threat alert broadcast
-        HEARTBEAT,  // Peer presence announcement
-        ACK         // Alert acknowledgement
+        ALERT,                  // Threat alert broadcast
+        HEARTBEAT,              // Peer presence announcement
+        ACK,                    // Alert acknowledgement
+        COOPERATIVE_OBSERVATION // Cooperative localization observation
     }
 }
 

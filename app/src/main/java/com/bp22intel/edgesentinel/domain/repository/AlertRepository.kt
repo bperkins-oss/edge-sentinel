@@ -23,4 +23,6 @@ interface AlertRepository {
     suspend fun acknowledgeAlert(id: Long)
     suspend fun deleteOldAlerts(beforeTimestamp: Long)
     fun getUnacknowledgedCount(): Flow<Int>
+    /** Get active (recent, unacknowledged) alerts as a snapshot for cooperative sharing. */
+    suspend fun getActiveAlerts(): List<Alert>
 }

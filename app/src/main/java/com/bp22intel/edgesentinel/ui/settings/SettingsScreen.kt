@@ -88,6 +88,7 @@ fun SettingsScreen(
     val isAdvancedMode by viewModel.isAdvancedMode.collectAsState()
     val isRooted by viewModel.isRooted.collectAsState()
     val alertRetentionDays by viewModel.alertRetentionDays.collectAsState()
+    val isCooperativeLocalization by viewModel.isCooperativeLocalization.collectAsState()
 
     LazyColumn(
         modifier = Modifier
@@ -201,6 +202,20 @@ fun SettingsScreen(
 
         item {
             PermissionsCard(context = context)
+        }
+
+        // Cooperative Localization (Mesh)
+        item {
+            SectionHeader(title = "Mesh Network")
+        }
+
+        item {
+            SettingsToggleItem(
+                title = "Cooperative Localization",
+                subtitle = "Share anonymous signal observations with nearby Edge Sentinel users to collectively locate suspicious towers. Only grid-snapped position and cell signal data is shared.",
+                checked = isCooperativeLocalization,
+                onCheckedChange = { viewModel.setCooperativeLocalization(it) }
+            )
         }
 
         // Demo mode
@@ -416,6 +431,7 @@ private fun PermissionsCard(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             add(PermissionItem("Bluetooth Scan", Manifest.permission.BLUETOOTH_SCAN, "BLE tracker detection"))
             add(PermissionItem("Bluetooth Connect", Manifest.permission.BLUETOOTH_CONNECT, "Mesh alerting"))
+            add(PermissionItem("Bluetooth Advertise", Manifest.permission.BLUETOOTH_ADVERTISE, "Cooperative mesh sharing"))
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             add(PermissionItem("Notifications", Manifest.permission.POST_NOTIFICATIONS, "Threat alerts"))

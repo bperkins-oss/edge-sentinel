@@ -213,7 +213,11 @@ data class GeolocatedThreat(
     val label: String,
     val timestamp: Long,
     val signalStrengthDbm: Int? = null,
-    val bearing: Float? = null
+    val bearing: Float? = null,
+    /** Whether this threat was cooperatively located by multiple devices. */
+    val isCooperativelyLocated: Boolean = false,
+    /** Number of devices that contributed to cooperative localization. */
+    val cooperativeDeviceCount: Int = 0
 )
 
 /**
@@ -495,6 +499,16 @@ class ThreatGeolocation @Inject constructor(
         // ── 12. Confidence-weighted fusion with technique multipliers ─
         val fused = fuseEstimates(estimates)
 
+        // Check if cooperative mesh contributed to the estimate
+        val coopEstimate = estimates.find { it.technique == GeoTechnique.COOPERATIVE_MESH }
+        val coopDeviceCount = if (coopEstimate != null) {
+            val alertCid = details.optInt("cid", 0)
+            synchronized(meshObservations) {
+                meshObservations.filter { it.cellCid == alertCid }
+                    .map { "${it.peerLat}:${it.peerLng}" }.distinct().size
+            }
+        } else 0
+
         return GeolocatedThreat(
             id = threatId,
             latitude = fused.latitude,
@@ -505,7 +519,9 @@ class ThreatGeolocation @Inject constructor(
             label = generateThreatLabel(alert, category),
             timestamp = alert.timestamp,
             signalStrengthDbm = signalStrength,
-            bearing = fused.bearingDeg?.toFloat()
+            bearing = fused.bearingDeg?.toFloat(),
+            isCooperativelyLocated = coopEstimate != null,
+            cooperativeDeviceCount = coopDeviceCount
         )
     }
 

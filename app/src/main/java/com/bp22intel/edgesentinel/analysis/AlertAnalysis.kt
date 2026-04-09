@@ -68,5 +68,7 @@ data class SituationBrief(
     val overallRisk: RiskLevel,
     val topConcerns: List<String>,
     val recommendations: List<String>,
-    val allClear: Boolean
+    val allClear: Boolean,
+    /** Cooperative localization context added when mesh peers contribute. */
+    val cooperativeContext: String? = null
 )

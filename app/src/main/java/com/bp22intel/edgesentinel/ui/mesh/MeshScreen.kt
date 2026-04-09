@@ -34,8 +34,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Card
@@ -54,7 +55,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -68,6 +68,8 @@ import com.bp22intel.edgesentinel.mesh.MeshAlert
 import com.bp22intel.edgesentinel.mesh.MeshAlertAggregator
 import com.bp22intel.edgesentinel.mesh.MeshUiState
 import com.bp22intel.edgesentinel.mesh.MeshViewModel
+import com.bp22intel.edgesentinel.mesh.CooperativeModeState
+import com.bp22intel.edgesentinel.mesh.TrackedCid
 import com.bp22intel.edgesentinel.ui.components.SectionHeader
 import com.bp22intel.edgesentinel.ui.theme.BackgroundPrimary
 import com.bp22intel.edgesentinel.ui.theme.Surface
@@ -83,6 +85,7 @@ import java.util.Date
 import java.util.Locale
 
 val MeshCyan = Color(0xFF06B6D4)
+val CoopGold = Color(0xFFF59E0B)
 
 // Data classes for the enhanced UI (extending existing MeshUiState)
 data class MeshPeer(
@@ -91,7 +94,8 @@ data class MeshPeer(
     val rssi: Int,
     val lastSeen: Long,
     val threatLevel: ThreatLevel,
-    val isConnected: Boolean
+    val isConnected: Boolean,
+    val isEdgeSentinel: Boolean = false
 )
 
 data class SharedAlert(
@@ -117,7 +121,8 @@ data class MeshStats(
     val totalPeersToday: Int,
     val alertsShared: Int,
     val alertsReceived: Int,
-    val correlatedDetections: Int
+    val correlatedDetections: Int,
+    val cooperativeLocations: Int
 )
 
 @Composable
@@ -126,6 +131,7 @@ fun MeshScreen(
     viewModel: MeshViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val coopEnabled by viewModel.isCooperativeEnabled.collectAsState()
     
     // Real discovered peers from BLE scan
     val realPeers = uiState.discoveredPeers.map { peer ->
@@ -135,7 +141,8 @@ fun MeshScreen(
             rssi = peer.rssi,
             lastSeen = peer.lastSeen,
             threatLevel = ThreatLevel.CLEAR,
-            isConnected = (System.currentTimeMillis() - peer.lastSeen) < 60_000
+            isConnected = (System.currentTimeMillis() - peer.lastSeen) < 60_000,
+            isEdgeSentinel = peer.isEdgeSentinel
         )
     }
     
@@ -144,7 +151,7 @@ fun MeshScreen(
             ConsensusAlert(
                 threatDescription = "Suspicious tower CID ${correlated.cellCid ?: "unknown"}",
                 detectingPeerCount = correlated.peerCount,
-                totalNearbyPeers = realPeers.size + 1, // +1 for this device
+                totalNearbyPeers = realPeers.size + 1,
                 confidenceLevel = when {
                     correlated.peerCount >= 3 -> "Confirmed"
                     correlated.peerCount >= 2 -> "Corroborated"
@@ -164,15 +171,18 @@ fun MeshScreen(
             alertType = alert.threatType.name,
             description = alert.summary,
             timestamp = alert.timestamp,
-            isCorroborated = false // Would check if local device also detected this
+            isCorroborated = false
         )
     }
+    
+    val coopState = uiState.cooperativeMode
     
     val meshStats = MeshStats(
         totalPeersToday = realPeers.size,
         alertsShared = uiState.totalAlertsReceived,
         alertsReceived = uiState.totalAlertsReceived,
-        correlatedDetections = uiState.corroboratedAlertCount
+        correlatedDetections = uiState.corroboratedAlertCount,
+        cooperativeLocations = coopState.trilaterations.count { it.hasEstimate }
     )
 
     Scaffold(
@@ -236,6 +246,23 @@ fun MeshScreen(
                 }
             }
         }
+
+        // ── Cooperative Localization Section ──────────────────────────
+        if (uiState.isActive && coopEnabled) {
+            item {
+                CooperativeModeCard(coopState = coopState)
+            }
+
+            // Cooperatively tracked CIDs
+            if (coopState.trackedCids.isNotEmpty()) {
+                item {
+                    SectionHeader(title = "Cooperative Tracking")
+                }
+                items(coopState.trackedCids, key = { it.cid }) { trackedCid ->
+                    CooperativeTrackedCidCard(trackedCid)
+                }
+            }
+        }
         
         // Nearby Peers Section
         item {
@@ -291,6 +318,161 @@ fun MeshScreen(
     }
 }
 
+// ── Cooperative Mode Cards ───────────────────────────────────────────────
+
+@Composable
+private fun CooperativeModeCard(coopState: CooperativeModeState) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (coopState.isActive) CoopGold.copy(alpha = 0.1f) else SurfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.GpsFixed,
+                    contentDescription = null,
+                    tint = if (coopState.isActive) CoopGold else TextSecondary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (coopState.isActive) "Cooperative Mode: Active" else "Cooperative Mode: Standby",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    if (coopState.isActive) {
+                        Text(
+                            text = "Sharing anonymous signal data with ${coopState.edgeSentinelPeerCount} nearby Edge Sentinel users",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    } else {
+                        Text(
+                            text = "Waiting for threats + peers to begin cooperative localization",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            }
+
+            if (coopState.isActive) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = null,
+                            tint = CoopGold,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Contributing ${coopState.sharingObservationCount} observations to ${coopState.edgeSentinelPeerCount} peers",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CoopGold
+                        )
+                    }
+                }
+
+                if (coopState.receivingFromPeerCount > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Receiving from ${coopState.receivingFromPeerCount} peer devices",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CooperativeTrackedCidCard(trackedCid: TrackedCid) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (trackedCid.hasEstimate)
+                CoopGold.copy(alpha = 0.08f) else Surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // CID badge
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(
+                        if (trackedCid.hasEstimate) CoopGold.copy(alpha = 0.2f)
+                        else SurfaceVariant
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = "CID ${trackedCid.cid}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (trackedCid.hasEstimate) CoopGold else TextSecondary
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${trackedCid.observationCount} observations from ${trackedCid.participatingDevices} devices",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary
+                    )
+                }
+
+                if (trackedCid.hasEstimate) {
+                    Text(
+                        text = "📍 Located — ${trackedCid.accuracyLabel}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = CoopGold
+                    )
+                } else if (trackedCid.participatingDevices < 3) {
+                    Text(
+                        text = "Need ${3 - trackedCid.participatingDevices} more devices to locate",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+            }
+
+            if (trackedCid.hasEstimate) {
+                // Star icon for cooperatively located threats
+                Icon(
+                    imageVector = Icons.Default.GpsFixed,
+                    contentDescription = "Cooperatively located",
+                    tint = CoopGold,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+// ── Existing Cards (preserved) ───────────────────────────────────────────
+
 @Composable
 private fun MeshStatusCard(
     state: MeshUiState,
@@ -326,7 +508,6 @@ private fun MeshStatusCard(
                         Row(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Status indicator
                             Box(
                                 modifier = Modifier
                                     .size(8.dp)
@@ -337,7 +518,7 @@ private fun MeshStatusCard(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                if (state.isActive) "Active — Scanning" else "Disabled",
+                                if (state.isActive) "Active — Scanning + Advertising" else "Disabled",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextSecondary
                             )
@@ -359,8 +540,9 @@ private fun MeshStatusCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    val esPeers = state.discoveredPeers.count { it.isEdgeSentinel }
                     Text(
-                        "$peerCount peers nearby",
+                        "$peerCount devices nearby" + if (esPeers > 0) " ($esPeers Edge Sentinel)" else "",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MeshCyan
                     )
@@ -387,14 +569,31 @@ private fun NearbyPeerCard(peer: MeshPeer) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Device identifier
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = peer.displayName,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium,
-                    color = TextPrimary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = peer.displayName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimary
+                    )
+                    if (peer.isEdgeSentinel) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MeshCyan.copy(alpha = 0.2f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "ES",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MeshCyan
+                            )
+                        }
+                    }
+                }
                 Text(
                     text = formatLastSeen(peer.lastSeen),
                     style = MaterialTheme.typography.bodySmall,
@@ -403,13 +602,9 @@ private fun NearbyPeerCard(peer: MeshPeer) {
             }
             
             Spacer(modifier = Modifier.width(12.dp))
-            
-            // Signal strength (RSSI bars)
             RssiIndicator(rssi = peer.rssi)
-            
             Spacer(modifier = Modifier.width(12.dp))
             
-            // Threat level indicator
             Box(
                 modifier = Modifier
                     .size(12.dp)
@@ -425,7 +620,6 @@ private fun NearbyPeerCard(peer: MeshPeer) {
             
             Spacer(modifier = Modifier.width(8.dp))
             
-            // Connection quality
             Icon(
                 imageVector = Icons.Default.Wifi,
                 contentDescription = "Connection quality",
@@ -442,7 +636,6 @@ private fun RssiIndicator(rssi: Int) {
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalAlignment = Alignment.Bottom
     ) {
-        // Calculate signal strength bars (4 bars max)
         val bars = when {
             rssi > -60 -> 4
             rssi > -70 -> 3
@@ -607,7 +800,6 @@ private fun SharedAlertCard(alert: SharedAlert) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Peer identifier badge
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(4.dp))
@@ -678,23 +870,24 @@ private fun MeshStatsCard(stats: MeshStats) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                StatColumn("Peers Today", stats.totalPeersToday.toString())
-                StatColumn("Alerts Shared", stats.alertsShared.toString())
-                StatColumn("Alerts Received", stats.alertsReceived.toString())
+                StatColumn("Peers", stats.totalPeersToday.toString())
+                StatColumn("Shared", stats.alertsShared.toString())
+                StatColumn("Received", stats.alertsReceived.toString())
                 StatColumn("Correlated", stats.correlatedDetections.toString())
+                StatColumn("Located", stats.cooperativeLocations.toString(), CoopGold)
             }
         }
     }
 }
 
 @Composable
-private fun StatColumn(label: String, value: String) {
+private fun StatColumn(label: String, value: String, color: Color = MeshCyan) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             value,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MeshCyan
+            color = color
         )
         Text(
             label,

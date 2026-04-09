@@ -49,4 +49,9 @@ class AlertRepositoryImpl @Inject constructor(
 
     override fun getUnacknowledgedCount(): Flow<Int> =
         alertDao.getUnacknowledgedCount()
+
+    override suspend fun getActiveAlerts(): List<Alert> {
+        val since = System.currentTimeMillis() - 5 * 60 * 1000L // Last 5 minutes
+        return alertDao.getActiveSince(since).map { it.toDomain() }
+    }
 }

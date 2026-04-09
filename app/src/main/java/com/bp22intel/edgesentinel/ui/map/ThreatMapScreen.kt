@@ -655,6 +655,25 @@ internal fun ThreatInfoPopup(
                 }
             }
 
+            // Cooperative localization indicator
+            if (threat.isCooperativelyLocated) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "⭐",
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                    Text(
+                        text = "Located by ${threat.cooperativeDeviceCount} devices",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFF59E0B), // CoopGold
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
             Text(
                 text = formatTimestamp(threat.timestamp),
                 style = MaterialTheme.typography.labelSmall,

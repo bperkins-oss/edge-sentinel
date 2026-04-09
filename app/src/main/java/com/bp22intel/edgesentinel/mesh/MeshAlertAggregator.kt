@@ -60,6 +60,18 @@ class MeshAlertAggregator(private val localDeviceId: String) {
     /** Callback for cooperative geolocation observations. */
     var onPeerObservation: ((MeshPeerObservation) -> Unit)? = null
 
+    /** Callback for cooperative observations (new protocol). */
+    var onCooperativeObservation: ((CooperativeObservation) -> Unit)? = null
+
+    /** Cooperative trilateration results by CID. */
+    private val _cooperativeTrilaterations = MutableStateFlow<List<CooperativeTrilateration>>(emptyList())
+    val cooperativeTrilaterations: StateFlow<List<CooperativeTrilateration>> = _cooperativeTrilaterations.asStateFlow()
+
+    /** Update cooperative trilateration results from CooperativeLocalizationManager. */
+    fun updateCooperativeTrilaterations(trilaterations: List<CooperativeTrilateration>) {
+        _cooperativeTrilaterations.value = trilaterations
+    }
+
     /** Ingest a mesh alert from a peer device. */
     fun onAlertReceived(alert: MeshAlert) {
         // Ignore our own alerts bounced back and duplicates

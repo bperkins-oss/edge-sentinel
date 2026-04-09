@@ -42,4 +42,7 @@ interface AlertDao {
 
     @Query("SELECT COUNT(*) FROM alerts WHERE acknowledged = 0")
     fun getUnacknowledgedCount(): Flow<Int>
+
+    @Query("SELECT * FROM alerts WHERE acknowledged = 0 AND timestamp > :since ORDER BY timestamp DESC LIMIT 20")
+    suspend fun getActiveSince(since: Long): List<AlertEntity>
 }
