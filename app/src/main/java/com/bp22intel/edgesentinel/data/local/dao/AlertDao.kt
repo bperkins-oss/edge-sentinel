@@ -40,6 +40,10 @@ interface AlertDao {
     @Query("DELETE FROM alerts WHERE timestamp < :before")
     suspend fun deleteBefore(before: Long)
 
+    /** Delete alerts within a time range (e.g., travel period). */
+    @Query("DELETE FROM alerts WHERE timestamp >= :from AND timestamp <= :to")
+    suspend fun deleteBetween(from: Long, to: Long)
+
     @Query("SELECT COUNT(*) FROM alerts WHERE acknowledged = 0")
     fun getUnacknowledgedCount(): Flow<Int>
 

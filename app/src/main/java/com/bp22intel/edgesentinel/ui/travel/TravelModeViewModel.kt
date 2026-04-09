@@ -192,6 +192,8 @@ class TravelModeViewModel @Inject constructor(
             // Delete alerts collected before "now" (effectively all travel-period alerts)
             // deleteBefore removes alerts with timestamp < given value
             if (entryTimestamp > 0) {
+                // Delete alerts from travel period (entry time through now)
+                database.alertDao().deleteBetween(entryTimestamp, System.currentTimeMillis())
                 // Delete baselines from travel period
                 database.baselineDao().deleteAll()
             }

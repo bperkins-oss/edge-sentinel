@@ -200,6 +200,7 @@ fun OnboardingScreen(
             Manifest.permission.READ_PHONE_STATE
         )
         val niceToHavePermissions = buildList {
+            add(Manifest.permission.RECEIVE_SMS)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 add(Manifest.permission.POST_NOTIFICATIONS)
             }
@@ -469,6 +470,8 @@ private fun permissionImpact(permission: String): String = when (permission) {
         "Cannot detect network downgrades or connection type changes"
     Manifest.permission.POST_NOTIFICATIONS ->
         "Will monitor silently — no real-time threat alerts"
+    Manifest.permission.RECEIVE_SMS ->
+        "Cannot detect silent SMS / Type-0 pings used for location tracking"
     else -> "Reduced detection capability"
 }
 
