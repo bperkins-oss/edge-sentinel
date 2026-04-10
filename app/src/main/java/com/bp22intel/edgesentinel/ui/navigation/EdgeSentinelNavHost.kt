@@ -196,6 +196,11 @@ fun EdgeSentinelNavHost() {
                 AlertListScreen(
                     onAlertClick = { alert ->
                         navController.navigate(Routes.alertDetail(alert.id))
+                    },
+                    onNavigate = { route ->
+                        navController.navigate(route) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
@@ -207,6 +212,7 @@ fun EdgeSentinelNavHost() {
                 TravelModeScreen(
                     travelState = travelState,
                     checkedItems = checkedItems,
+                    onBack = { navController.popBackStack() },
                     onActivate = viewModel::activate,
                     onDeactivate = viewModel::deactivate,
                     onExportData = viewModel::exportData,

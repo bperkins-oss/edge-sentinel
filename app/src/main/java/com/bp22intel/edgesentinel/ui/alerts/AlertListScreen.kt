@@ -86,7 +86,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun AlertListScreen(
     viewModel: AlertsViewModel = hiltViewModel(),
-    onAlertClick: (Alert) -> Unit = {}
+    onAlertClick: (Alert) -> Unit = {},
+    onNavigate: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val alerts by viewModel.alerts.collectAsState()
@@ -129,29 +130,33 @@ fun AlertListScreen(
             }
         }
 
-        // Category filter chips
+        // Category filter chips — only show Cellular and Bluetooth (the types that
+        // have Alert DB records). WiFi/Network/Baseline threats live on their
+        // dedicated screens and never create Alert records.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            CategoryFilter.entries.forEach { filter ->
+            // Only show categories that can actually have alert records
+            val visibleFilters = listOf(
+                CategoryFilter.ALL,
+                CategoryFilter.CELLULAR,
+                CategoryFilter.BLUETOOTH
+            )
+            visibleFilters.forEach { filter ->
                 val label = when (filter) {
                     CategoryFilter.ALL -> "All"
                     CategoryFilter.CELLULAR -> "Cellular"
-                    CategoryFilter.WIFI -> "WiFi"
                     CategoryFilter.BLUETOOTH -> "Bluetooth"
-                    CategoryFilter.NETWORK -> "Network"
-                    CategoryFilter.BASELINE -> "Baseline"
+                    else -> ""
                 }
                 val selectedColor = when (filter) {
                     CategoryFilter.ALL -> AccentBlue
                     CategoryFilter.CELLULAR -> SensorCellular
-                    CategoryFilter.WIFI -> SensorWifi
                     CategoryFilter.BLUETOOTH -> SensorBluetooth
-                    CategoryFilter.NETWORK -> SensorNetwork
-                    CategoryFilter.BASELINE -> SensorBaseline
+                    else -> AccentBlue
                 }
                 FilterChip(
                     selected = selectedCategoryFilter == filter,
@@ -167,6 +172,53 @@ fun AlertListScreen(
                         containerColor = Surface
                     )
                 )
+            }
+        }
+
+        // Cross-navigation hint for other sensor screens
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Surface),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "WiFi, Network & Baseline threats appear on their dedicated screens.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(
+                        "WiFi" to "wifi",
+                        "Network" to "network",
+                        "Baseline" to "baseline"
+                    ).forEach { (label, route) ->
+                        val chipColor = when (label) {
+                            "WiFi" -> SensorWifi
+                            "Network" -> SensorNetwork
+                            else -> SensorBaseline
+                        }
+                        FilterChip(
+                            selected = false,
+                            onClick = { onNavigate(route) },
+                            label = {
+                                Text(
+                                    text = "$label \u2192",
+                                    color = chipColor,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = chipColor.copy(alpha = 0.1f)
+                            )
+                        )
+                    }
+                }
             }
         }
 

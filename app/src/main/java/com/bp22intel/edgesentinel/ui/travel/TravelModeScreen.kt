@@ -48,8 +48,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -83,9 +89,11 @@ import com.bp22intel.edgesentinel.ui.theme.TextSecondary
 import com.bp22intel.edgesentinel.ui.theme.TextTertiary
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun TravelModeScreen(
     travelState: TravelModeState = TravelModeState(),
     checkedItems: Set<String> = emptySet(),
+    onBack: () -> Unit = {},
     onActivate: () -> Unit = {},
     onDeactivate: () -> Unit = {},
     onExportData: (passphrase: String) -> Unit = {},
@@ -138,9 +146,28 @@ fun TravelModeScreen(
         )
     }
 
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Travel Mode") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = BackgroundPrimary,
+                    titleContentColor = TextPrimary,
+                    navigationIconContentColor = TextPrimary
+                )
+            )
+        },
+        containerColor = BackgroundPrimary
+    ) { innerPadding ->
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .padding(innerPadding)
             .padding(horizontal = 16.dp),
         contentPadding = PaddingValues(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -295,6 +322,7 @@ fun TravelModeScreen(
         // Bottom spacer
         item { Spacer(modifier = Modifier.height(72.dp)) }
     }
+    } // end Scaffold
 }
 
 @Composable

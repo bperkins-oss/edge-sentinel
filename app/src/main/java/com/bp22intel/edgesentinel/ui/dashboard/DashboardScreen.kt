@@ -167,7 +167,7 @@ fun DashboardScreen(
             if (recentAlerts.isNotEmpty()) {
                 item {
                     SectionHeader(
-                        title = "Active Alerts (${recentAlerts.size})",
+                        title = "Cellular Alerts (${recentAlerts.size})",
                         actionText = if (recentAlerts.size > 3) "View All" else null,
                         onActionClick = { onNavigate("alerts") }
                     )
@@ -894,7 +894,7 @@ private fun DetectionLayerCards(
                 else -> StatusClear
             }
             val statusText = when {
-                score.activeThreatCount > 0 -> "${score.activeThreatCount} alert${if (score.activeThreatCount != 1) "s" else ""}"
+                score.activeThreatCount > 0 -> "${score.activeThreatCount} threat${if (score.activeThreatCount != 1) "s" else ""}"
                 else -> "Clear"
             }
 
