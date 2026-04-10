@@ -208,19 +208,19 @@ fun DashboardScreen(
                 DetectionLayerCards(
                     categoryScores = posture.categoryBreakdown,
                     onLayerClick = { category ->
+                        // Each sensor has its own detail screen where threats are shown.
+                        // Cellular alerts go to the alerts tab (they have Alert records).
+                        // WiFi/BLE/Network/Baseline go to their dedicated screens
+                        // (threats live there, not in the unified alert list).
                         val hasAlerts = posture.categoryBreakdown
                             .find { it.category == category }
                             ?.activeThreatCount ?: 0 > 0
-                        val route = if (hasAlerts) {
-                            "alerts"
-                        } else {
-                            when (category) {
-                                SensorCategory.CELLULAR -> "cell_info"
-                                SensorCategory.WIFI -> "wifi"
-                                SensorCategory.BLUETOOTH -> "bluetooth"
-                                SensorCategory.NETWORK -> "network"
-                                SensorCategory.BASELINE -> "baseline"
-                            }
+                        val route = when (category) {
+                            SensorCategory.CELLULAR -> if (hasAlerts) "alerts" else "cell_info"
+                            SensorCategory.WIFI -> "wifi"
+                            SensorCategory.BLUETOOTH -> "bluetooth"
+                            SensorCategory.NETWORK -> "network"
+                            SensorCategory.BASELINE -> "baseline"
                         }
                         onNavigate(route)
                     }
