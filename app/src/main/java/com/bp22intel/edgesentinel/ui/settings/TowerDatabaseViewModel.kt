@@ -29,13 +29,12 @@ import java.net.URL
 import java.util.zip.GZIPInputStream
 import javax.inject.Inject
 
-data class AvailableCountry(
+data class CountryGroup(
     val name: String,
-    val mcc: Int,
-    val flag: String, // emoji flag for display
+    val mccs: List<Int>,
+    val flag: String, // 2-letter country code for display
     val isInstalled: Boolean = false,
-    val towerCount: Int = 0,
-    val isDownloading: Boolean = false
+    val towerCount: Int = 0
 )
 
 @HiltViewModel
@@ -59,32 +58,32 @@ class TowerDatabaseViewModel @Inject constructor(
     private val _importSuccess = MutableStateFlow<String?>(null)
     val importSuccess: StateFlow<String?> = _importSuccess.asStateFlow()
 
-    private val _downloadingMcc = MutableStateFlow<Int?>(null)
-    val downloadingMcc: StateFlow<Int?> = _downloadingMcc.asStateFlow()
+    private val _downloadingCountry = MutableStateFlow<String?>(null)
+    val downloadingCountry: StateFlow<String?> = _downloadingCountry.asStateFlow()
 
     private val _downloadProgress = MutableStateFlow("")
     val downloadProgress: StateFlow<String> = _downloadProgress.asStateFlow()
 
     val importProgress = towerDatabaseManager.importProgress
 
-    // Countries available for one-tap install
-    // Uses Mozilla Location Services (MLS) data — open, no API key required
+    // Countries available for one-tap install, grouped by country (multi-MCC)
     companion object {
         val AVAILABLE_COUNTRIES = listOf(
-            AvailableCountry("United States", 310, "US"),
-            AvailableCountry("United States", 311, "US"), // Secondary US MCC
-            AvailableCountry("United Kingdom", 234, "GB"),
-            AvailableCountry("Germany", 262, "DE"),
-            AvailableCountry("France", 208, "FR"),
-            AvailableCountry("Japan", 440, "JP"),
-            AvailableCountry("Australia", 505, "AU"),
-            AvailableCountry("Canada", 302, "CA"),
-            AvailableCountry("South Korea", 450, "KR"),
-            AvailableCountry("Israel", 425, "IL"),
-            AvailableCountry("Turkey", 286, "TR"),
-            AvailableCountry("UAE", 424, "AE"),
-            AvailableCountry("Saudi Arabia", 420, "SA"),
+            CountryGroup("United States", listOf(310, 311), "US"),
+            CountryGroup("United Kingdom", listOf(234, 235), "GB"),
+            CountryGroup("Canada", listOf(302), "CA"),
+            CountryGroup("Germany", listOf(262), "DE"),
+            CountryGroup("France", listOf(208), "FR"),
+            CountryGroup("Japan", listOf(440), "JP"),
+            CountryGroup("Australia", listOf(505), "AU"),
+            CountryGroup("South Korea", listOf(450), "KR"),
+            CountryGroup("Israel", listOf(425), "IL"),
+            CountryGroup("Turkey", listOf(286), "TR"),
+            CountryGroup("UAE", listOf(424), "AE"),
+            CountryGroup("Saudi Arabia", listOf(420), "SA"),
         )
+
+        private const val KAGGLE_DATASET_URL = "https://www.kaggle.com/datasets/aaborochin/cell-towers-from-opencellid"
     }
 
     init {
@@ -117,35 +116,40 @@ class TowerDatabaseViewModel @Inject constructor(
 
     /**
      * One-tap install: downloads tower data for a country and imports it.
-     * Uses OpenCelliD public data via their download API.
+     * Tries OpenCelliD download for each MCC in the group.
+     * Falls back to a helpful message pointing to Kaggle if download fails.
      */
-    fun installCountry(mcc: Int, countryName: String) {
-        if (_downloadingMcc.value != null) return // Already downloading
+    fun installCountry(mccs: List<Int>, countryName: String) {
+        if (_downloadingCountry.value != null) return // Already downloading
 
         viewModelScope.launch {
             try {
-                _downloadingMcc.value = mcc
+                _downloadingCountry.value = countryName
                 _error.value = null
                 _downloadProgress.value = "Downloading $countryName towers..."
 
-                // Download from OpenCelliD (free tier, no auth for small requests)
-                // Fallback: generate from the device's own cell observations
-                val inputStream = downloadTowerData(mcc)
+                var anySuccess = false
+                for (mcc in mccs) {
+                    val inputStream = downloadTowerData(mcc)
+                    if (inputStream != null) {
+                        _downloadProgress.value = "Importing MCC $mcc..."
+                        towerDatabaseManager.importFromCsv(inputStream, mcc)
+                        anySuccess = true
+                    }
+                }
 
-                if (inputStream != null) {
-                    _downloadProgress.value = "Importing..."
-                    towerDatabaseManager.importFromCsv(inputStream, mcc)
+                if (anySuccess) {
                     loadCountryList()
                     loadTotalTowerCount()
                     _importSuccess.value = "$countryName towers installed"
                 } else {
-                    _error.value = "Could not download tower data for $countryName. Try manual CSV import instead."
+                    _error.value = "Download failed. Get tower data from kaggle.com/datasets and use 'Import from CSV' below.\n\nDataset: $KAGGLE_DATASET_URL"
                 }
             } catch (e: Exception) {
-                _error.value = "Install failed: ${e.message}"
+                _error.value = "Install failed: ${e.message}\n\nTry downloading from Kaggle instead: $KAGGLE_DATASET_URL"
                 android.util.Log.e("TowerDBVM", "Country install failed", e)
             } finally {
-                _downloadingMcc.value = null
+                _downloadingCountry.value = null
                 _downloadProgress.value = ""
             }
         }
@@ -213,10 +217,10 @@ class TowerDatabaseViewModel @Inject constructor(
     fun clearError() { _error.value = null }
     fun clearSuccess() { _importSuccess.value = null }
 
-    fun deleteCountry(mcc: Int) {
+    fun deleteCountry(mccs: List<Int>) {
         viewModelScope.launch {
             try {
-                towerDatabaseManager.deleteCountry(mcc)
+                mccs.forEach { towerDatabaseManager.deleteCountry(it) }
                 loadCountryList()
                 loadTotalTowerCount()
             } catch (e: Exception) {

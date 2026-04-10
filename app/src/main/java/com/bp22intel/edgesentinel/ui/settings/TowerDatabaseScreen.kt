@@ -87,7 +87,7 @@ fun TowerDatabaseScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val importSuccess by viewModel.importSuccess.collectAsState()
-    val downloadingMcc by viewModel.downloadingMcc.collectAsState()
+    val downloadingCountry by viewModel.downloadingCountry.collectAsState()
     val downloadProgress by viewModel.downloadProgress.collectAsState()
 
     // Fallback: manual CSV import via file picker
@@ -105,8 +105,17 @@ fun TowerDatabaseScreen(
         }
     }
 
-    // Figure out which MCCs are already installed
-    val installedMccs = countries.map { it.mcc }.toSet()
+    // Figure out which MCCs are already installed and compute grouped country list
+    val installedMccs = countries.filter { it.isInstalled }.map { it.mcc }.toSet()
+    val countryGroups = TowerDatabaseViewModel.AVAILABLE_COUNTRIES.map { group ->
+        group.copy(
+            isInstalled = group.mccs.any { it in installedMccs },
+            towerCount = group.mccs.sumOf { mcc ->
+                countries.find { it.mcc == mcc }?.towerCount ?: 0
+            }
+        )
+    }
+    val installedCountryCount = countryGroups.count { it.isInstalled }
 
     LazyColumn(
         modifier = Modifier
@@ -140,7 +149,7 @@ fun TowerDatabaseScreen(
                     )
                     if (totalTowerCount > 0) {
                         Text(
-                            text = "${countries.size} countries installed",
+                            text = "$installedCountryCount countries installed",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
@@ -187,7 +196,7 @@ fun TowerDatabaseScreen(
         }
 
         // Download progress
-        if (downloadingMcc != null) {
+        if (downloadingCountry != null) {
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = AccentBlue.copy(alpha = 0.1f))) {
                     Row(
@@ -215,18 +224,9 @@ fun TowerDatabaseScreen(
             )
         }
 
-        // Country install buttons — grouped by region
-        val countryGroups = TowerDatabaseViewModel.AVAILABLE_COUNTRIES
-            .distinctBy { it.mcc }
-            .map { country ->
-                country.copy(
-                    isInstalled = installedMccs.contains(country.mcc),
-                    towerCount = countries.find { it.mcc == country.mcc }?.towerCount ?: 0
-                )
-            }
-
-        items(countryGroups, key = { it.mcc }) { country ->
-            val isDownloading = downloadingMcc == country.mcc
+        // Country install buttons — grouped by country (multi-MCC)
+        items(countryGroups, key = { it.name }) { country ->
+            val isDownloading = downloadingCountry == country.name
             
             Card(
                 colors = CardDefaults.cardColors(containerColor = Surface),
@@ -247,7 +247,7 @@ fun TowerDatabaseScreen(
                             color = TextPrimary
                         )
                         Text(
-                            text = if (country.isInstalled) "${country.towerCount} towers" else "MCC ${country.mcc}",
+                            text = if (country.isInstalled) "${country.towerCount} towers" else "MCC ${country.mccs.joinToString(", ")}",
                             style = MaterialTheme.typography.bodySmall,
                             color = if (country.isInstalled) StatusClear else TextSecondary
                         )
@@ -263,7 +263,7 @@ fun TowerDatabaseScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         IconButton(
-                            onClick = { viewModel.deleteCountry(country.mcc) },
+                            onClick = { viewModel.deleteCountry(country.mccs) },
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
@@ -282,7 +282,7 @@ fun TowerDatabaseScreen(
                     } else {
                         // Not installed — install button
                         Button(
-                            onClick = { viewModel.installCountry(country.mcc, country.name) },
+                            onClick = { viewModel.installCountry(country.mccs, country.name) },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = AccentBlue,
                                 contentColor = BackgroundPrimary
@@ -328,7 +328,7 @@ fun TowerDatabaseScreen(
 
         item {
             Text(
-                "For countries not listed above, download CSV files from opencellid.org",
+                "Download CSV tower data from kaggle.com/datasets/aaborochin/cell-towers-from-opencellid",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextSecondary,
                 textAlign = TextAlign.Center,

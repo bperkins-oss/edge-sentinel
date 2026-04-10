@@ -120,10 +120,24 @@ class TowerDatabaseManager @Inject constructor(
             var isSlimFormat: Boolean? = null // Auto-detect on first data row
 
             reader.useLines { lines ->
-                lines.drop(1).forEach { line -> // skip header
+                var firstLine = true
+                var separator = ','
+
+                lines.forEach { line ->
+                    // Detect separator and skip header on first line
+                    if (firstLine) {
+                        firstLine = false
+                        separator = if (line.count { it == '\t' } > line.count { it == ',' }) '\t' else ','
+                        val firstField = line.split(separator)[0].trim().lowercase()
+                        if (firstField == "radio" || firstField == "\"radio\"") {
+                            return@forEach // skip header row
+                        }
+                        // Not a header — fall through to parse as data
+                    }
+
                     lineCount++
                     try {
-                        val parts = line.split(",")
+                        val parts = line.split(separator)
                         if (parts.size < 9) return@forEach
 
                         // Auto-detect format on first row
@@ -168,7 +182,7 @@ class TowerDatabaseManager @Inject constructor(
                             samples = samples
                         ))
 
-                        if (batch.size >= 500) {
+                        if (batch.size >= 5000) {
                             knownTowerDao.insertTowers(batch.toList())
                             importedCount += batch.size
                             batch.clear()

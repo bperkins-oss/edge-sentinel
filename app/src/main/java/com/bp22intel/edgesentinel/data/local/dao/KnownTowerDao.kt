@@ -34,8 +34,14 @@ interface KnownTowerDao {
     @Query("SELECT COUNT(*) FROM known_towers WHERE mcc = :mcc")
     suspend fun getTowerCountByCountry(mcc: Int): Int
 
+    @Query("SELECT COUNT(*) FROM known_towers WHERE mcc IN (:mccs)")
+    suspend fun getTowerCountByCountries(mccs: List<Int>): Int
+
     @Query("DELETE FROM known_towers WHERE mcc = :mcc")
     suspend fun deleteTowersByCountry(mcc: Int)
+
+    @Query("DELETE FROM known_towers WHERE mcc IN (:mccs)")
+    suspend fun deleteTowersByCountries(mccs: List<Int>)
 
     @Query("SELECT DISTINCT mcc FROM known_towers ORDER BY mcc")
     suspend fun getInstalledCountries(): List<Int>
