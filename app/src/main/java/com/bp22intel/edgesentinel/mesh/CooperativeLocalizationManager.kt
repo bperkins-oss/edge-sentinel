@@ -43,6 +43,15 @@ class CooperativeLocalizationManager(
     private val context: Context,
     private val threatGeolocation: ThreatGeolocation
 ) {
+    companion object {
+        /**
+         * Global cooperative trilateration results, observable from any ViewModel.
+         * Updated by the active CooperativeLocalizationManager instance.
+         */
+        private val _globalTrilaterations = MutableStateFlow<List<CooperativeTrilateration>>(emptyList())
+        val globalTrilaterations: StateFlow<List<CooperativeTrilateration>> = _globalTrilaterations.asStateFlow()
+    }
+
     private val prefs: SharedPreferences by lazy {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
@@ -204,7 +213,9 @@ class CooperativeLocalizationManager(
             }.filter { it.observations.isNotEmpty() }
         }
 
-        _trilaterations.value = results.sortedByDescending { it.participatingDevices }
+        val sorted = results.sortedByDescending { it.participatingDevices }
+        _trilaterations.value = sorted
+        _globalTrilaterations.value = sorted
     }
 
     /**
@@ -306,6 +317,7 @@ class CooperativeLocalizationManager(
     fun clear() {
         synchronized(peerObservationsByCid) { peerObservationsByCid.clear() }
         _trilaterations.value = emptyList()
+        _globalTrilaterations.value = emptyList()
         _sharingCount.value = 0
         _peerCount.value = 0
     }

@@ -92,13 +92,24 @@ class DashboardViewModel @Inject constructor(
         kotlinx.coroutines.flow.combine(
             recentAlerts,
             _currentCell,
-            motionDetector.motionState
-        ) { alerts, cell, motion ->
-            threatAnalyst.analyzeSituation(
+            motionDetector.motionState,
+            com.bp22intel.edgesentinel.mesh.CooperativeLocalizationManager.globalTrilaterations
+        ) { alerts, cell, motion, coopTrilaterations ->
+            val brief = threatAnalyst.analyzeSituation(
                 alerts = alerts,
                 cellInfo = cell,
                 isMoving = motion == MotionState.WALKING || motion == MotionState.DRIVING
             )
+            // Inject cooperative localization context if available
+            val locatedTrilaterations = coopTrilaterations.filter { it.hasEstimate }
+            if (locatedTrilaterations.isNotEmpty()) {
+                val coopText = locatedTrilaterations.joinToString(" ") { trilat ->
+                    "Tower CID ${trilat.cellId} has been cooperatively located by " +
+                    "${trilat.participatingDevices} Edge Sentinel devices. " +
+                    "Estimated accuracy: ${trilat.accuracyLabel}."
+                }
+                brief.copy(cooperativeContext = coopText)
+            } else brief
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),

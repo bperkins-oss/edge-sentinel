@@ -756,6 +756,7 @@ private fun SituationAnalysisCard(
 
                     // Cooperative localization context
                     brief.cooperativeContext?.let { coopCtx ->
+                        Spacer(modifier = Modifier.height(6.dp))
                         Card(
                             colors = CardDefaults.cardColors(
                                 containerColor = Color(0xFFF59E0B).copy(alpha = 0.08f)
