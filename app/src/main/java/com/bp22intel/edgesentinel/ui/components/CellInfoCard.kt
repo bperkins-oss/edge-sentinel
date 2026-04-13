@@ -11,23 +11,35 @@
 package com.bp22intel.edgesentinel.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.bp22intel.edgesentinel.data.local.entity.KnownTowerEntity
 import com.bp22intel.edgesentinel.domain.model.CellTower
 import com.bp22intel.edgesentinel.domain.model.NetworkType
 import com.bp22intel.edgesentinel.ui.theme.AccentBlue
@@ -42,8 +54,29 @@ fun CellInfoCard(
     cellTower: CellTower,
     modifier: Modifier = Modifier
 ) {
+    val viewModel: CellInfoCardViewModel = hiltViewModel()
+    var knownTowerEntity by remember { mutableStateOf<KnownTowerEntity?>(null) }
+    var showTowerLocationSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(cellTower.cid, cellTower.lacTac, cellTower.mcc, cellTower.mnc) {
+        knownTowerEntity = viewModel.towerDatabaseManager.lookupTower(
+            mcc = cellTower.mcc,
+            mnc = cellTower.mnc,
+            lac = cellTower.lacTac,
+            cid = cellTower.cid
+        )
+    }
+
+    val hasTowerLocation = knownTowerEntity != null
+
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (hasTowerLocation) {
+                    Modifier.clickable { showTowerLocationSheet = true }
+                } else Modifier
+            ),
         colors = CardDefaults.cardColors(containerColor = Surface),
         shape = MaterialTheme.shapes.medium
     ) {
@@ -95,11 +128,44 @@ fun CellInfoCard(
                 CellInfoItem(label = "MNC", value = "${cellTower.mnc}")
                 CellInfoItem(label = "Signal", value = "${cellTower.signalStrength} dBm")
             }
+
+            // "Tap to view on map" hint when tower location is available
+            if (hasTowerLocation) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Map,
+                        contentDescription = null,
+                        tint = AccentBlue.copy(alpha = 0.7f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "Tap to view tower on map",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AccentBlue.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
             ExplainableText(
                 text = "LAC TAC MCC MNC CID",
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
+    }
+
+    // Tower Location Bottom Sheet
+    if (showTowerLocationSheet && knownTowerEntity != null) {
+        TowerLocationSheet(
+            towerInfo = TowerLocationInfo(
+                cellTower = cellTower,
+                knownTower = knownTowerEntity!!
+            ),
+            onDismiss = { showTowerLocationSheet = false }
+        )
     }
 }
 

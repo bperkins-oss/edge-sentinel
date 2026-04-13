@@ -11,6 +11,7 @@
 package com.bp22intel.edgesentinel.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bp22intel.edgesentinel.data.local.entity.KnownTowerEntity
 import com.bp22intel.edgesentinel.detection.tower.TowerVerifier
 import com.bp22intel.edgesentinel.domain.model.CellTower
 import com.bp22intel.edgesentinel.domain.model.NetworkType
@@ -64,6 +67,8 @@ fun CellInfoCardWithVerification(
     // Create a ViewModel wrapper for TowerVerifier
     val viewModel: CellInfoCardViewModel = hiltViewModel()
     var verificationResult by remember { mutableStateOf<TowerVerifier.VerificationResult?>(null) }
+    var knownTowerEntity by remember { mutableStateOf<KnownTowerEntity?>(null) }
+    var showTowerLocationSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(cellTower.cid, cellTower.lacTac, cellTower.mcc, cellTower.mnc) {
         verificationResult = viewModel.towerVerifier.verifyTower(
@@ -74,10 +79,26 @@ fun CellInfoCardWithVerification(
             observedLat = cellTower.latitude,
             observedLng = cellTower.longitude
         )
+        // Look up full tower entity for location data
+        knownTowerEntity = viewModel.towerDatabaseManager.lookupTower(
+            mcc = cellTower.mcc,
+            mnc = cellTower.mnc,
+            lac = cellTower.lacTac,
+            cid = cellTower.cid
+        )
     }
 
+    // Determine if we can show the tower on a map
+    val hasTowerLocation = knownTowerEntity != null
+
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (hasTowerLocation) {
+                    Modifier.clickable { showTowerLocationSheet = true }
+                } else Modifier
+            ),
         colors = CardDefaults.cardColors(containerColor = Surface),
         shape = MaterialTheme.shapes.medium
     ) {
@@ -139,6 +160,28 @@ fun CellInfoCardWithVerification(
                 CellInfoItem(label = "MNC", value = "${cellTower.mnc}")
                 CellInfoItem(label = "Signal", value = "${cellTower.signalStrength} dBm")
             }
+
+            // "Tap to view on map" hint when tower location is available
+            if (hasTowerLocation) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Map,
+                        contentDescription = null,
+                        tint = AccentBlue.copy(alpha = 0.7f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "Tap to view tower on map",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AccentBlue.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
             ExplainableText(
                 text = "LAC TAC MCC MNC CID",
                 modifier = Modifier.padding(top = 4.dp)
@@ -157,6 +200,17 @@ fun CellInfoCardWithVerification(
                 }
             }
         }
+    }
+
+    // Tower Location Bottom Sheet
+    if (showTowerLocationSheet && knownTowerEntity != null) {
+        TowerLocationSheet(
+            towerInfo = TowerLocationInfo(
+                cellTower = cellTower,
+                knownTower = knownTowerEntity!!
+            ),
+            onDismiss = { showTowerLocationSheet = false }
+        )
     }
 }
 

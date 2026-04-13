@@ -103,6 +103,37 @@ class WifiMonitor @Inject constructor(
     companion object {
         private const val SCAN_INTERVAL_MS = 15_000L
         private const val MAX_HISTORY_SNAPSHOTS = 60
+
+        /**
+         * Android API 28+ throttles WifiManager.startScan() to 4 scans per 2 minutes
+         * for foreground apps. We enforce a minimum gap to stay within budget.
+         */
+        private const val MIN_FORCE_RESCAN_INTERVAL_MS = 30_000L
+    }
+
+    /** Timestamp of the last forced rescan to respect Android throttle limits. */
+    @Volatile
+    private var lastForceScanTimestamp = 0L
+
+    /**
+     * Immediately triggers a new WiFi scan outside the normal periodic interval.
+     *
+     * Call this when the user has moved to a new location and stale scan results
+     * would misrepresent the current WiFi environment.
+     *
+     * Respects Android API 28+ throttling (4 scans / 2 min foreground) by enforcing
+     * a minimum [MIN_FORCE_RESCAN_INTERVAL_MS] gap between forced scans.
+     *
+     * @return `true` if a scan was actually triggered, `false` if throttled.
+     */
+    fun forceRescan(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastForceScanTimestamp < MIN_FORCE_RESCAN_INTERVAL_MS) {
+            return false // Throttled — too soon since last forced scan
+        }
+        lastForceScanTimestamp = now
+        @Suppress("DEPRECATION")
+        return wifiManager.startScan()
     }
 
     /**

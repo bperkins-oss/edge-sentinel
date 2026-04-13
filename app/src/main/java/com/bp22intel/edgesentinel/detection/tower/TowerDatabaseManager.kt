@@ -248,6 +248,15 @@ class TowerDatabaseManager @Inject constructor(
         return tower.trustScore
     }
 
+    /**
+     * Look up a tower's full record from the bundled OpenCelliD database.
+     * Returns null if the tower is not found. Use this to obtain geographic
+     * coordinates (latitude / longitude) for display on the tower location map.
+     */
+    suspend fun lookupTower(mcc: Int, mnc: Int, lac: Int, cid: Int): KnownTowerEntity? {
+        return knownTowerDao.findTower(mcc, mnc, lac, cid)
+    }
+
     suspend fun deleteCountry(mcc: Int) {
         knownTowerDao.deleteTowersByCountry(mcc)
     }

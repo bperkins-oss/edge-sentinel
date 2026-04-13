@@ -23,6 +23,7 @@ import androidx.lifecycle.viewModelScope
 import com.bp22intel.edgesentinel.detection.geo.GeolocatedThreat
 import com.bp22intel.edgesentinel.detection.geo.HeatMapPoint
 import com.bp22intel.edgesentinel.detection.geo.ThreatGeolocation
+import com.bp22intel.edgesentinel.detection.wifi.WifiMonitor
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -38,6 +39,7 @@ import javax.inject.Inject
 class ThreatMapViewModel @Inject constructor(
     private val alertRepository: AlertRepository,
     private val threatGeolocation: ThreatGeolocation,
+    private val wifiMonitor: WifiMonitor,
     @ApplicationContext private val context: Context
 ) : ViewModel(), LocationListener {
 
@@ -45,7 +47,13 @@ class ThreatMapViewModel @Inject constructor(
         private const val LOCATION_UPDATE_MIN_TIME = 10000L // 10 seconds
         private const val LOCATION_UPDATE_MIN_DISTANCE = 10f // 10 meters
         private const val MAX_ALERTS_FOR_MAP = 50 // Limit to prevent performance issues
+
+        /** Distance threshold (meters) before triggering a WiFi rescan on location change. */
+        private const val WIFI_RESCAN_DISTANCE_METERS = 100.0
     }
+
+    /** Location of the last WiFi rescan trigger, used to detect significant movement. */
+    private var lastWifiScanLocation: Pair<Double, Double>? = null
 
     private val _geolocatedThreats = MutableStateFlow<List<GeolocatedThreat>>(emptyList())
     val geolocatedThreats: StateFlow<List<GeolocatedThreat>> = _geolocatedThreats.asStateFlow()
@@ -164,7 +172,54 @@ class ThreatMapViewModel @Inject constructor(
 
     // LocationListener implementation
     override fun onLocationChanged(location: Location) {
-        _userLocation.value = Pair(location.latitude, location.longitude)
+        val newLoc = Pair(location.latitude, location.longitude)
+        _userLocation.value = newLoc
+
+        // Trigger WiFi rescan when user has moved significantly from last scan position
+        triggerWifiRescanIfMoved(newLoc)
+    }
+
+    /**
+     * If the user has moved more than [WIFI_RESCAN_DISTANCE_METERS] from the
+     * location of the last WiFi forced-scan, kick off a new scan so the WiFi
+     * results reflect the current environment rather than the old one.
+     */
+    private fun triggerWifiRescanIfMoved(currentLocation: Pair<Double, Double>) {
+        val lastLoc = lastWifiScanLocation
+        if (lastLoc == null) {
+            // First location fix — record and scan
+            lastWifiScanLocation = currentLocation
+            wifiMonitor.forceRescan()
+            return
+        }
+
+        val distance = haversineMeters(
+            lastLoc.first, lastLoc.second,
+            currentLocation.first, currentLocation.second
+        )
+        if (distance >= WIFI_RESCAN_DISTANCE_METERS) {
+            if (wifiMonitor.forceRescan()) {
+                lastWifiScanLocation = currentLocation
+            }
+            // If throttled (returns false), keep the old lastWifiScanLocation
+            // so we retry on the next location update.
+        }
+    }
+
+    /** Haversine distance between two lat/lon points in meters. */
+    private fun haversineMeters(
+        lat1: Double, lon1: Double,
+        lat2: Double, lon2: Double
+    ): Double {
+        val R = 6_371_000.0 // Earth radius in meters
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = kotlin.math.sin(dLat / 2).let { it * it } +
+                kotlin.math.cos(Math.toRadians(lat1)) *
+                kotlin.math.cos(Math.toRadians(lat2)) *
+                kotlin.math.sin(dLon / 2).let { it * it }
+        val c = 2 * kotlin.math.atan2(kotlin.math.sqrt(a), kotlin.math.sqrt(1 - a))
+        return R * c
     }
 
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {

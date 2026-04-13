@@ -211,6 +211,60 @@ fun TowerDatabaseScreen(
             }
         }
 
+        // API Token section
+        item {
+            SectionHeader(title = "OpenCelliD API Token")
+        }
+
+        item {
+            val currentToken by viewModel.apiToken.collectAsState()
+            var tokenInput by remember { mutableStateOf(currentToken ?: "") }
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Surface),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        "Required for downloading tower data. Get a free token at opencellid.org",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = tokenInput,
+                            onValueChange = { tokenInput = it },
+                            label = { Text("API Token", color = TextSecondary) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            textStyle = MaterialTheme.typography.bodySmall.copy(color = TextPrimary)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = { viewModel.setApiToken(tokenInput) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AccentBlue,
+                                contentColor = BackgroundPrimary
+                            ),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Save", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                    if (!currentToken.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "✅ Token saved",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = StatusClear
+                        )
+                    }
+                }
+            }
+        }
+
         // One-tap install section
         item {
             SectionHeader(title = "Install Tower Database")

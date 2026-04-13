@@ -143,7 +143,13 @@ class TowerDatabaseViewModel @Inject constructor(
                     loadTotalTowerCount()
                     _importSuccess.value = "$countryName towers installed"
                 } else {
-                    _error.value = "Download failed. Get tower data from kaggle.com/datasets and use 'Import from CSV' below.\n\nDataset: $KAGGLE_DATASET_URL"
+                    val token = _apiToken.value ?: loadApiToken()
+                    val msg = if (token.isNullOrBlank()) {
+                        "No API token set. Enter your OpenCelliD token in Settings, or use 'Import from CSV' below with data from Kaggle.\n\nGet a free token: opencellid.org → Sign up → API Access"
+                    } else {
+                        "Download failed — your API token may be invalid. Get a new one at opencellid.org, or use 'Import from CSV' below with data from Kaggle.\n\nDataset: $KAGGLE_DATASET_URL"
+                    }
+                    _error.value = msg
                 }
             } catch (e: Exception) {
                 _error.value = "Install failed: ${e.message}\n\nTry downloading from Kaggle instead: $KAGGLE_DATASET_URL"
@@ -155,11 +161,32 @@ class TowerDatabaseViewModel @Inject constructor(
         }
     }
 
+    private val _apiToken = MutableStateFlow<String?>(null)
+    val apiToken: StateFlow<String?> = _apiToken.asStateFlow()
+
+    fun setApiToken(token: String) {
+        _apiToken.value = token.trim()
+        // Persist token
+        context.getSharedPreferences("edge_sentinel", Context.MODE_PRIVATE)
+            .edit().putString("opencellid_token", token.trim()).apply()
+    }
+
+    private fun loadApiToken(): String? {
+        return context.getSharedPreferences("edge_sentinel", Context.MODE_PRIVATE)
+            .getString("opencellid_token", null)
+    }
+
     private suspend fun downloadTowerData(mcc: Int): InputStream? = withContext(Dispatchers.IO) {
+        val token = _apiToken.value ?: loadApiToken()
+        if (token.isNullOrBlank()) {
+            android.util.Log.w("TowerDBVM", "No OpenCelliD API token configured")
+            return@withContext null
+        }
+
         try {
-            // Try OpenCelliD public export (gzipped CSV)
+            // OpenCelliD public export (gzipped CSV)
             // Format: radio,mcc,net,area,cell,unit,lon,lat,range,samples,changeable,created,updated,averageSignal
-            val url = URL("https://opencellid.org/ocid/downloads?token=pk.fe79b1475d441eff6a7bca55d7b2e8c3&type=mcc&file=${mcc}.csv.gz")
+            val url = URL("https://opencellid.org/ocid/downloads?token=$token&type=mcc&file=${mcc}.csv.gz")
             val connection = url.openConnection() as HttpURLConnection
             connection.connectTimeout = 30_000
             connection.readTimeout = 120_000
@@ -167,13 +194,11 @@ class TowerDatabaseViewModel @Inject constructor(
             connection.setRequestProperty("User-Agent", "EdgeSentinel/2.0")
 
             if (connection.responseCode == 200) {
-                // OpenCelliD returns 200 even for errors — check content type
                 val contentType = connection.contentType ?: ""
                 val contentLength = connection.contentLength
 
-                // If response is tiny (<500 bytes) or JSON, it's an error message
+                // OpenCelliD returns 200 even for errors — check content type/size
                 if (contentLength in 1..499 || contentType.contains("json", ignoreCase = true)) {
-                    // Read the error body to log it
                     val errorBody = try {
                         connection.inputStream.bufferedReader().readText()
                     } catch (_: Exception) { "unknown error" }
@@ -181,7 +206,6 @@ class TowerDatabaseViewModel @Inject constructor(
                     connection.disconnect()
                     null
                 } else {
-                    // Decompress gzip and return input stream
                     GZIPInputStream(BufferedInputStream(connection.inputStream))
                 }
             } else {
