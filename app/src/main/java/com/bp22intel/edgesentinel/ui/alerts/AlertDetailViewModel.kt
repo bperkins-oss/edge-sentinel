@@ -54,6 +54,7 @@ class AlertDetailViewModel @Inject constructor(
     private val trustedNetworkDao: TrustedNetworkDao,
     private val sensorFusionEngine: SensorFusionEngine,
     private val towerDatabaseManager: com.bp22intel.edgesentinel.detection.tower.TowerDatabaseManager,
+    private val threatGeolocation: com.bp22intel.edgesentinel.detection.geo.ThreatGeolocation,
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context
 ) : ViewModel() {
 
@@ -75,25 +76,7 @@ class AlertDetailViewModel @Inject constructor(
                 // Check if user already gave feedback on this alert.
                 val existingFeedback = feedbackDao.getFeedbackForAlert(alertId)
 
-                // Look up tower coordinates from OpenCelliD database
-                var towerLat: Double? = null
-                var towerLon: Double? = null
-                try {
-                    val details = org.json.JSONObject(alert.detailsJson)
-                    val mcc = details.optInt("mcc", 0)
-                    val mnc = details.optInt("mnc", 0)
-                    val lac = details.optInt("lac", 0)
-                    val cid = details.optInt("cellId", details.optInt("cid", 0))
-                    if (mcc > 0 && cid > 0) {
-                        val tower = towerDatabaseManager.lookupTower(mcc, mnc, lac, cid)
-                        if (tower != null) {
-                            towerLat = tower.latitude
-                            towerLon = tower.longitude
-                        }
-                    }
-                } catch (_: Exception) { /* no tower location available */ }
-
-                // Get user's current/last known GPS for the map
+                // Get user's current GPS
                 var userLat: Double? = null
                 var userLon: Double? = null
                 try {
@@ -106,6 +89,44 @@ class AlertDetailViewModel @Inject constructor(
                         userLon = lastLoc.longitude
                     }
                 } catch (_: Exception) { /* permission denied or unavailable */ }
+
+                // Run the full geolocation engine (15 techniques) to estimate tower position
+                var towerLat: Double? = null
+                var towerLon: Double? = null
+                var geoAccuracy: Double? = null
+                try {
+                    if (userLat != null && userLon != null) {
+                        val geoResults = threatGeolocation.geolocateThreats(
+                            alerts = listOf(alert),
+                            userLat = userLat,
+                            userLng = userLon
+                        )
+                        val geoResult = geoResults.firstOrNull()
+                        if (geoResult != null) {
+                            towerLat = geoResult.latitude
+                            towerLon = geoResult.longitude
+                            geoAccuracy = geoResult.accuracyMeters
+                        }
+                    }
+                } catch (_: Exception) { /* geolocation engine failed */ }
+
+                // Fallback: try OpenCelliD DB lookup if geolocation engine didn't produce results
+                if (towerLat == null || towerLon == null) {
+                    try {
+                        val details = org.json.JSONObject(alert.detailsJson)
+                        val mcc = details.optInt("mcc", 0)
+                        val mnc = details.optInt("mnc", 0)
+                        val lac = details.optInt("lac", 0)
+                        val cid = details.optInt("cellId", details.optInt("cid", 0))
+                        if (mcc > 0 && cid > 0) {
+                            val tower = towerDatabaseManager.lookupTower(mcc, mnc, lac, cid)
+                            if (tower != null) {
+                                towerLat = tower.latitude
+                                towerLon = tower.longitude
+                            }
+                        }
+                    } catch (_: Exception) { }
+                }
 
                 _uiState.value = AlertDetailUiState(
                     alert = alert,
