@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bp22intel.edgesentinel.data.local.entity.EstimatedTowerPositionEntity
 import com.bp22intel.edgesentinel.data.local.entity.KnownTowerEntity
 import com.bp22intel.edgesentinel.domain.model.CellTower
 import com.bp22intel.edgesentinel.domain.model.NetworkType
@@ -56,6 +57,7 @@ fun CellInfoCard(
 ) {
     val viewModel: CellInfoCardViewModel = hiltViewModel()
     var knownTowerEntity by remember { mutableStateOf<KnownTowerEntity?>(null) }
+    var estimatedPosition by remember { mutableStateOf<EstimatedTowerPositionEntity?>(null) }
     var showTowerLocationSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(cellTower.cid, cellTower.lacTac, cellTower.mcc, cellTower.mnc) {
@@ -65,9 +67,15 @@ fun CellInfoCard(
             lac = cellTower.lacTac,
             cid = cellTower.cid
         )
+        estimatedPosition = viewModel.towerPositionTracker.getEstimatedPosition(
+            mcc = cellTower.mcc,
+            mnc = cellTower.mnc,
+            lac = cellTower.lacTac,
+            cid = cellTower.cid
+        )
     }
 
-    val hasTowerLocation = knownTowerEntity != null
+    val hasTowerLocation = knownTowerEntity != null || estimatedPosition != null
 
     Card(
         modifier = modifier
@@ -129,8 +137,27 @@ fun CellInfoCard(
                 CellInfoItem(label = "Signal", value = "${cellTower.signalStrength} dBm")
             }
 
-            // "Tap to view on map" hint when tower location is available
-            if (hasTowerLocation) {
+            // Estimated position info when available from continuous tracker
+            if (estimatedPosition != null && knownTowerEntity == null) {
+                val ep = estimatedPosition!!
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Map,
+                        contentDescription = null,
+                        tint = AccentBlue.copy(alpha = 0.7f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "Est. position: ±${ep.accuracyMeters.toInt()}m (${ep.readingCount} readings)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AccentBlue.copy(alpha = 0.7f)
+                    )
+                }
+            } else if (hasTowerLocation) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),

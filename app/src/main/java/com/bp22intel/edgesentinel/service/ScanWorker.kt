@@ -38,7 +38,8 @@ class ScanWorker @AssistedInject constructor(
     private val threatDetectionEngine: ThreatDetectionEngine,
     private val cellRepository: CellRepository,
     private val alertRepository: AlertRepository,
-    private val scanRepository: ScanRepository
+    private val scanRepository: ScanRepository,
+    private val towerPositionTracker: com.bp22intel.edgesentinel.detection.geo.TowerPositionTracker
 ) : CoroutineWorker(appContext, workerParams) {
 
     companion object {
@@ -78,6 +79,22 @@ class ScanWorker @AssistedInject constructor(
             // Save observed cells
             for (cell in currentCells) {
                 cellRepository.insertOrUpdateCell(cell)
+            }
+
+            // Feed towers into continuous position tracker
+            val userLocation = try {
+                val locMgr = applicationContext.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+                @Suppress("MissingPermission")
+                locMgr.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                    ?: locMgr.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+            } catch (_: Exception) { null }
+
+            if (userLocation != null) {
+                towerPositionTracker.processScanResults(
+                    cells = currentCells,
+                    userLat = userLocation.latitude,
+                    userLng = userLocation.longitude
+                )
             }
 
             // Run threat detection

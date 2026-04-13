@@ -20,9 +20,11 @@ import android.os.Bundle
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bp22intel.edgesentinel.data.local.entity.EstimatedTowerPositionEntity
 import com.bp22intel.edgesentinel.detection.geo.GeolocatedThreat
 import com.bp22intel.edgesentinel.detection.geo.HeatMapPoint
 import com.bp22intel.edgesentinel.detection.geo.ThreatGeolocation
+import com.bp22intel.edgesentinel.detection.geo.TowerPositionTracker
 import com.bp22intel.edgesentinel.detection.wifi.WifiMonitor
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -39,6 +41,7 @@ import javax.inject.Inject
 class ThreatMapViewModel @Inject constructor(
     private val alertRepository: AlertRepository,
     private val threatGeolocation: ThreatGeolocation,
+    private val towerPositionTracker: TowerPositionTracker,
     private val wifiMonitor: WifiMonitor,
     @ApplicationContext private val context: Context
 ) : ViewModel(), LocationListener {
@@ -57,6 +60,20 @@ class ThreatMapViewModel @Inject constructor(
 
     private val _geolocatedThreats = MutableStateFlow<List<GeolocatedThreat>>(emptyList())
     val geolocatedThreats: StateFlow<List<GeolocatedThreat>> = _geolocatedThreats.asStateFlow()
+
+    /**
+     * All persistently estimated tower positions from the continuous tracker.
+     * These are plotted on the map as known tower locations with accuracy circles.
+     */
+    val estimatedTowerPositions: StateFlow<List<EstimatedTowerPositionEntity>> =
+        towerPositionTracker.observeAllPositions()
+            .let { flow ->
+                val state = MutableStateFlow<List<EstimatedTowerPositionEntity>>(emptyList())
+                viewModelScope.launch {
+                    flow.collectLatest { positions -> state.value = positions }
+                }
+                state.asStateFlow()
+            }
 
     private val _userLocation = MutableStateFlow(Pair(0.0, 0.0))
     val userLocation: StateFlow<Pair<Double, Double>> = _userLocation.asStateFlow()

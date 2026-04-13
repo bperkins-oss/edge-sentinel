@@ -24,9 +24,12 @@ import com.bp22intel.edgesentinel.domain.model.Alert
 import com.bp22intel.edgesentinel.domain.repository.AlertRepository
 import com.bp22intel.edgesentinel.fusion.SensorFusionEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import javax.inject.Inject
@@ -41,6 +44,10 @@ data class AlertDetailUiState(
     val feedbackConfirmation: String? = null,  // Transient confirmation message
     val towerLatitude: Double? = null,
     val towerLongitude: Double? = null,
+    val towerAccuracyMeters: Double? = null,
+    val towerReadingCount: Int = 0,
+    val towerConfidenceScore: Float = 0f,
+    val towerTechniques: String = "",
     val userLatitude: Double? = null,
     val userLongitude: Double? = null
 )
@@ -55,6 +62,7 @@ class AlertDetailViewModel @Inject constructor(
     private val sensorFusionEngine: SensorFusionEngine,
     private val towerDatabaseManager: com.bp22intel.edgesentinel.detection.tower.TowerDatabaseManager,
     private val threatGeolocation: com.bp22intel.edgesentinel.detection.geo.ThreatGeolocation,
+    private val towerPositionTracker: com.bp22intel.edgesentinel.detection.geo.TowerPositionTracker,
     @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context
 ) : ViewModel() {
 
@@ -90,12 +98,38 @@ class AlertDetailViewModel @Inject constructor(
                     }
                 } catch (_: Exception) { /* permission denied or unavailable */ }
 
-                // Run the full geolocation engine (15 techniques) to estimate tower position
+                // Try persistent estimated position first (continuous tracking)
+                val details = try { org.json.JSONObject(alert.detailsJson) } catch (_: Exception) { org.json.JSONObject() }
+                val alertMcc = details.optInt("mcc", 0)
+                val alertMnc = details.optInt("mnc", 0)
+                val alertLac = details.optInt("lac", 0)
+                val alertCid = details.optInt("cellId", details.optInt("cid", 0))
+
                 var towerLat: Double? = null
                 var towerLon: Double? = null
-                var geoAccuracy: Double? = null
-                try {
-                    if (userLat != null && userLon != null) {
+                var towerAccuracy: Double? = null
+                var towerReadings = 0
+                var towerConfidence = 0f
+                var towerTechniques = ""
+
+                // 1) Check persistent estimated positions (from continuous tracker)
+                if (alertMcc > 0 && alertCid > 0) {
+                    val estimated = towerPositionTracker.getEstimatedPosition(
+                        alertMcc, alertMnc, alertLac, alertCid
+                    )
+                    if (estimated != null) {
+                        towerLat = estimated.estimatedLat
+                        towerLon = estimated.estimatedLon
+                        towerAccuracy = estimated.accuracyMeters
+                        towerReadings = estimated.readingCount
+                        towerConfidence = estimated.confidenceScore
+                        towerTechniques = estimated.techniques
+                    }
+                }
+
+                // 2) Fallback: run the one-shot geolocation engine
+                if (towerLat == null && userLat != null && userLon != null) {
+                    try {
                         val geoResults = threatGeolocation.geolocateThreats(
                             alerts = listOf(alert),
                             userLat = userLat,
@@ -105,25 +139,19 @@ class AlertDetailViewModel @Inject constructor(
                         if (geoResult != null) {
                             towerLat = geoResult.latitude
                             towerLon = geoResult.longitude
-                            geoAccuracy = geoResult.accuracyMeters
+                            towerAccuracy = geoResult.accuracyMeters
+                            towerReadings = geoResult.observationCount
                         }
-                    }
-                } catch (_: Exception) { /* geolocation engine failed */ }
+                    } catch (_: Exception) { /* geolocation engine failed */ }
+                }
 
-                // Fallback: try OpenCelliD DB lookup if geolocation engine didn't produce results
-                if (towerLat == null || towerLon == null) {
+                // 3) Fallback: OpenCelliD DB lookup
+                if (towerLat == null && alertMcc > 0 && alertCid > 0) {
                     try {
-                        val details = org.json.JSONObject(alert.detailsJson)
-                        val mcc = details.optInt("mcc", 0)
-                        val mnc = details.optInt("mnc", 0)
-                        val lac = details.optInt("lac", 0)
-                        val cid = details.optInt("cellId", details.optInt("cid", 0))
-                        if (mcc > 0 && cid > 0) {
-                            val tower = towerDatabaseManager.lookupTower(mcc, mnc, lac, cid)
-                            if (tower != null) {
-                                towerLat = tower.latitude
-                                towerLon = tower.longitude
-                            }
+                        val tower = towerDatabaseManager.lookupTower(alertMcc, alertMnc, alertLac, alertCid)
+                        if (tower != null) {
+                            towerLat = tower.latitude
+                            towerLon = tower.longitude
                         }
                     } catch (_: Exception) { }
                 }
@@ -137,13 +165,61 @@ class AlertDetailViewModel @Inject constructor(
                     feedbackGiven = existingFeedback?.feedback,
                     towerLatitude = towerLat,
                     towerLongitude = towerLon,
+                    towerAccuracyMeters = towerAccuracy,
+                    towerReadingCount = towerReadings,
+                    towerConfidenceScore = towerConfidence,
+                    towerTechniques = towerTechniques,
                     userLatitude = userLat,
                     userLongitude = userLon
                 )
+
+                // Start observing live position updates for this tower
+                if (alertMcc > 0 && alertCid > 0) {
+                    observeTowerPositionUpdates(alertMcc, alertMnc, alertLac, alertCid)
+                }
             } else {
                 _uiState.value = AlertDetailUiState(isLoading = false)
             }
         }
+    }
+
+    /** Job for the live tower position observation — cancelled when no longer needed. */
+    private var towerObserveJob: Job? = null
+
+    /**
+     * Observe live updates to this tower's estimated position.
+     * Each new scan cycle that sees this tower will emit a refined estimate.
+     * The map marker moves and the accuracy circle shrinks in real-time.
+     */
+    private fun observeTowerPositionUpdates(mcc: Int, mnc: Int, lac: Int, cid: Int) {
+        towerObserveJob?.cancel()
+        towerObserveJob = viewModelScope.launch {
+            towerPositionTracker.observeTowerPosition(mcc, mnc, lac, cid)
+                .filterNotNull()
+                .collectLatest { estimated ->
+                    val current = _uiState.value
+                    // Only update if position actually changed
+                    if (current.towerLatitude != estimated.estimatedLat ||
+                        current.towerLongitude != estimated.estimatedLon ||
+                        current.towerAccuracyMeters != estimated.accuracyMeters ||
+                        current.towerReadingCount != estimated.readingCount
+                    ) {
+                        _uiState.value = current.copy(
+                            towerLatitude = estimated.estimatedLat,
+                            towerLongitude = estimated.estimatedLon,
+                            towerAccuracyMeters = estimated.accuracyMeters,
+                            towerReadingCount = estimated.readingCount,
+                            towerConfidenceScore = estimated.confidenceScore,
+                            towerTechniques = estimated.techniques
+                        )
+                    }
+                }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        towerObserveJob?.cancel()
     }
 
     fun acknowledgeAlert() {

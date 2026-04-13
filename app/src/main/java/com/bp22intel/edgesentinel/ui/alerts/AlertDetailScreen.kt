@@ -188,11 +188,14 @@ fun AlertDetailScreen(
                 // 7. Timestamp + duration
                 TimestampCard(alert = alert)
 
-                // 8. Location map — tower from DB or user GPS as fallback
+                // 8. Location map — live-updating tower position from continuous tracker
                 AlertLocationMapSection(
                     alert = alert,
                     towerLat = uiState.towerLatitude,
                     towerLon = uiState.towerLongitude,
+                    towerAccuracyM = uiState.towerAccuracyMeters,
+                    towerReadingCount = uiState.towerReadingCount,
+                    towerConfidenceScore = uiState.towerConfidenceScore,
                     currentUserLat = uiState.userLatitude,
                     currentUserLon = uiState.userLongitude
                 )
@@ -962,12 +965,15 @@ private fun AlertLocationMapSection(
     alert: Alert,
     towerLat: Double? = null,
     towerLon: Double? = null,
+    towerAccuracyM: Double? = null,
+    towerReadingCount: Int = 0,
+    towerConfidenceScore: Float = 0f,
     currentUserLat: Double? = null,
     currentUserLon: Double? = null
 ) {
     val details = try { JSONObject(alert.detailsJson) } catch (_: Exception) { JSONObject() }
 
-    // Priority: 1) OpenCelliD lookup (passed from ViewModel), 2) alert JSON fields
+    // Priority: 1) Live estimated position (from ViewModel/tracker), 2) alert JSON fields
     val lat = towerLat
         ?: details.optDouble("latitude", Double.NaN).takeIf { !it.isNaN() }
         ?: details.optDouble("towerLatitude", Double.NaN).takeIf { !it.isNaN() }
@@ -1020,11 +1026,14 @@ private fun AlertLocationMapSection(
         return
     }
 
-    // User location (if stored with the alert)
-    val userLat = details.optDouble("userLatitude", Double.NaN).takeIf { !it.isNaN() }
-    val userLng = details.optDouble("userLongitude", Double.NaN).takeIf { !it.isNaN() }
+    // User location (if stored with the alert, or current live position)
+    val userLat = currentUserLat
+        ?: details.optDouble("userLatitude", Double.NaN).takeIf { !it.isNaN() }
+    val userLng = currentUserLon
+        ?: details.optDouble("userLongitude", Double.NaN).takeIf { !it.isNaN() }
 
-    val accuracy = details.optDouble("accuracyMeters", Double.NaN).let {
+    // Use tracker accuracy if available, otherwise fall back to heuristic
+    val accuracy = towerAccuracyM ?: details.optDouble("accuracyMeters", Double.NaN).let {
         if (!it.isNaN()) it else when (alert.threatType) {
             ThreatType.FAKE_BTS -> 300.0
             ThreatType.SIGNAL_ANOMALY -> 500.0
@@ -1045,6 +1054,8 @@ private fun AlertLocationMapSection(
         latitude = lat,
         longitude = lng,
         accuracyM = accuracy,
+        readingCount = towerReadingCount,
+        confidenceScore = towerConfidenceScore,
         label = label,
         userLat = userLat,
         userLng = userLng

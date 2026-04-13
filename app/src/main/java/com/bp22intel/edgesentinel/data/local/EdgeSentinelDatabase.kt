@@ -18,6 +18,7 @@ import com.bp22intel.edgesentinel.data.local.dao.AlertFeedbackDao
 import com.bp22intel.edgesentinel.data.local.dao.BaselineDao
 import com.bp22intel.edgesentinel.data.local.dao.BleDeviceDao
 import com.bp22intel.edgesentinel.data.local.dao.CellDao
+import com.bp22intel.edgesentinel.data.local.dao.EstimatedTowerPositionDao
 import com.bp22intel.edgesentinel.data.local.dao.KnownTowerDao
 import com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao
 import com.bp22intel.edgesentinel.data.local.dao.ScanDao
@@ -26,6 +27,7 @@ import com.bp22intel.edgesentinel.data.local.entity.AlertFeedbackEntity
 import com.bp22intel.edgesentinel.data.local.entity.BaselineEntity
 import com.bp22intel.edgesentinel.data.local.entity.BleDeviceEntity
 import com.bp22intel.edgesentinel.data.local.entity.CellTowerEntity
+import com.bp22intel.edgesentinel.data.local.entity.EstimatedTowerPositionEntity
 import com.bp22intel.edgesentinel.data.local.entity.KnownTowerEntity
 import com.bp22intel.edgesentinel.data.local.entity.ScanEntity
 import com.bp22intel.edgesentinel.data.local.entity.TrustedNetworkEntity
@@ -39,9 +41,10 @@ import com.bp22intel.edgesentinel.data.local.entity.TrustedNetworkEntity
         BleDeviceEntity::class,
         BaselineEntity::class,
         KnownTowerEntity::class,
-        TrustedNetworkEntity::class
+        TrustedNetworkEntity::class,
+        EstimatedTowerPositionEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -54,4 +57,5 @@ abstract class EdgeSentinelDatabase : RoomDatabase() {
     abstract fun knownTowerDao(): KnownTowerDao
     abstract fun trustedNetworkDao(): TrustedNetworkDao
     abstract fun alertFeedbackDao(): AlertFeedbackDao
+    abstract fun estimatedTowerPositionDao(): EstimatedTowerPositionDao
 }

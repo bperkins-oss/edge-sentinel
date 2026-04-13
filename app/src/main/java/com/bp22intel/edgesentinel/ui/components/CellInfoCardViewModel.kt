@@ -11,6 +11,7 @@
 package com.bp22intel.edgesentinel.ui.components
 
 import androidx.lifecycle.ViewModel
+import com.bp22intel.edgesentinel.detection.geo.TowerPositionTracker
 import com.bp22intel.edgesentinel.detection.tower.TowerDatabaseManager
 import com.bp22intel.edgesentinel.detection.tower.TowerVerifier
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,5 +20,6 @@ import javax.inject.Inject
 @HiltViewModel
 class CellInfoCardViewModel @Inject constructor(
     val towerVerifier: TowerVerifier,
-    val towerDatabaseManager: TowerDatabaseManager
+    val towerDatabaseManager: TowerDatabaseManager,
+    val towerPositionTracker: TowerPositionTracker
 ) : ViewModel()

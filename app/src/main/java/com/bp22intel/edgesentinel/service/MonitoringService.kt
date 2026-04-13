@@ -85,6 +85,7 @@ class MonitoringService : LifecycleService() {
     @Inject lateinit var vpnMonitor: VpnMonitor
 
     @Inject lateinit var knownTowerDao: com.bp22intel.edgesentinel.data.local.dao.KnownTowerDao
+    @Inject lateinit var towerPositionTracker: com.bp22intel.edgesentinel.detection.geo.TowerPositionTracker
 
     private var scanJob: Job? = null
     private var wifiJob: Job? = null
@@ -240,6 +241,10 @@ class MonitoringService : LifecycleService() {
     }
 
     private fun stopMonitoring() {
+        // Flush tower position estimates to disk before stopping
+        lifecycleScope.launch {
+            try { towerPositionTracker.flushToDisk() } catch (_: Exception) {}
+        }
         _isRunning.value = false
         _threatLevel.value = ThreatLevel.CLEAR
         scanJob?.cancel()
@@ -432,6 +437,23 @@ class MonitoringService : LifecycleService() {
             // Save observed cells
             for (cell in currentCells) {
                 cellRepository.insertOrUpdateCell(cell)
+            }
+
+            // Feed every visible tower into the continuous position tracker.
+            // Get user GPS for position estimation.
+            val userLocation = try {
+                val locMgr = getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+                @Suppress("MissingPermission")
+                locMgr.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                    ?: locMgr.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+            } catch (_: Exception) { null }
+
+            if (userLocation != null) {
+                towerPositionTracker.processScanResults(
+                    cells = currentCells,
+                    userLat = userLocation.latitude,
+                    userLng = userLocation.longitude
+                )
             }
 
             // Run threat detection

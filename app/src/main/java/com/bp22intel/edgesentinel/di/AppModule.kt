@@ -134,6 +134,9 @@ object AppModule {
     fun provideTrustedNetworkDao(db: EdgeSentinelDatabase): com.bp22intel.edgesentinel.data.local.dao.TrustedNetworkDao = db.trustedNetworkDao()
 
     @Provides
+    fun provideEstimatedTowerPositionDao(db: EdgeSentinelDatabase): com.bp22intel.edgesentinel.data.local.dao.EstimatedTowerPositionDao = db.estimatedTowerPositionDao()
+
+    @Provides
     @Singleton
     fun provideCellInfoCollector(
         @ApplicationContext context: Context
