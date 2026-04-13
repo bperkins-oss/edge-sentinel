@@ -38,7 +38,9 @@ data class AlertDetailUiState(
     val isLoading: Boolean = true,
     val isAcknowledged: Boolean = false,
     val feedbackGiven: String? = null,  // "FALSE_POSITIVE", "CONFIRMED_THREAT", "UNSURE", or null
-    val feedbackConfirmation: String? = null  // Transient confirmation message
+    val feedbackConfirmation: String? = null,  // Transient confirmation message
+    val towerLatitude: Double? = null,
+    val towerLongitude: Double? = null
 )
 
 @HiltViewModel
@@ -48,7 +50,8 @@ class AlertDetailViewModel @Inject constructor(
     private val threatAnalyst: ThreatAnalyst,
     private val feedbackDao: AlertFeedbackDao,
     private val trustedNetworkDao: TrustedNetworkDao,
-    private val sensorFusionEngine: SensorFusionEngine
+    private val sensorFusionEngine: SensorFusionEngine,
+    private val towerDatabaseManager: com.bp22intel.edgesentinel.detection.tower.TowerDatabaseManager
 ) : ViewModel() {
 
     private val alertId: Long = savedStateHandle["alertId"] ?: 0L
@@ -69,13 +72,33 @@ class AlertDetailViewModel @Inject constructor(
                 // Check if user already gave feedback on this alert.
                 val existingFeedback = feedbackDao.getFeedbackForAlert(alertId)
 
+                // Look up tower coordinates from OpenCelliD database
+                var towerLat: Double? = null
+                var towerLon: Double? = null
+                try {
+                    val details = org.json.JSONObject(alert.detailsJson)
+                    val mcc = details.optInt("mcc", 0)
+                    val mnc = details.optInt("mnc", 0)
+                    val lac = details.optInt("lac", 0)
+                    val cid = details.optInt("cellId", details.optInt("cid", 0))
+                    if (mcc > 0 && cid > 0) {
+                        val tower = towerDatabaseManager.lookupTower(mcc, mnc, lac, cid)
+                        if (tower != null) {
+                            towerLat = tower.latitude
+                            towerLon = tower.longitude
+                        }
+                    }
+                } catch (_: Exception) { /* no tower location available */ }
+
                 _uiState.value = AlertDetailUiState(
                     alert = alert,
                     analysis = analysis,
                     filterRecommendation = filterRec,
                     isLoading = false,
                     isAcknowledged = alert.acknowledged,
-                    feedbackGiven = existingFeedback?.feedback
+                    feedbackGiven = existingFeedback?.feedback,
+                    towerLatitude = towerLat,
+                    towerLongitude = towerLon
                 )
             } else {
                 _uiState.value = AlertDetailUiState(isLoading = false)

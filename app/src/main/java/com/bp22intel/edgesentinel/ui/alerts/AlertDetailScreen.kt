@@ -188,8 +188,12 @@ fun AlertDetailScreen(
                 // 7. Timestamp + duration
                 TimestampCard(alert = alert)
 
-                // 8. Location map (if coordinates available)
-                AlertLocationMapSection(alert = alert)
+                // 8. Location map — uses tower coordinates from OpenCelliD database
+                AlertLocationMapSection(
+                    alert = alert,
+                    towerLat = uiState.towerLatitude,
+                    towerLon = uiState.towerLongitude
+                )
 
                 // 9. Action buttons (acknowledge + share)
                 ActionButtons(
@@ -952,33 +956,55 @@ private fun formatDuration(ms: Long): String {
 }
 
 @Composable
-private fun AlertLocationMapSection(alert: Alert) {
-    val details = try { JSONObject(alert.detailsJson) } catch (_: Exception) { return }
+private fun AlertLocationMapSection(
+    alert: Alert,
+    towerLat: Double? = null,
+    towerLon: Double? = null
+) {
+    val details = try { JSONObject(alert.detailsJson) } catch (_: Exception) { JSONObject() }
 
-    // Try to get coordinates from the alert details
-    val lat = details.optDouble("latitude", Double.NaN)
-    val lng = details.optDouble("longitude", Double.NaN)
+    // Priority: 1) OpenCelliD lookup (passed from ViewModel), 2) alert JSON fields
+    val lat = towerLat
+        ?: details.optDouble("latitude", Double.NaN).takeIf { !it.isNaN() }
+        ?: details.optDouble("towerLatitude", Double.NaN).takeIf { !it.isNaN() }
+    val lng = towerLon
+        ?: details.optDouble("longitude", Double.NaN).takeIf { !it.isNaN() }
+        ?: details.optDouble("towerLongitude", Double.NaN).takeIf { !it.isNaN() }
 
-    // Also check for tower location fields
-    val towerLat = details.optDouble("towerLatitude", Double.NaN)
-    val towerLng = details.optDouble("towerLongitude", Double.NaN)
+    if (lat == null || lng == null) {
+        // No location data — show a placeholder card
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Surface),
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Tower Location",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Tower not found in database. Install tower data from Settings → Tower Database.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
+        return
+    }
 
     // User location (if stored with the alert)
-    val userLat = details.optDouble("userLatitude", Double.NaN)
-    val userLng = details.optDouble("userLongitude", Double.NaN)
+    val userLat = details.optDouble("userLatitude", Double.NaN).takeIf { !it.isNaN() }
+    val userLng = details.optDouble("userLongitude", Double.NaN).takeIf { !it.isNaN() }
 
-    val finalLat = when {
-        !lat.isNaN() -> lat
-        !towerLat.isNaN() -> towerLat
-        else -> return  // No location data
-    }
-    val finalLng = when {
-        !lng.isNaN() -> lng
-        !towerLng.isNaN() -> towerLng
-        else -> return
-    }
-
-    // Accuracy from details, or default based on detection type
     val accuracy = details.optDouble("accuracyMeters", Double.NaN).let {
         if (!it.isNaN()) it else when (alert.threatType) {
             ThreatType.FAKE_BTS -> 300.0
@@ -989,7 +1015,7 @@ private fun AlertLocationMapSection(alert: Alert) {
         }
     }
 
-    val cid = details.optString("cellId", "")
+    val cid = details.optString("cellId", details.optString("cid", ""))
     val label = if (cid.isNotEmpty()) {
         "${threatTypeLabel(alert.threatType)} — CID $cid"
     } else {
@@ -997,12 +1023,12 @@ private fun AlertLocationMapSection(alert: Alert) {
     }
 
     AlertLocationMap(
-        latitude = finalLat,
-        longitude = finalLng,
+        latitude = lat,
+        longitude = lng,
         accuracyM = accuracy,
         label = label,
-        userLat = if (!userLat.isNaN()) userLat else null,
-        userLng = if (!userLng.isNaN()) userLng else null
+        userLat = userLat,
+        userLng = userLng
     )
 }
 
