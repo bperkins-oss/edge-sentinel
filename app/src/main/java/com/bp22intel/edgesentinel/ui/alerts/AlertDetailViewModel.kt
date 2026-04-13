@@ -40,7 +40,9 @@ data class AlertDetailUiState(
     val feedbackGiven: String? = null,  // "FALSE_POSITIVE", "CONFIRMED_THREAT", "UNSURE", or null
     val feedbackConfirmation: String? = null,  // Transient confirmation message
     val towerLatitude: Double? = null,
-    val towerLongitude: Double? = null
+    val towerLongitude: Double? = null,
+    val userLatitude: Double? = null,
+    val userLongitude: Double? = null
 )
 
 @HiltViewModel
@@ -51,7 +53,8 @@ class AlertDetailViewModel @Inject constructor(
     private val feedbackDao: AlertFeedbackDao,
     private val trustedNetworkDao: TrustedNetworkDao,
     private val sensorFusionEngine: SensorFusionEngine,
-    private val towerDatabaseManager: com.bp22intel.edgesentinel.detection.tower.TowerDatabaseManager
+    private val towerDatabaseManager: com.bp22intel.edgesentinel.detection.tower.TowerDatabaseManager,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context
 ) : ViewModel() {
 
     private val alertId: Long = savedStateHandle["alertId"] ?: 0L
@@ -90,6 +93,20 @@ class AlertDetailViewModel @Inject constructor(
                     }
                 } catch (_: Exception) { /* no tower location available */ }
 
+                // Get user's current/last known GPS for the map
+                var userLat: Double? = null
+                var userLon: Double? = null
+                try {
+                    val locationManager = appContext.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+                    @Suppress("MissingPermission")
+                    val lastLoc = locationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                        ?: locationManager.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+                    if (lastLoc != null) {
+                        userLat = lastLoc.latitude
+                        userLon = lastLoc.longitude
+                    }
+                } catch (_: Exception) { /* permission denied or unavailable */ }
+
                 _uiState.value = AlertDetailUiState(
                     alert = alert,
                     analysis = analysis,
@@ -98,7 +115,9 @@ class AlertDetailViewModel @Inject constructor(
                     isAcknowledged = alert.acknowledged,
                     feedbackGiven = existingFeedback?.feedback,
                     towerLatitude = towerLat,
-                    towerLongitude = towerLon
+                    towerLongitude = towerLon,
+                    userLatitude = userLat,
+                    userLongitude = userLon
                 )
             } else {
                 _uiState.value = AlertDetailUiState(isLoading = false)

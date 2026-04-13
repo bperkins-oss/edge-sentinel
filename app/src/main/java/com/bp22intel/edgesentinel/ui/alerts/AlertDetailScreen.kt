@@ -188,11 +188,13 @@ fun AlertDetailScreen(
                 // 7. Timestamp + duration
                 TimestampCard(alert = alert)
 
-                // 8. Location map — uses tower coordinates from OpenCelliD database
+                // 8. Location map — tower from DB or user GPS as fallback
                 AlertLocationMapSection(
                     alert = alert,
                     towerLat = uiState.towerLatitude,
-                    towerLon = uiState.towerLongitude
+                    towerLon = uiState.towerLongitude,
+                    currentUserLat = uiState.userLatitude,
+                    currentUserLon = uiState.userLongitude
                 )
 
                 // 9. Action buttons (acknowledge + share)
@@ -959,7 +961,9 @@ private fun formatDuration(ms: Long): String {
 private fun AlertLocationMapSection(
     alert: Alert,
     towerLat: Double? = null,
-    towerLon: Double? = null
+    towerLon: Double? = null,
+    currentUserLat: Double? = null,
+    currentUserLon: Double? = null
 ) {
     val details = try { JSONObject(alert.detailsJson) } catch (_: Exception) { JSONObject() }
 
@@ -972,7 +976,22 @@ private fun AlertLocationMapSection(
         ?: details.optDouble("towerLongitude", Double.NaN).takeIf { !it.isNaN() }
 
     if (lat == null || lng == null) {
-        // No location data — show a placeholder card
+        // Tower not in DB — fall back to user's GPS location as approximate tower position
+        val fallbackLat = details.optDouble("userLatitude", Double.NaN).takeIf { !it.isNaN() }
+            ?: currentUserLat
+        val fallbackLng = details.optDouble("userLongitude", Double.NaN).takeIf { !it.isNaN() }
+            ?: currentUserLon
+        if (fallbackLat != null && fallbackLng != null) {
+            val cidStr = details.optString("cellId", details.optString("cid", ""))
+            AlertLocationMap(
+                latitude = fallbackLat,
+                longitude = fallbackLng,
+                accuracyM = 500.0,
+                label = if (cidStr.isNotEmpty()) "Approximate — CID $cidStr (not in tower DB)" else "Approximate Location"
+            )
+            return
+        }
+        // No location data at all — show placeholder
         Card(
             colors = CardDefaults.cardColors(containerColor = Surface),
             shape = MaterialTheme.shapes.medium
@@ -991,7 +1010,7 @@ private fun AlertLocationMapSection(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Tower not found in database. Install tower data from Settings → Tower Database.",
+                    text = "Location unavailable. Tower not in database and no GPS data recorded with this alert.",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
