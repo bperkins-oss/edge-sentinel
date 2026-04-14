@@ -77,6 +77,9 @@ class BleTrackingDetector @Inject constructor(
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
+    private val _statusMessage = MutableStateFlow<String?>(null)
+    val statusMessage: StateFlow<String?> = _statusMessage.asStateFlow()
+
     private val _nearbyDeviceCount = MutableStateFlow(0)
     val nearbyDeviceCount: StateFlow<Int> = _nearbyDeviceCount.asStateFlow()
 
@@ -115,24 +118,37 @@ class BleTrackingDetector @Inject constructor(
      * Start continuous BLE scanning with duty cycling (10s scan, 50s pause).
      */
     fun startScanning() {
-        if (scanJob?.isActive == true) return
+        if (scanJob?.isActive == true) {
+            _statusMessage.value = "Already scanning"
+            return
+        }
         if (!hasRequiredPermissions()) {
             Log.w(TAG, "Missing BLE scan permissions")
+            _statusMessage.value = "Missing permissions: grant Nearby Devices in Settings → Apps → Edge Sentinel → Permissions"
             return
         }
 
         val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
         val adapter = bluetoothManager?.adapter
-        if (adapter == null || !adapter.isEnabled) {
-            Log.w(TAG, "Bluetooth adapter not available or disabled")
+        if (adapter == null) {
+            Log.w(TAG, "Bluetooth adapter not available")
+            _statusMessage.value = "Bluetooth not available on this device"
+            return
+        }
+        if (!adapter.isEnabled) {
+            Log.w(TAG, "Bluetooth disabled")
+            _statusMessage.value = "Bluetooth is OFF — turn it on in Settings"
             return
         }
 
         scanner = adapter.bluetoothLeScanner
         if (scanner == null) {
             Log.w(TAG, "BluetoothLeScanner not available")
+            _statusMessage.value = "BLE scanner not available — try toggling Bluetooth off and on"
             return
         }
+
+        _statusMessage.value = null  // Clear any error
 
         scanJob = scope.launch {
             while (isActive) {

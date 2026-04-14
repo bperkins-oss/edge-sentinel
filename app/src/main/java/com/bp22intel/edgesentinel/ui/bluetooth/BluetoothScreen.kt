@@ -34,6 +34,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -76,6 +77,7 @@ fun BluetoothScreen(
     val alerts by viewModel.alerts.collectAsState()
     val recentDevices by viewModel.recentDevices.collectAsState()
     val trackers by viewModel.trackers.collectAsState()
+    val statusMessage by viewModel.statusMessage.collectAsState()
 
     val context = LocalContext.current
 
@@ -196,9 +198,13 @@ fun BluetoothScreen(
             if (nonTrackerDevices.isEmpty()) {
                 item {
                     Text(
-                        text = if (isScanning) "Scanning for BLE devices..." else "Tap the button to start scanning",
+                        text = when {
+                            statusMessage != null -> statusMessage!!
+                            isScanning -> "Scanning for BLE devices..."
+                            else -> "Tap the button to start scanning"
+                        },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = if (statusMessage != null) Color(0xFFEF4444) else TextSecondary
                     )
                 }
             } else {

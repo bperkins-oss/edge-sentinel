@@ -36,6 +36,8 @@ class BluetoothViewModel @Inject constructor(
 
     val nearbyDeviceCount: StateFlow<Int> = detector.nearbyDeviceCount
 
+    val statusMessage: StateFlow<String?> = detector.statusMessage
+
     val alerts: StateFlow<List<BleAlertManager.BleAlert>> = alertManager.activeAlerts
 
     val allDevices: StateFlow<List<BleDeviceEntity>> = deviceTracker.getAllDevices()
