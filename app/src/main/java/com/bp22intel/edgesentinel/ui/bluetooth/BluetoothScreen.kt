@@ -33,6 +33,8 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -75,6 +77,18 @@ fun BluetoothScreen(
     val recentDevices by viewModel.recentDevices.collectAsState()
     val trackers by viewModel.trackers.collectAsState()
 
+    val context = LocalContext.current
+
+    // Runtime permission request for BLE scanning (Android 12+)
+    val blePermissionLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        val allGranted = results.values.all { it }
+        if (allGranted) {
+            viewModel.toggleScanning()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -94,7 +108,28 @@ fun BluetoothScreen(
         containerColor = BackgroundPrimary,
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { viewModel.toggleScanning() },
+                onClick = {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        val scanGranted = androidx.core.content.ContextCompat.checkSelfPermission(
+                            context, android.Manifest.permission.BLUETOOTH_SCAN
+                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                        val connectGranted = androidx.core.content.ContextCompat.checkSelfPermission(
+                            context, android.Manifest.permission.BLUETOOTH_CONNECT
+                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                        if (!scanGranted || !connectGranted) {
+                            blePermissionLauncher.launch(
+                                arrayOf(
+                                    android.Manifest.permission.BLUETOOTH_SCAN,
+                                    android.Manifest.permission.BLUETOOTH_CONNECT
+                                )
+                            )
+                        } else {
+                            viewModel.toggleScanning()
+                        }
+                    } else {
+                        viewModel.toggleScanning()
+                    }
+                },
                 containerColor = if (isScanning) StatusSuspicious else AccentBlue
             ) {
                 Icon(
