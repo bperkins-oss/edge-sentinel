@@ -658,6 +658,25 @@ class MonitoringService : LifecycleService() {
             else -> NotificationChannels.WARNING
         }
 
+        // Deep-link to Alert Detail screen when notification is tapped
+        val deepLinkIntent = android.content.Intent(
+            android.content.Intent.ACTION_VIEW,
+            android.net.Uri.parse("edgesentinel://alert_detail/${alert.id}"),
+            this,
+            com.bp22intel.edgesentinel.MainActivity::class.java
+        ).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        val pendingIntent = android.app.PendingIntent.getActivity(
+            this,
+            notificationId,
+            deepLinkIntent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or
+                android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle(title)
             .setContentText(alert.summary)
@@ -666,6 +685,7 @@ class MonitoringService : LifecycleService() {
                 if (alert.severity == ThreatLevel.THREAT) NotificationCompat.PRIORITY_HIGH
                 else NotificationCompat.PRIORITY_DEFAULT
             )
+            .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
 

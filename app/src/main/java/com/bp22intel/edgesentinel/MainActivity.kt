@@ -65,11 +65,30 @@ class MainActivity : ComponentActivity() {
             MonitoringService.start(this)
         }
 
+        // Check if launched from a notification deep link
+        val deepLinkAlertId = parseAlertIdFromIntent(intent)
+
         setContent {
             EdgeSentinelTheme {
-                EdgeSentinelNavHost()
+                EdgeSentinelNavHost(initialAlertId = deepLinkAlertId)
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        // Handle deep link when app is already running
+        // The NavHost will pick this up via the saved state
+        setIntent(intent)
+    }
+
+    private fun parseAlertIdFromIntent(intent: android.content.Intent?): Long? {
+        val uri = intent?.data ?: return null
+        // Expected: edgesentinel://alert_detail/{alertId}
+        if (uri.scheme == "edgesentinel" && uri.host == "alert_detail") {
+            return uri.lastPathSegment?.toLongOrNull()
+        }
+        return null
     }
 
     private fun requestMissingPermissions() {

@@ -109,8 +109,19 @@ enum class BottomNavTab(
 }
 
 @Composable
-fun EdgeSentinelNavHost() {
+fun EdgeSentinelNavHost(initialAlertId: Long? = null) {
     val navController = rememberNavController()
+
+    // Navigate to alert detail if launched from notification deep link
+    androidx.compose.runtime.LaunchedEffect(initialAlertId) {
+        if (initialAlertId != null && initialAlertId > 0) {
+            // Small delay to let NavHost initialize
+            kotlinx.coroutines.delay(300)
+            navController.navigate(Routes.alertDetail(initialAlertId)) {
+                launchSingleTop = true
+            }
+        }
+    }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
