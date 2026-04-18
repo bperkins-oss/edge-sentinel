@@ -29,6 +29,14 @@ class AlertRepositoryImpl @Inject constructor(
     override suspend fun insertAlert(alert: Alert): Long =
         alertDao.insert(alert.toEntity())
 
+    override suspend fun insertAlertWithLocation(
+        alert: Alert,
+        latitude: Double?,
+        longitude: Double?
+    ): Long = alertDao.insert(
+        alert.copy(latitude = latitude, longitude = longitude).toEntity()
+    )
+
     override fun getAllAlerts(): Flow<List<Alert>> =
         alertDao.getAll().map { entities -> entities.map { it.toDomain() } }
 

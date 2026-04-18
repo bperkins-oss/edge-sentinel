@@ -145,6 +145,9 @@ dependencies {
     // OpenStreetMap (osmdroid) - Threat Map view
     implementation("org.osmdroid:osmdroid-android:6.1.18")
 
+    // Google Play Services - Fused Location + Activity Recognition
+    implementation(libs.play.services.location)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.test.ext.junit)

@@ -91,7 +91,7 @@ class MotionDetector @Inject constructor(
         sensorManager.registerListener(
             this,
             accelerometer,
-            SensorManager.SENSOR_DELAY_NORMAL
+            SensorManager.SENSOR_DELAY_UI
         )
         isListening = true
     }

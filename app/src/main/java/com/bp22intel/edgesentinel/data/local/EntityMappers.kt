@@ -68,7 +68,9 @@ fun AlertEntity.toDomain(): Alert = Alert(
     summary = summary,
     detailsJson = detailsJson,
     cellId = cellId,
-    acknowledged = acknowledged
+    acknowledged = acknowledged,
+    latitude = latitude,
+    longitude = longitude
 )
 
 fun Alert.toEntity(): AlertEntity = AlertEntity(
@@ -80,7 +82,9 @@ fun Alert.toEntity(): AlertEntity = AlertEntity(
     summary = summary,
     detailsJson = detailsJson,
     cellId = cellId,
-    acknowledged = acknowledged
+    acknowledged = acknowledged,
+    latitude = latitude,
+    longitude = longitude
 )
 
 // ── ScanResult ──────────────────────────────────────────────────────────────────

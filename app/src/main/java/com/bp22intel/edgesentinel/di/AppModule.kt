@@ -90,6 +90,13 @@ private val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
+private val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE alerts ADD COLUMN latitude REAL DEFAULT NULL")
+        db.execSQL("ALTER TABLE alerts ADD COLUMN longitude REAL DEFAULT NULL")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
@@ -103,7 +110,7 @@ object AppModule {
             context,
             EdgeSentinelDatabase::class.java,
             "edge_sentinel.db"
-        ).addMigrations(MIGRATION_1_2, MIGRATION_6_7, MIGRATION_7_8)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
          .fallbackToDestructiveMigration()
          .build()
     }

@@ -16,6 +16,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.BatteryManager
 import android.os.Build
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -42,8 +43,11 @@ import com.bp22intel.edgesentinel.domain.repository.AlertRepository
 import com.bp22intel.edgesentinel.domain.repository.CellRepository
 import com.bp22intel.edgesentinel.domain.repository.ScanRepository
 import com.bp22intel.edgesentinel.notification.NotificationChannels
+import com.bp22intel.edgesentinel.sensor.LocationTracker
 import com.bp22intel.edgesentinel.sensor.MotionDetector
 import com.bp22intel.edgesentinel.sensor.MotionState
+import com.bp22intel.edgesentinel.sensor.MovementClassifier
+import com.bp22intel.edgesentinel.sensor.MovementProfile
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -68,6 +72,8 @@ class MonitoringService : LifecycleService() {
     @Inject lateinit var scanRepository: ScanRepository
     @Inject lateinit var sensorFusionEngine: com.bp22intel.edgesentinel.fusion.SensorFusionEngine
     @Inject lateinit var motionDetector: MotionDetector
+    @Inject lateinit var movementClassifier: MovementClassifier
+    @Inject lateinit var locationTracker: LocationTracker
 
     // WiFi detection
     @Inject lateinit var wifiMonitor: WifiMonitor
@@ -90,7 +96,9 @@ class MonitoringService : LifecycleService() {
     private var wifiJob: Job? = null
     private var bleJob: Job? = null
     private var networkJob: Job? = null
+    private var movementJob: Job? = null
     private lateinit var notificationManager: NotificationManager
+    private var wakeLock: PowerManager.WakeLock? = null
 
     /** Timestamp of the most recent alert, used for adaptive interval logic. */
     private var lastAlertTimestamp = 0L
@@ -178,8 +186,25 @@ class MonitoringService : LifecycleService() {
 
     private fun startMonitoring() {
         _isRunning.value = true
+
+        // Acquire a partial wake lock so the CPU stays awake for scans
+        // even when the screen is off.
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = pm.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "EdgeSentinel::MonitoringScan"
+        ).apply { acquire() }
+
         telephonyMonitor.start()
-        motionDetector.start()
+
+        // Movement classification drives location cadence.
+        // MovementClassifier manages MotionDetector internally when it falls back.
+        movementClassifier.start()
+        movementJob = lifecycleScope.launch {
+            movementClassifier.profile.collect { profile ->
+                locationTracker.start(profile)
+            }
+        }
 
         // Cellular scan loop
         scanJob = lifecycleScope.launch {
@@ -250,11 +275,22 @@ class MonitoringService : LifecycleService() {
         bleJob = null
         networkJob?.cancel()
         networkJob = null
+        movementJob?.cancel()
+        movementJob = null
         telephonyMonitor.stop()
+        movementClassifier.stop()
+        locationTracker.stop()
+        // MotionDetector is owned by MovementClassifier when used as fallback,
+        // but also defend against leftover listener registration.
         motionDetector.stop()
         bleTrackingDetector.stopScanning()
         vpnMonitor.stopMonitoring()
         lastAlertTimestamp = 0L
+
+        wakeLock?.let {
+            if (it.isHeld) it.release()
+        }
+        wakeLock = null
     }
 
     // ── WiFi → Sensor Fusion ──────────────────────────────────────────────
@@ -429,6 +465,12 @@ class MonitoringService : LifecycleService() {
             val currentCells = cellInfoCollector.getCurrentCellInfo()
             val history = cellRepository.getAllCells().first()
 
+            // Capture GPS snapshot once per scan so every cell and alert produced
+            // by this scan is tagged with the same position.
+            val gps = locationTracker.snapshot()
+            val scanLat = gps?.latitude
+            val scanLon = gps?.longitude
+
             // Save observed cells
             for (cell in currentCells) {
                 cellRepository.insertOrUpdateCell(cell)
@@ -477,6 +519,12 @@ class MonitoringService : LifecycleService() {
                             put("networkType", cell.networkType.name)
                             put("nearbyTowerCount", currentCells.size)
                         }
+                        // GPS position at scan time
+                        if (scanLat != null && scanLon != null) {
+                            put("gpsLatitude", scanLat)
+                            put("gpsLongitude", scanLon)
+                            put("movementProfile", movementClassifier.profile.value.name)
+                        }
                         // Motion state for ThreatAnalyst context
                         put("isMoving", motionDetector.isMoving)
                         put("motionState", motionDetector.motionState.value.name)
@@ -518,7 +566,9 @@ class MonitoringService : LifecycleService() {
                         summary = result.summary,
                         detailsJson = enrichedJson,
                         cellId = currentCells.firstOrNull()?.id,
-                        acknowledged = false
+                        acknowledged = false,
+                        latitude = scanLat,
+                        longitude = scanLon
                     )
                     // Check false-positive filter before persisting.
                     val filterResult = falsePositiveFilter.evaluate(alert)
@@ -539,7 +589,7 @@ class MonitoringService : LifecycleService() {
                         alert
                     }
 
-                    alertRepository.insertAlert(finalAlert)
+                    alertRepository.insertAlertWithLocation(finalAlert, scanLat, scanLon)
                     showAlertNotification(finalAlert)
 
                     // Track last alert time for adaptive interval logic
@@ -573,7 +623,7 @@ class MonitoringService : LifecycleService() {
                 }
             }
 
-            // Update foreground notification
+            // Update foreground notification (includes GPS coords)
             notificationManager.notify(NOTIFICATION_ID, buildStatusNotification(scanThreatLevel))
         } catch (e: Exception) {
             // Log but don't crash the scan loop
@@ -600,7 +650,7 @@ class MonitoringService : LifecycleService() {
     }
 
     private fun buildStatusNotification(threatLevel: ThreatLevel): Notification {
-        val statusText = when (threatLevel) {
+        val baseStatus = when (threatLevel) {
             ThreatLevel.CLEAR -> "All clear - monitoring cellular environment"
             ThreatLevel.SUSPICIOUS -> "Suspicious activity detected"
             ThreatLevel.THREAT -> "THREAT DETECTED - Cellular anomaly found"
@@ -611,6 +661,17 @@ class MonitoringService : LifecycleService() {
             ThreatLevel.SUSPICIOUS -> NotificationCompat.PRIORITY_DEFAULT
             ThreatLevel.THREAT -> NotificationCompat.PRIORITY_HIGH
         }
+
+        // In active scan mode (running), append GPS coords so the ongoing
+        // notification surfaces the last known position.
+        val statusText = if (_isRunning.value) {
+            val loc = locationTracker.snapshot()
+            if (loc != null) {
+                "$baseStatus · ${"%.4f".format(loc.latitude)}, ${"%.4f".format(loc.longitude)}"
+            } else {
+                "$baseStatus · GPS: acquiring"
+            }
+        } else baseStatus
 
         return NotificationCompat.Builder(this, NotificationChannels.MONITORING)
             .setContentTitle("Edge Sentinel")

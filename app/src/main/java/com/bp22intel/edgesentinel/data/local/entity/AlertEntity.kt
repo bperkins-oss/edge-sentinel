@@ -28,5 +28,7 @@ data class AlertEntity(
     val detailsJson: String,
     @ColumnInfo(name = "cell_id")
     val cellId: Long?,
-    val acknowledged: Boolean = false
+    val acknowledged: Boolean = false,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )

@@ -16,6 +16,13 @@ import kotlinx.coroutines.flow.Flow
 
 interface AlertRepository {
     suspend fun insertAlert(alert: Alert): Long
+
+    /**
+     * Persist an alert tagged with a GPS location. Equivalent to
+     * copying [latitude]/[longitude] onto [alert] before [insertAlert].
+     */
+    suspend fun insertAlertWithLocation(alert: Alert, latitude: Double?, longitude: Double?): Long
+
     fun getAllAlerts(): Flow<List<Alert>>
     fun getRecentAlerts(limit: Int): Flow<List<Alert>>
     fun getAlertsByThreatLevel(level: ThreatLevel): Flow<List<Alert>>
